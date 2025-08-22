@@ -1,7 +1,7 @@
-package apis;
+package com.ubs.tariffapp.apis;
 
-import models.ForexRate;
-import utils.HttpClientUtil;
+import com.ubs.tariffapp.models.ForexRate;
+import com.ubs.tariffapp.utils.HttpClientUtil;
 import org.json.JSONObject;
 
 public class ForexApiClient {

@@ -1,7 +1,7 @@
-package services;
+package com.ubs.tariffapp.services;
 
-import models.ForexRate;
-import apis.ForexApiClient;
+import com.ubs.tariffapp.models.ForexRate;
+import com.ubs.tariffapp.apis.ForexApiClient;
 
 public class ForexService {
 

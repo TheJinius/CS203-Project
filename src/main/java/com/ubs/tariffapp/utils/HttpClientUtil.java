@@ -1,4 +1,4 @@
-package utils;
+package com.ubs.tariffapp.utils;
 
 import java.io.IOException;
 import java.net.URI;

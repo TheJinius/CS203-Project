@@ -1,7 +1,8 @@
-package cli;
+package com.ubs.tariffapp.cli;
 
-import services.ForexService;
 import java.util.Scanner;
+
+import com.ubs.tariffapp.services.ForexService;
 
 public class ForexCalculator {
     public static void main(String[] args) {

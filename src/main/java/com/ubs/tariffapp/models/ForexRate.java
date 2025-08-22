@@ -1,4 +1,4 @@
-package models;
+package com.ubs.tariffapp.models;
 
 import java.util.Map;
 
