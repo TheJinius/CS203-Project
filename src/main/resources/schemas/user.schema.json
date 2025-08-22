@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "type": "object",
+  "required": ["PK", "SK", "name", "email", "type"],
+  "properties": {
+    "PK": {
+      "type": "string",
+      "pattern": "^USER#[A-Za-z0-9_-]+$",
+      "description": "Primary key, e.g. USER#123"
+    },
+    "SK": {
+      "type": "string",
+      "const": "PROFILE",
+      "description": "Sort key, always 'PROFILE' for user root item"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Full name of the user"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "User's email address"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of when the user was created"
+    },
+    "type": {
+      "type": "string",
+      "const": "User",
+      "description": "Entity type marker"
+    }
+  },
+  "additionalProperties": true
+}
