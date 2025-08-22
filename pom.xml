@@ -19,7 +19,7 @@
 
     </dependencies>
 
-    <!-- Optional: plugin to run Java class directly -->
+    <!-- Plugin to run Java class directly -->
     <build>
         <plugins>
             <plugin>
