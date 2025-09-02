@@ -37,6 +37,23 @@ public class Tariff {
     @Column(name = "notes")
     private String notes;
 
+    // Empty no argument constructor for JPA
+    public Tariff() {
+
+    }
+
+    // Argument constructor for easier testing
+    public Tariff(String origin, LocalDateTime effectiveFrom, double taxRate,
+            List<Surcharge> surcharges, String baseCurrency, 
+            LocalDateTime lastUpdated, String notes) {
+        this.origin = origin;
+        this.effectiveFrom = effectiveFrom;
+        this.taxRate = taxRate;
+        this.surcharges = surcharges;
+        this.baseCurrency = baseCurrency;
+        this.lastUpdated = lastUpdated;
+        this.notes = notes;
+    }
 
     public String getOrigin() {
         return origin;

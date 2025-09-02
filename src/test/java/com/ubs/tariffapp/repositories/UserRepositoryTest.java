@@ -26,17 +26,11 @@ public class UserRepositoryTest {
 
     @Test
     void testSaveAndFindUser() {
-        User user = new User();
-        user.setUserId(USER_ID);
-        user.setType("user");
-        user.setName(NAME);
-        user.setEmail(EMAIL);
-        user.setCreatedAt(LocalDateTime.now());
+    User user = new User(USER_ID, "user", NAME, EMAIL, LocalDateTime.now());
+    userRepository.save(user);
 
-        userRepository.save(user);
-
-        User found = userRepository.findById(USER_ID).orElse(null);
-        assertThat(found).isNotNull();
-        assertThat(found.getName()).isEqualTo(NAME);
+    User found = userRepository.findById(USER_ID).orElse(null);
+    assertThat(found).isNotNull();
+    assertThat(found.getName()).isEqualTo(NAME);
     }
 }

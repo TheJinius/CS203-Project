@@ -17,6 +17,17 @@ public class Surcharge {
     @Column(name = "currency")
     private String currency;
 
+    // Empty no argument constructor for JPA
+    public Surcharge() {
+
+    }
+
+    // Argument constructor for easier testing
+    public Surcharge(String type, double amount, String currency) {
+        this.type = type;
+        this.amount = amount;
+        this.currency = currency;
+    }
 
     public String getType() {
         return type;

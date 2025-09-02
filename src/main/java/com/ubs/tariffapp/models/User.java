@@ -26,7 +26,21 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    
+    // Empty no argument constructor for JPA
+    public User() {
+
+    }
+
+    // Argument constructor for easier testing
+    public User(String userId, String type, String name, String email,
+            LocalDateTime createdAt) {
+        this.userId = userId;
+        this.type = type;
+        this.name = name;
+        this.email = email;
+        this.createdAt = createdAt;
+    }
+
     public String getUserId() {
         return userId;
     }

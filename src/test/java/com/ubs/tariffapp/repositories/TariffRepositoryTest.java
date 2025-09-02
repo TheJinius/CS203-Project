@@ -30,18 +30,16 @@ public class TariffRepositoryTest {
 
     @Test
     void testSaveAndFindTariff() {
-        Tariff tariff = new Tariff();
-        tariff.setOrigin(ORIGIN);
-        tariff.setEffectiveFrom(LocalDateTime.now());
-        tariff.setTaxRate(TAX_RATE);
-        Surcharge surcharge = new Surcharge();
-        surcharge.setType(TYPE);
-        surcharge.setAmount(SURCHARGE_AMOUNT);
-        surcharge.setCurrency(CURRENCY);
-        tariff.setSurcharges(Collections.singletonList(surcharge));
-        tariff.setBaseCurrency(CURRENCY);
-        tariff.setLastUpdated(LocalDateTime.now());
-        tariff.setNotes("Test tariff");
+        Surcharge surcharge = new Surcharge(TYPE, SURCHARGE_AMOUNT, CURRENCY);
+        Tariff tariff = new Tariff(
+            ORIGIN,
+            LocalDateTime.now(),
+            TAX_RATE,
+            Collections.singletonList(surcharge),
+            CURRENCY,
+            LocalDateTime.now(),
+            "Test tariff"
+        );
 
         tariffRepository.save(tariff);
 
