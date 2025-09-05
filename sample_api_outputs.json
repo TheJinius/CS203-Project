@@ -29,7 +29,7 @@
     "tariff_id":1, //integer auto increment
     "tariff_name": "US tariff 2025",
     "tariff_code": "TAR2201",
-    "tariff_type":"ad-valorem" // ad valorem, compound, reciprocal, specific
+    "tariff_type":"ad-valorem", // ad valorem, compound, reciprocal, specific
     "description": "trumps tariffs on Singapore for aluminium exports",
     "status": "active", // active or inactive, inactive --> move to audit
     "start_date": "01011970", //iso 8601 format
@@ -45,6 +45,11 @@
     "valid_from": "01011970", //iso 8601 format
     "valid_to":"02032010", //iso 8601 format
     "conditions": "HelloWorld!"
+}
+
+//route: /calculateTariff
+{
+    "value": 10000
 }
 
 //audit log should not be exposed to an endpoint, rather fetched from backend directly when needed

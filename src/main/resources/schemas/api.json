@@ -1,0 +1,778 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Trade Optimisation Pathfinder (T.O.P.) API",
+    "description": "Comprehensive API for optimizing international trade routes across cost, time, carbon emissions, and risk factors",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.top-pathfinder.com/v1",
+      "description": "Production server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Country": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "US"},
+          "name": {"type": "string", "example": "United States"},
+          "currency": {"type": "string", "example": "USD"},
+          "region": {"type": "string", "example": "North America"},
+          "ports": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/Port"}
+          },
+          "industryData": {
+            "type": "object",
+            "properties": {
+              "metals": {"type": "object"},
+              "agriculture": {"type": "object"},
+              "energy": {"type": "object"}
+            }
+          }
+        },
+        "required": ["id", "name", "currency"]
+      },
+      "Port": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "example": "USLAX"},
+          "name": {"type": "string", "example": "Port of Los Angeles"},
+          "countryId": {"type": "string", "example": "US"},
+          "coordinates": {
+            "type": "object",
+            "properties": {
+              "latitude": {"type": "number", "example": 33.7362},
+              "longitude": {"type": "number", "example": -118.2639}
+            }
+          },
+          "capacity": {"type": "integer", "example": 1000000},
+          "facilities": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["id", "name", "countryId", "coordinates"]
+      },
+      "Tariff": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "fromCountryId": {"type": "string", "example": "US"},
+          "toCountryId": {"type": "string", "example": "DE"},
+          "productType": {"type": "string", "enum": ["metals", "agriculture", "energy"]},
+          "productCategory": {"type": "string", "example": "steel"},
+          "hsCode": {"type": "string", "example": "720839"},
+          "dutyRate": {"type": "number", "example": 0.15},
+          "dutyType": {"type": "string", "enum": ["ad_valorem", "specific", "compound"]},
+          "additionalTaxes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "taxType": {"type": "string"},
+                "rate": {"type": "number"}
+              }
+            }
+          },
+          "tradeAgreement": {"type": "string", "example": "USMCA"},
+          "effectiveFrom": {"type": "string", "format": "date"},
+          "effectiveTo": {"type": "string", "format": "date"},
+          "lastUpdated": {"type": "string", "format": "date-time"}
+        },
+        "required": ["id", "fromCountryId", "toCountryId", "productType", "dutyRate", "dutyType"]
+      },
+      "TradeAgreement": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string", "example": "USMCA"},
+          "countries": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "preferentialRates": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "reduction": {"type": "number", "example": 0.1}
+              }
+            }
+          },
+          "effectiveFrom": {"type": "string", "format": "date"},
+          "effectiveTo": {"type": "string", "format": "date"}
+        },
+        "required": ["id", "name", "countries"]
+      },
+      "ComplianceRule": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "countryId": {"type": "string"},
+          "productType": {"type": "string", "enum": ["metals", "agriculture", "energy"]},
+          "productCategory": {"type": "string"},
+          "status": {"type": "string", "enum": ["allowed", "restricted", "blacklisted", "greylisted"]},
+          "restrictions": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "requiredDocuments": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "sanctionDetails": {"type": "string"},
+          "lastUpdated": {"type": "string", "format": "date-time"}
+        },
+        "required": ["id", "countryId", "productType", "status"]
+      },
+      "RiskRating": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "routeId": {"type": "string"},
+          "countryId": {"type": "string"},
+          "overallRisk": {"type": "number", "minimum": 0, "maximum": 10},
+          "riskFactors": {
+            "type": "object",
+            "properties": {
+              "politicalInstability": {"type": "number", "minimum": 0, "maximum": 10},
+              "piracy": {"type": "number", "minimum": 0, "maximum": 10},
+              "naturalDisasters": {"type": "number", "minimum": 0, "maximum": 10},
+              "sanctions": {"type": "number", "minimum": 0, "maximum": 10},
+              "conflictZones": {"type": "number", "minimum": 0, "maximum": 10}
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "lastUpdated": {"type": "string", "format": "date-time"}
+        },
+        "required": ["id", "overallRisk", "riskFactors"]
+      },
+      "ShippingRoute": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "fromPortId": {"type": "string"},
+          "toPortId": {"type": "string"},
+          "waypoints": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "distance": {"type": "number", "description": "Distance in nautical miles"},
+          "estimatedTime": {"type": "number", "description": "Time in hours"},
+          "baseShippingCost": {"type": "number"},
+          "carbonEmissions": {"type": "number", "description": "CO2 emissions per ton"},
+          "routeType": {"type": "string", "enum": ["sea", "air", "land", "multimodal"]},
+          "active": {"type": "boolean", "default": true}
+        },
+        "required": ["id", "fromPortId", "toPortId", "distance", "estimatedTime", "baseShippingCost"]
+      },
+      "OptimizationRequest": {
+        "type": "object",
+        "properties": {
+          "originCountry": {"type": "string", "example": "US"},
+          "destinationCountry": {"type": "string", "example": "DE"},
+          "productType": {"type": "string", "enum": ["metals", "agriculture", "energy"]},
+          "productCategory": {"type": "string", "example": "steel"},
+          "shipmentValue": {"type": "number", "example": 100000},
+          "shipmentWeight": {"type": "number", "example": 1000},
+          "currency": {"type": "string", "example": "USD"},
+          "preferences": {
+            "type": "object",
+            "properties": {
+              "costWeight": {"type": "number", "minimum": 0, "maximum": 1, "example": 0.4},
+              "timeWeight": {"type": "number", "minimum": 0, "maximum": 1, "example": 0.3},
+              "riskWeight": {"type": "number", "minimum": 0, "maximum": 1, "example": 0.2},
+              "sustainabilityWeight": {"type": "number", "minimum": 0, "maximum": 1, "example": 0.1}
+            }
+          },
+          "constraints": {
+            "type": "object",
+            "properties": {
+              "maxCost": {"type": "number"},
+              "maxTime": {"type": "number"},
+              "maxRisk": {"type": "number"},
+              "excludeCountries": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        },
+        "required": ["originCountry", "destinationCountry", "productType", "shipmentValue", "shipmentWeight"]
+      },
+      "OptimizationResult": {
+        "type": "object",
+        "properties": {
+          "routes": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/OptimizedRoute"}
+          },
+          "requestId": {"type": "string"},
+          "calculatedAt": {"type": "string", "format": "date-time"},
+          "exchangeRates": {
+            "type": "object",
+            "additionalProperties": {"type": "number"}
+          }
+        }
+      },
+      "OptimizedRoute": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "path": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/RouteSegment"}
+          },
+          "totalCost": {"type": "number"},
+          "totalTime": {"type": "number"},
+          "totalRisk": {"type": "number"},
+          "totalCarbonEmissions": {"type": "number"},
+          "overallScore": {"type": "number"},
+          "costBreakdown": {
+            "type": "object",
+            "properties": {
+              "tariffs": {"type": "number"},
+              "shipping": {"type": "number"},
+              "taxes": {"type": "number"},
+              "insurance": {"type": "number"}
+            }
+          },
+          "complianceStatus": {"type": "string", "enum": ["compliant", "restricted", "prohibited"]},
+          "warnings": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      },
+      "RouteSegment": {
+        "type": "object",
+        "properties": {
+          "fromPort": {"$ref": "#/components/schemas/Port"},
+          "toPort": {"$ref": "#/components/schemas/Port"},
+          "shippingRoute": {"$ref": "#/components/schemas/ShippingRoute"},
+          "cost": {"type": "number"},
+          "time": {"type": "number"},
+          "risk": {"type": "number"},
+          "carbonEmissions": {"type": "number"}
+        }
+      },
+      "ExchangeRate": {
+        "type": "object",
+        "properties": {
+          "baseCurrency": {"type": "string", "example": "USD"},
+          "targetCurrency": {"type": "string", "example": "EUR"},
+          "rate": {"type": "number", "example": 0.85},
+          "lastUpdated": {"type": "string", "format": "date-time"}
+        }
+      },
+      "ChatQuery": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "example": "What are the compliance requirements for shipping steel from US to Germany?"},
+          "context": {
+            "type": "object",
+            "properties": {
+              "productType": {"type": "string"},
+              "originCountry": {"type": "string"},
+              "destinationCountry": {"type": "string"}
+            }
+          }
+        },
+        "required": ["query"]
+      },
+      "ChatResponse": {
+        "type": "object",
+        "properties": {
+          "response": {"type": "string"},
+          "sources": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "relatedRules": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/ComplianceRule"}
+          }
+        }
+      },
+      "AdminUpdate": {
+        "type": "object",
+        "properties": {
+          "updateType": {"type": "string", "enum": ["tariff", "trade_agreement", "compliance_rule", "risk_rating"]},
+          "action": {"type": "string", "enum": ["create", "update", "delete"]},
+          "data": {"type": "object"},
+          "reason": {"type": "string"},
+          "updatedBy": {"type": "string"}
+        },
+        "required": ["updateType", "action", "data", "updatedBy"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {"type": "string"},
+          "message": {"type": "string"},
+          "timestamp": {"type": "string", "format": "date-time"},
+          "path": {"type": "string"}
+        }
+      }
+    }
+  },
+  "paths": {
+    "/tariffs": {
+      "get": {
+        "tags": ["Tariff Service"],
+        "summary": "Get tariffs with filtering",
+        "parameters": [
+          {
+            "name": "fromCountry",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "toCountry",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "productType",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["metals", "agriculture", "energy"]}
+          },
+          {
+            "name": "hsCode",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tariffs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Tariff"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tariff Service"],
+        "summary": "Create new tariff (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/Tariff"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tariff created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Tariff"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tariffs/{tariffId}": {
+      "patch": {
+        "tags": ["Tariff Service"],
+        "summary": "Update tariff (Admin only)",
+        "parameters": [
+          {
+            "name": "tariffId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/Tariff"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tariff updated",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Tariff"}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Tariff Service"],
+        "summary": "Delete tariff (Admin only)",
+        "parameters": [
+          {
+            "name": "tariffId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "204": {"description": "Tariff deleted"}
+        }
+      }
+    },
+    "/trade-agreements": {
+      "get": {
+        "tags": ["Tariff Service"],
+        "summary": "Get trade agreements",
+        "responses": {
+          "200": {
+            "description": "List of trade agreements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/TradeAgreement"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tariff Service"],
+        "summary": "Create trade agreement (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TradeAgreement"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Trade agreement created"
+          }
+        }
+      }
+    },
+    "/compliance/rules": {
+      "get": {
+        "tags": ["Compliance Service"],
+        "summary": "Get compliance rules",
+        "parameters": [
+          {
+            "name": "countryId",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "productType",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of compliance rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/ComplianceRule"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Compliance Service"],
+        "summary": "Create compliance rule (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ComplianceRule"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Compliance rule created"}
+        }
+      }
+    },
+    "/compliance/chat": {
+      "post": {
+        "tags": ["Compliance Service"],
+        "summary": "RAG-powered compliance chatbot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ChatQuery"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat response",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ChatResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/risk/ratings": {
+      "get": {
+        "tags": ["Risk Service"],
+        "summary": "Get risk ratings",
+        "parameters": [
+          {
+            "name": "countryId",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "routeId",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of risk ratings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/RiskRating"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Risk Service"],
+        "summary": "Create risk rating (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RiskRating"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Risk rating created"}
+        }
+      }
+    },
+    "/optimization/optimize": {
+      "post": {
+        "tags": ["Optimization Service"],
+        "summary": "Optimize trade route using A* algorithm",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/OptimizationRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Optimized routes",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/OptimizationResult"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimization/preferences": {
+      "patch": {
+        "tags": ["Optimization Service"],
+        "summary": "Update optimization preferences in real-time",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "requestId": {"type": "string"},
+                  "preferences": {
+                    "type": "object",
+                    "properties": {
+                      "costWeight": {"type": "number"},
+                      "timeWeight": {"type": "number"},
+                      "riskWeight": {"type": "number"},
+                      "sustainabilityWeight": {"type": "number"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated optimization results",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/OptimizationResult"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/routes": {
+      "get": {
+        "tags": ["Route Service"],
+        "summary": "Get shipping routes",
+        "parameters": [
+          {
+            "name": "fromPort",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "toPort",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "routeType",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of shipping routes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/ShippingRoute"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Route Service"],
+        "summary": "Create shipping route (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ShippingRoute"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Route created"}
+        }
+      }
+    },
+    "/countries": {
+      "get": {
+        "tags": ["Data Service"],
+        "summary": "Get countries and ports",
+        "responses": {
+          "200": {
+            "description": "List of countries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Country"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/exchange-rates": {
+      "get": {
+        "tags": ["Data Service"],
+        "summary": "Get current exchange rates",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "query",
+            "schema": {"type": "string", "example": "USD"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exchange rates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/ExchangeRate"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/update": {
+      "post": {
+        "tags": ["Admin Service"],
+        "summary": "Admin bulk update endpoint",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/AdminUpdate"}
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Update completed"}
+        }
+      }
+    }
+  },
+  "tags": [
+    {"name": "Tariff Service", "description": "Tariff and trade agreement management"},
+    {"name": "Compliance Service", "description": "Legal compliance and chatbot"},
+    {"name": "Risk Service", "description": "Risk assessment and ratings"},
+    {"name": "Optimization Service", "description": "Route optimization using modified A*"},
+    {"name": "Route Service", "description": "Shipping route management"},
+    {"name": "Data Service", "description": "Countries, ports, and exchange rates"},
+    {"name": "Admin Service", "description": "Administrative functions"}
+  ]
+}
