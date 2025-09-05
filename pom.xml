@@ -5,27 +5,74 @@
 
     <!-- Mandatory POM fields -->
     <modelVersion>4.0.0</modelVersion>
-    <groupId>edu.smu</groupId>
+    <groupId>sch.smu</groupId>
     <artifactId>cs203-project</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <!-- Spring Boot Parent (so we don't need to specify the versions for common dependencies)-->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.5</version>
+        <relativePath/> <!-- lookup in the Maven Central repository -->
+    </parent>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+
     <!-- Dependencies -->
     <dependencies>
+
+        <!-- For Spring Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- For H2 Database (in-memory database for dev/testing) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- For unit testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- For CSV parsing of raw_hsca_data.csv -->
         <dependency>
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>5.12.0</version>
         </dependency>
+        
+        <!-- JSON Processing -->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20250517</version>
+        </dependency>
 
     </dependencies>
 
-    <!-- Plugin to run Java class directly -->
     <build>
         <plugins>
+            <!-- Spring Boot Maven Plugin (can run "mvn spring-boot:run" without "mvn install")-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            
+            <!-- Plugin to run Java class directly -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.5.1</version>
             </plugin>
         </plugins>
     </build>
