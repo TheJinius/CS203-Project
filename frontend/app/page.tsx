@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import Image from "next/image"
 
 export default function TariffCalculatorPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -38,8 +39,13 @@ export default function TariffCalculatorPage() {
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <Globe className="h-6 w-6 text-sidebar-accent" />
-              <h1 className="text-lg font-semibold text-sidebar-foreground">Tariff Calculator</h1>
+              <Image
+                src="/TOP light.png"
+                alt="Tariff Calculator Logo"
+                width={160}  
+                height={40}
+                priority
+              />
             </div>
             <Button
               variant="ghost"
