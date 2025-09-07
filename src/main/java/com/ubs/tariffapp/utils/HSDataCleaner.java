@@ -18,14 +18,13 @@ import com.opencsv.exceptions.CsvException;
  * We assume that the csv file and this class is in ./src/main/java
  * 
  * mvn compile exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.HSDataCleaner"
- * Raw data obtained from: https://hscodechecker.gobusiness.gov.sg/
  */
 
 public class HSDataCleaner {
 
     public static void main(String[] args) {
         // Read input from resources
-        InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/raw_hsca_data.csv");
+        InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/raw_hsca_data.csv");
         if (inputStream == null) {
             System.err.println("Input CSV file not found in resources folder.");
             return;

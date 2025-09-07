@@ -1,0 +1,5 @@
+Code data obtained from here:
+https://wits.worldbank.org/wits/wits/witshelp/Content/Codes/Country_Codes.htm
+
+HSCA data obtained from here:
+https://hscodechecker.gobusiness.gov.sg/
