@@ -9,7 +9,7 @@ import jakarta.persistence.OneToMany;
 @Entity
 public class Country {
     @Id
-    private Integer countryId;
+    private String countryId;
     private String countryName;
     private String isoCode;
 
@@ -24,7 +24,7 @@ public class Country {
     }
 
     // All-argument constructor
-    public Country(Integer countryId, String countryName, String isoCode, List<TariffSchedule> reportedTariffs,
+    public Country(String countryId, String countryName, String isoCode, List<TariffSchedule> reportedTariffs,
             List<TariffSchedule> partneredTariffs) {
         this.countryId = countryId;
         this.countryName = countryName;
@@ -34,11 +34,11 @@ public class Country {
     }
 
     // Getters and setters
-    public Integer getCountryId() {
+    public String getCountryId() {
         return countryId;
     }
 
-    public void setCountryId(Integer countryId) {
+    public void setCountryId(String countryId) {
         this.countryId = countryId;
     }
 
