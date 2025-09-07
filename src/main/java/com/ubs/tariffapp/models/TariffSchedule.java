@@ -5,8 +5,10 @@ import java.util.List;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 
 @Entity
 public class TariffSchedule {
@@ -21,53 +23,43 @@ public class TariffSchedule {
     @JoinColumn(name = "partner_id")
     private Country partner;
 
-    private Integer year;
-
     @ManyToOne
     @JoinColumn(name = "tl_code")
     private Product product;
+
+    @ManyToOne
+    @JoinColumns({
+        @JoinColumn(name = "duty_type", referencedColumnName = "dutyType"),
+        @JoinColumn(name = "duty_code", referencedColumnName = "dutyCode")
+    })
+    private DutyType dutyType;
+
+    private String tlsSuffix;
+    private String note;
+
+    @OneToOne(mappedBy = "tariffSchedule")
+    private Duty duty;
+
+    @OneToMany(mappedBy = "tariffSchedule")
+    private List<AuditLog> auditLogs;
 
     // No-argument constructor
     public TariffSchedule() {
     }
 
     // All-argument constructor
-    public TariffSchedule(Integer tariffId, Country reporter, Country partner, Integer year, Product product,
-            String tlsSuffix, DutyType dutyType, String dutyCode, String dutyTypeDescription, String dutyNature,
-            String avMethod, String note, List<DutyComponent> dutyComponents, List<AuditLog> auditLogs) {
+    public TariffSchedule(Integer tariffId, Country reporter, Country partner, Product product, String tlsSuffix,
+            DutyType dutyType, String note, Duty duty, List<AuditLog> auditLogs) {
         this.tariffId = tariffId;
         this.reporter = reporter;
         this.partner = partner;
-        this.year = year;
         this.product = product;
         this.tlsSuffix = tlsSuffix;
         this.dutyType = dutyType;
-        this.dutyCode = dutyCode;
-        this.dutyTypeDescription = dutyTypeDescription;
-        this.dutyNature = dutyNature;
-        this.avMethod = avMethod;
         this.note = note;
-        this.dutyComponents = dutyComponents;
+        this.duty = duty;
         this.auditLogs = auditLogs;
     }
-
-    private String tlsSuffix;
-
-    @ManyToOne
-    @JoinColumn(name = "duty_type_code")
-    private DutyType dutyType;
-
-    private String dutyCode;
-    private String dutyTypeDescription;
-    private String dutyNature;
-    private String avMethod;
-    private String note;
-
-    @OneToMany(mappedBy = "tariffSchedule")
-    private List<DutyComponent> dutyComponents;
-
-    @OneToMany(mappedBy = "tariffSchedule")
-    private List<AuditLog> auditLogs;
 
     // Getters and setters
     public Integer getTariffId() {
@@ -94,14 +86,6 @@ public class TariffSchedule {
         this.partner = partner;
     }
 
-    public Integer getYear() {
-        return year;
-    }
-
-    public void setYear(Integer year) {
-        this.year = year;
-    }
-
     public Product getProduct() {
         return product;
     }
@@ -126,37 +110,6 @@ public class TariffSchedule {
         this.dutyType = dutyType;
     }
 
-    public String getDutyCode() {
-        return dutyCode;
-    }
-
-    public void setDutyCode(String dutyCode) {
-        this.dutyCode = dutyCode;
-    }
-
-    public String getDutyTypeDescription() {
-        return dutyTypeDescription;
-    }
-
-    public void setDutyTypeDescription(String dutyTypeDescription) {
-        this.dutyTypeDescription = dutyTypeDescription;
-    }
-
-    public String getDutyNature() {
-        return dutyNature;
-    }
-
-    public void setDutyNature(String dutyNature) {
-        this.dutyNature = dutyNature;
-    }
-
-    public String getAvMethod() {
-        return avMethod;
-    }
-
-    public void setAvMethod(String avMethod) {
-        this.avMethod = avMethod;
-    }
 
     public String getNote() {
         return note;
@@ -166,19 +119,19 @@ public class TariffSchedule {
         this.note = note;
     }
 
-    public List<DutyComponent> getDutyComponents() {
-        return dutyComponents;
-    }
-
-    public void setDutyComponents(List<DutyComponent> dutyComponents) {
-        this.dutyComponents = dutyComponents;
-    }
-
     public List<AuditLog> getAuditLogs() {
         return auditLogs;
     }
 
     public void setAuditLogs(List<AuditLog> auditLogs) {
         this.auditLogs = auditLogs;
+    }
+
+    public Duty getDuty() {
+        return duty;
+    }
+
+    public void setDuty(Duty duty) {
+        this.duty = duty;
     }
 }

@@ -11,7 +11,6 @@ public class Product {
     @Id
     private String tlCode;
     private String description;
-    private String hsVersion;
     private Integer digits;
 
     @OneToMany(mappedBy = "product")
@@ -22,11 +21,10 @@ public class Product {
     }
 
     // All-argument constructor
-    public Product(String tlCode, String description, String hsVersion, Integer digits,
+    public Product(String tlCode, String description, Integer digits,
             List<TariffSchedule> tariffSchedules) {
         this.tlCode = tlCode;
         this.description = description;
-        this.hsVersion = hsVersion;
         this.digits = digits;
         this.tariffSchedules = tariffSchedules;
     }
@@ -46,14 +44,6 @@ public class Product {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getHsVersion() {
-        return hsVersion;
-    }
-
-    public void setHsVersion(String hsVersion) {
-        this.hsVersion = hsVersion;
     }
 
     public Integer getDigits() {
