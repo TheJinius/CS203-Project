@@ -12,3 +12,10 @@ variable "common_tags" {
     "project":"cs203"
   }
 }
+
+variable "environment" {
+  description = "Environment name (dev, stg, prod)"
+  type = string
+  default = "dev"
+}
+

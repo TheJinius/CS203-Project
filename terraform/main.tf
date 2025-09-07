@@ -1,5 +1,9 @@
-module "dynamodb" {
-  source = "./modules/dynamodb"
+module "network" {
+  source = "./modules/network"
+}
 
-  table_tags = var.common_tags
+
+module "rds" {
+  source = "./modules/rds"
+  
 }
