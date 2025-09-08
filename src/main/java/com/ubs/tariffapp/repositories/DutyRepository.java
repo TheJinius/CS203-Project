@@ -1,8 +1,0 @@
-package com.ubs.tariffapp.repositories;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.ubs.tariffapp.models.Duty;
-
-public interface DutyRepository extends JpaRepository<Duty, Integer> {
-}
