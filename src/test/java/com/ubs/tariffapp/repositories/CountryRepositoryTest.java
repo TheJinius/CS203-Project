@@ -1,27 +1,32 @@
 package com.ubs.tariffapp.repositories;
 
-import com.ubs.tariffapp.models.Country;
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Collections;
+import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.TariffSchedule;
 
 @DataJpaTest
 public class CountryRepositoryTest {
     private static final String COUNTRY_ID = "004";
     private static final String COUNTRY_NAME = "Afghanistan";
     private static final String ISO_CODE = "AFG";
+    private static final List<TariffSchedule> REPORTED_TARIFFS = Collections.emptyList();
+    private static final List<TariffSchedule> PARTNERED_TARIFFS = Collections.emptyList();
 
     @Autowired
     private CountryRepository countryRepository;
 
     @Test
-    void testSaveAndFindCountry() {
+    void testSaveAndFindById() {
         Country country = new Country(COUNTRY_ID, COUNTRY_NAME, ISO_CODE,
-                Collections.emptyList(), Collections.emptyList());
+                REPORTED_TARIFFS, PARTNERED_TARIFFS);
         countryRepository.save(country);
 
         Country found = countryRepository.findById(COUNTRY_ID).orElse(null);
@@ -30,5 +35,14 @@ public class CountryRepositoryTest {
         assertThat(found.getIsoCode()).isEqualTo(ISO_CODE);
         assertThat(found.getReportedTariffs()).isEmpty();
         assertThat(found.getPartneredTariffs()).isEmpty();
+    }
+
+    @Test
+    void testDelete() {
+        Country country = new Country(COUNTRY_ID, COUNTRY_NAME, ISO_CODE,
+                REPORTED_TARIFFS, PARTNERED_TARIFFS);
+        countryRepository.save(country);
+        countryRepository.deleteById(COUNTRY_ID);
+        assertThat(countryRepository.findById(COUNTRY_ID)).isEmpty();
     }
 }
