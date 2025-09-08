@@ -48,13 +48,13 @@ public class TariffSchedule {
     }
 
     // All-argument constructor
-    public TariffSchedule(Integer tariffId, Country reporter, Country partner, Product product, String tlsSuffix,
+    public TariffSchedule(Integer tariffId, Country reporter, Country partner, Product product, String tariffLineSuffix,
             DutyType dutyType, String note, Duty duty, List<AuditLog> auditLogs) {
         this.tariffId = tariffId;
         this.reporter = reporter;
         this.partner = partner;
         this.product = product;
-        this.tlsSuffix = tlsSuffix;
+        this.tlsSuffix = tariffLineSuffix;
         this.dutyType = dutyType;
         this.note = note;
         this.duty = duty;

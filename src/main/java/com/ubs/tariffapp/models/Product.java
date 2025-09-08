@@ -21,9 +21,9 @@ public class Product {
     }
 
     // All-argument constructor
-    public Product(String tlCode, String description, Integer digits,
+    public Product(String tariffLineCode, String description, Integer digits,
             List<TariffSchedule> tariffSchedules) {
-        this.tlCode = tlCode;
+        this.tlCode = tariffLineCode;
         this.description = description;
         this.digits = digits;
         this.tariffSchedules = tariffSchedules;
