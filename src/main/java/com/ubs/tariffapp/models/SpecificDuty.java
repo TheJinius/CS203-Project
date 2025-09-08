@@ -9,16 +9,18 @@ public class SpecificDuty extends Duty {
     private BigDecimal amount; // For exact float precision
     private String unit;
     private Integer multiplier;
+    private String specificDutyRateRaw;
 
     public SpecificDuty() {
     }
 
     public SpecificDuty(Integer tariffId, TariffSchedule tariffSchedule, String dutyNature, String mathExpression,
-            String rawText, BigDecimal amount, String unit, Integer multiplier) {
-        super(tariffId, tariffSchedule, dutyNature, mathExpression, rawText);
+            BigDecimal amount, String unit, Integer multiplier, String specificDutyRateRaw) {
+        super(tariffId, tariffSchedule, dutyNature, mathExpression);
         this.amount = amount;
         this.unit = unit;
         this.multiplier = multiplier;
+        this.specificDutyRateRaw = specificDutyRateRaw;
     }
 
     public BigDecimal getAmount() {
@@ -43,5 +45,13 @@ public class SpecificDuty extends Duty {
 
     public void setMultiplier(Integer multiplier) {
         this.multiplier = multiplier;
+    }
+
+    public String getSpecificDutyRateRaw() {
+        return specificDutyRateRaw;
+    }
+    
+    public void setSpecificDutyRateRaw(String specificDutyRateRaw) {
+        this.specificDutyRateRaw = specificDutyRateRaw;
     }
 }

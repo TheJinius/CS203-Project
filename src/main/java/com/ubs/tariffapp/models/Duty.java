@@ -22,18 +22,16 @@ public abstract class Duty {
 
     private String dutyNature;
     private String mathExpression;
-    private String rawText;
 
     public Duty() {
     }
 
-    public Duty(Integer tariffId, TariffSchedule tariffSchedule, String dutyNature, String mathExpression,
-            String rawText) {
+    public Duty(Integer tariffId, TariffSchedule tariffSchedule,
+            String dutyNature, String mathExpression) {
         this.tariffId = tariffId;
         this.tariffSchedule = tariffSchedule;
         this.dutyNature = dutyNature;
         this.mathExpression = mathExpression;
-        this.rawText = rawText;
     }
 
     // getters and setters
@@ -69,11 +67,4 @@ public abstract class Duty {
         this.mathExpression = mathExpression;
     }
 
-    public String getRawText() {
-        return rawText;
-    }
-
-    public void setRawText(String rawText) {
-        this.rawText = rawText;
-    }
 }

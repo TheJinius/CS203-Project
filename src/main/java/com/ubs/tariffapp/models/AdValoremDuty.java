@@ -12,8 +12,8 @@ public class AdValoremDuty extends Duty {
     }
 
     public AdValoremDuty(Integer tariffId, TariffSchedule tariffSchedule, String dutyNature, String mathExpression,
-            String rawText, BigDecimal ratePercent) {
-        super(tariffId, tariffSchedule, dutyNature, mathExpression, rawText);
+            BigDecimal ratePercent) {
+        super(tariffId, tariffSchedule, dutyNature, mathExpression);
         this.ratePercent = ratePercent;
     }
 
