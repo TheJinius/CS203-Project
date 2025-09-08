@@ -9,13 +9,14 @@ import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.CascadeType; 
 
 @Entity
 public class TariffSchedule {
     @Id
     private Integer tariffId;
 
-    private Integer year;
+    private Integer tariffYear;
 
     @ManyToOne
     @JoinColumn(name = "reporter_id")
@@ -39,7 +40,7 @@ public class TariffSchedule {
     private String tlsSuffix;
     private String note;
 
-    @OneToOne(mappedBy = "tariffSchedule")
+    @OneToOne(mappedBy = "tariffSchedule", cascade = CascadeType.ALL)
     private Duty duty;
 
     @OneToMany(mappedBy = "tariffSchedule")
@@ -51,12 +52,12 @@ public class TariffSchedule {
 
     // All-argument constructor
     public TariffSchedule(Integer tariffId, Country reporter, Country partner, 
-             Integer year, Product product, String tariffLineSuffix,  
+             Integer tariffYear, Product product, String tariffLineSuffix,  
              DutyType dutyType, String note, Duty duty, List<AuditLog> auditLogs) {
         this.tariffId = tariffId;
         this.reporter = reporter;
         this.partner = partner;
-        this.year = year;
+        this.tariffYear = tariffYear;
         this.product = product;
         this.tlsSuffix = tariffLineSuffix;
         this.dutyType = dutyType;
@@ -90,12 +91,12 @@ public class TariffSchedule {
         this.partner = partner;
     }
 
-    public Integer getYear() {
-        return year;
+    public Integer getTariffYear() {
+        return tariffYear;
     }
 
-    public void setYear(Integer year) {
-        this.year = year;
+    public void setTariffYear(Integer tariffYear) {
+        this.tariffYear = tariffYear;
     }
 
     public Product getProduct() {
