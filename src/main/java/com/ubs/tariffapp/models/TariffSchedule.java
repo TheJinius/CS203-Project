@@ -15,6 +15,8 @@ public class TariffSchedule {
     @Id
     private Integer tariffId;
 
+    private Integer year;
+
     @ManyToOne
     @JoinColumn(name = "reporter_id")
     private Country reporter;
@@ -48,11 +50,13 @@ public class TariffSchedule {
     }
 
     // All-argument constructor
-    public TariffSchedule(Integer tariffId, Country reporter, Country partner, Product product, String tariffLineSuffix,
-            DutyType dutyType, String note, Duty duty, List<AuditLog> auditLogs) {
+    public TariffSchedule(Integer tariffId, Country reporter, Country partner, 
+             Integer year, Product product, String tariffLineSuffix,  
+             DutyType dutyType, String note, Duty duty, List<AuditLog> auditLogs) {
         this.tariffId = tariffId;
         this.reporter = reporter;
         this.partner = partner;
+        this.year = year;
         this.product = product;
         this.tlsSuffix = tariffLineSuffix;
         this.dutyType = dutyType;
@@ -86,6 +90,14 @@ public class TariffSchedule {
         this.partner = partner;
     }
 
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
     public Product getProduct() {
         return product;
     }
@@ -109,7 +121,6 @@ public class TariffSchedule {
     public void setDutyType(DutyType dutyType) {
         this.dutyType = dutyType;
     }
-
 
     public String getNote() {
         return note;
