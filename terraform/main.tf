@@ -1,5 +1,6 @@
 module "network" {
   source = "./modules/network"
+  vpc_id = module.network.vpc_id
 }
 
 module "rds" {

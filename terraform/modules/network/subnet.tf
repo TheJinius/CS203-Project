@@ -27,7 +27,7 @@
 resource "aws_subnet" "public_rds_subnet_1" {
   vpc_id                  = aws_vpc.vpc.id
   availability_zone       = "ap-southeast-1a"
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = "10.10.1.0/24"
   map_public_ip_on_launch = true
 
   tags = {
@@ -39,7 +39,7 @@ resource "aws_subnet" "public_rds_subnet_1" {
 resource "aws_subnet" "public_rds_subnet_2" {
   vpc_id                  = aws_vpc.vpc.id
   availability_zone       = "ap-southeast-1b"
-  cidr_block              = "10.0.2.0/24"
+  cidr_block              = "10.10.2.0/24"
   map_public_ip_on_launch = true
 
   tags = {
@@ -49,9 +49,9 @@ resource "aws_subnet" "public_rds_subnet_2" {
 
 resource "aws_db_subnet_group" "rds_public_subnet_group" {
   name = "rds_public_subnet_group"
-  subnet_ids = [public_rds_subnet_1, public_rds_subnet_2]
+  subnet_ids = [aws_subnet.public_rds_subnet_1.id, aws_subnet.public_rds_subnet_2.id]
 
-  tags {
+  tags = {
     Name = "rds_public_subnet_group"
   }
 }
