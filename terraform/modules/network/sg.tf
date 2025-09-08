@@ -1,14 +1,13 @@
-resource "aws_security_group" "tariffs_db_security_group" {
-  name_prefix = "tariffs-db-sg-dev"
+resource "aws_security_group" "rds_sg" {
+  name_prefix = "rds_sg"
   vpc_id      = var.vpc_id
   description = "Security group for tariffs RDS database"
 
   ingress {
-    from_port   = 3306
-    to_port     = 3306
+    from_port   = 5432
+    to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = var.allowed_cidr_blocks
-    description = "postgres allowed cidr blocks"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -20,11 +19,7 @@ resource "aws_security_group" "tariffs_db_security_group" {
   }
 
   tags = {
-    Name        = "tariffs-db-security-group-dev"
+    Name        = "rds-subnet-group"
     Environment = var.Environment
-  }
-
-  lifecycle {
-    create_before_destroy = true
   }
 }
