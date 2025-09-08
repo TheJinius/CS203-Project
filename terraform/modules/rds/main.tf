@@ -11,11 +11,14 @@ resource "aws_db_instance" "postgres" {
   db_name                 = "cs203db"
   parameter_group_name    = "default.postgres15"
   publicly_accessible     = true
-  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
-  db_subnet_group_name    = aws_db_subnet_group.rds_subnet_group.name
+  vpc_security_group_ids  = [var.rds_sg_id]
+  db_subnet_group_name = var.rds_subnet_group_name
   skip_final_snapshot     = true
+  enabled_cloudwatch_logs_exports = ["general", "error", "slowquery"]
+  apply_immediately = true
 
   tags = {
     Name = "cs203-postgres-db"
+    Project = "cs203"
   }
 }

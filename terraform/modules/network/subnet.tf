@@ -46,3 +46,12 @@ resource "aws_subnet" "public_rds_subnet_2" {
     Name = "public_rds_subnet_2"
   }
 }
+
+resource "aws_db_subnet_group" "rds_public_subnet_group" {
+  name = "rds_public_subnet_group"
+  subnet_ids = [public_rds_subnet_1, public_rds_subnet_2]
+
+  tags {
+    Name = "rds_public_subnet_group"
+  }
+}

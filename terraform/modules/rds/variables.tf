@@ -9,7 +9,12 @@ variable "db_password" {
   sensitive   = true
 }
 
-variable "vpc_id" {
-    description = "id of vpc where rds is deployed"
-    type = string
+variable "rds_subnet_group_name" {
+  description = "subnet group name for rds"
+  type = string
+}
+
+variable "rds_sg_id" {
+  description = "id for rds security group"
+  type = string
 }
