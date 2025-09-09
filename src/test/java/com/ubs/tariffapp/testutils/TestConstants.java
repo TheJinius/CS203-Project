@@ -1,8 +1,10 @@
 package com.ubs.tariffapp.testutils;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
+import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.TariffSchedule;
 
 public class TestConstants {
@@ -33,8 +35,20 @@ public class TestConstants {
     public static final String REPORTER_ID = "840";
     public static final String REPORTER_NAME = "United States";
     public static final String REPORTER_ISO = "USA";
+    public static final List<TariffSchedule> REPORTER_REPORTED_TARIFFS = Collections.emptyList();
+    public static final List<TariffSchedule> REPORTER_PARTNERED_TARIFFS = Collections.emptyList();
 
     public static final String PARTNER_ID = "000";
     public static final String PARTNER_NAME = "World";
     public static final String PARTNER_ISO = "WLD";
+    public static final List<TariffSchedule> PARTNER_REPORTED_TARIFFS = Collections.emptyList();
+    public static final List<TariffSchedule> PARTNER_PARTNERED_TARIFFS = Collections.emptyList();
+
+    public static final List<AuditLog> AUDIT_LOGS = Collections.emptyList();
+
+    // For AdValoremDutyRepositoryTest
+    public static final String MATH_EXPRESSION = "0";
+    public static final BigDecimal RATE_PERCENT = BigDecimal.ZERO;
+
+
 }
