@@ -1,6 +1,7 @@
 package com.ubs.tariffapp.testutils;
 
 import com.ubs.tariffapp.models.AdValoremDuty;
+import com.ubs.tariffapp.models.SpecificDuty;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.models.DutyType;
@@ -82,15 +83,18 @@ public class TestEntityFactory {
                 return adValoremDuty;
         }
 
-        // public static SpecificDuty createSpecificDuty() {
-        // SpecificDuty specificDuty = new SpecificDuty(
-        // TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by
-        // @MapsId
-        // null, // TariffSchedule will be set later (see createTariffSchedule)
-        // TestConstants.DUTY_TYPE_DESCRIPTION,
-        // TestConstants.MATH_EXPRESSION,
-        // TestConstants.RATE_PERCENT);
-        // }
+        public static SpecificDuty createSpecificDuty() {
+                SpecificDuty specificDuty = new SpecificDuty(
+                                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                                null, // TariffSchedule will be set later (see createTariffSchedule)
+                                TestConstants.SPECIFIC_DUTY_NATURE,
+                                TestConstants.SPECIFIC_MATH_EXPRESSION,
+                                TestConstants.SPECIFIC_AMOUNT,
+                                TestConstants.SPECIFIC_UNIT,
+                                TestConstants.SPECIFIC_MULTIPLIER,
+                                TestConstants.SPECIFIC_DUTY_RATE_RAW);
+                return specificDuty;
+        }
 
         public static TariffSchedule createTariffSchedule(Country reporter,
                         Country partner, Product product, DutyType dutyType, Duty duty) {
@@ -128,7 +132,7 @@ public class TestEntityFactory {
                         DutyTypeRepository dutyTypeRepo,
                         TariffScheduleRepository scheduleRepo,
                         Duty childDuty) {
-                // Note that parent Java objects do not have their lists updated 
+                // Note that parent Java objects do not have their lists updated
                 // in memory when children are added
                 // But the database relationships are correctly established
                 Country reporter = createReporterCountry();

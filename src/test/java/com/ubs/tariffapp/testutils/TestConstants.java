@@ -8,6 +8,14 @@ import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.TariffSchedule;
 
 public class TestConstants {
+    /*
+     * Constants for testing purposes (taken from actual data)
+     * However, not all fields accurately reflect real-world data
+     * E.g. between USA and World, for the product with TL code 19019061 in 2023,
+     * it is an ad valorem duty with a rate of 0.0%, but we use this data
+     * to test both AdValoremDuty and SpecificDuty entities, using hypothetical values
+     * for SpecificDuty taken from another product
+     */
     // For CountryRepositoryTest
     public static final String COUNTRY_ID = "004";
     public static final String COUNTRY_NAME = "Afghanistan";
@@ -48,11 +56,18 @@ public class TestConstants {
 
     // For AdValoremDuty fields
     public static final String AD_VALOREM_DUTY_NATURE = "A"; // For AdValoremDuty
-    public static final String AD_VALOREM_MATH_EXPRESSION = "0";
+    public static final String AD_VALOREM_MATH_EXPRESSION = "0 * value";
     public static final BigDecimal AD_VALOREM_RATE_PERCENT = BigDecimal.ZERO;
 
     // For SpecificDuty fields
-    
+    public static final String SPECIFIC_DUTY_NATURE = "S"; // For SpecificDuty
+    // specific duty rate of 0.34 cents/liter
+    public static final String SPECIFIC_MATH_EXPRESSION = "0.0034 * num_units"; 
+    public static final BigDecimal SPECIFIC_AMOUNT = BigDecimal.valueOf(0.34); 
+    public static final String SPECIFIC_UNIT = "liter";
+    public static final Integer SPECIFIC_MULTIPLIER = 1; // Since rate is per 1 liter
+    public static final String SPECIFIC_DUTY_RATE_RAW = "0.34 cents/liter";
+    // TODO: Find a way to parse raw representation into structured fields
 
 
 }
