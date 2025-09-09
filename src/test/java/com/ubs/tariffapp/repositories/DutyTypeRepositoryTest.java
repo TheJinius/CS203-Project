@@ -11,13 +11,14 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.testutils.TestConstants;
 
 @DataJpaTest
 public class DutyTypeRepositoryTest {
-	private static final String DUTY_TYPE = "1";
-	private static final String DUTY_CODE = "A";
-	private static final String DESCRIPTION = "Free Trade Area duty rate for Dominican Rep. and Central America (DR-CAFTA)";
-    private static final List<TariffSchedule> TARIFF_SCHEDULES = Collections.emptyList();
+	private static final String DUTY_TYPE = TestConstants.DUTY_TYPE;
+	private static final String DUTY_CODE = TestConstants.DUTY_CODE;
+	private static final String DESCRIPTION = TestConstants.DUTY_TYPE_DESCRIPTION;
+	private static final List<TariffSchedule> TARIFF_SCHEDULES = TestConstants.DUTY_TYPE_TARIFF_SCHEDULES;
 
 	@Autowired
 	private DutyTypeRepository repository;

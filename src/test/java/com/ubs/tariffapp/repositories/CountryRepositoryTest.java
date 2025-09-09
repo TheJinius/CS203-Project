@@ -11,14 +11,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.testutils.TestConstants;
 
 @DataJpaTest
 public class CountryRepositoryTest {
-    private static final String COUNTRY_ID = "004";
-    private static final String COUNTRY_NAME = "Afghanistan";
-    private static final String ISO_CODE = "AFG";
-    private static final List<TariffSchedule> REPORTED_TARIFFS = Collections.emptyList();
-    private static final List<TariffSchedule> PARTNERED_TARIFFS = Collections.emptyList();
+    private static final String COUNTRY_ID = TestConstants.COUNTRY_ID;
+    private static final String COUNTRY_NAME = TestConstants.COUNTRY_NAME;
+    private static final String ISO_CODE = TestConstants.COUNTRY_ISO_CODE;
+    private static final List<TariffSchedule> REPORTED_TARIFFS = TestConstants.COUNTRY_REPORTED_TARIFFS;
+    private static final List<TariffSchedule> PARTNERED_TARIFFS = TestConstants.COUNTRY_PARTNERED_TARIFFS;
 
     @Autowired
     private CountryRepository countryRepository;

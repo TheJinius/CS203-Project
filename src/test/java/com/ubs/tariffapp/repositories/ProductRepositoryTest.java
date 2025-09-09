@@ -10,13 +10,14 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.testutils.TestConstants;
 
 @DataJpaTest
 public class ProductRepositoryTest {
-	private static final String TL_CODE = "72299005";
-	private static final String DESCRIPTION = "Alloy high-speed steel, wire";
+	private static final String TL_CODE = TestConstants.PRODUCT_TL_CODE;
+	private static final String DESCRIPTION = TestConstants.PRODUCT_DESCRIPTION;
 	private static final Integer DIGITS = TL_CODE.length();
-    private static final List<TariffSchedule> TARIFF_SCHEDULES = Collections.emptyList();
+    private static final List<TariffSchedule> TARIFF_SCHEDULES = TestConstants.PRODUCT_TARIFF_SCHEDULES;
 
 	@Autowired
 	private ProductRepository repository;
