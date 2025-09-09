@@ -19,7 +19,7 @@ import jakarta.persistence.UniqueConstraint;
 @Table(
     uniqueConstraints = {
         @UniqueConstraint(
-            name = "uq_tariff_business_key",
+            name = "unique_tariff_business_key",
             columnNames = {
                 "reporter_id",
                 "partner_id",
