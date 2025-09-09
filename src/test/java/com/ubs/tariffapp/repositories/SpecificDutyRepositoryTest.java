@@ -31,25 +31,25 @@ public class SpecificDutyRepositoryTest {
     void testSaveAndFindById() {
         SpecificDuty duty = TestEntityFactory.createSpecificDuty();
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
-            countryRepository,
-            productRepository,
-            dutyTypeRepository,
-            scheduleRepository,
-            duty
-        );
+                countryRepository,
+                productRepository,
+                dutyTypeRepository,
+                scheduleRepository,
+                duty);
 
         Integer generatedId = schedule.getTariffId();
         SpecificDuty found = dutyRepository.findById(generatedId).orElse(null);
 
         assertThat(found).isNotNull();
         assertThat(found.getTariffId()).isEqualTo(generatedId);
+        assertThat(found.getDutyNature()).isEqualTo(duty.getDutyNature());
+        assertThat(found.getMathExpression()).isEqualTo(duty.getMathExpression());
         assertThat(found.getAmount()).isEqualByComparingTo(duty.getAmount());
         assertThat(found.getUnit()).isEqualTo(duty.getUnit());
         assertThat(found.getMultiplier()).isEqualTo(duty.getMultiplier());
         assertThat(found.getSpecificDutyRateRaw()).isEqualTo(duty.getSpecificDutyRateRaw());
-        assertThat(found.getDutyNature()).isEqualTo(duty.getDutyNature());
-        assertThat(found.getMathExpression()).isEqualTo(duty.getMathExpression());
-        assertThat(found.getTariffSchedule()).isNotNull(); 
+
+        assertThat(found.getTariffSchedule()).isNotNull();
         // Only check if TariffSchedule is not null
     }
 
@@ -57,16 +57,15 @@ public class SpecificDutyRepositoryTest {
     void testDelete() {
         SpecificDuty duty = TestEntityFactory.createSpecificDuty();
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
-            countryRepository,
-            productRepository,
-            dutyTypeRepository,
-            scheduleRepository,
-            duty
-        );
+                countryRepository,
+                productRepository,
+                dutyTypeRepository,
+                scheduleRepository,
+                duty);
 
         Integer generatedId = schedule.getTariffId();
         dutyRepository.deleteById(generatedId);
-        
+
         assertThat(dutyRepository.findById(generatedId)).isEmpty();
     }
 }
