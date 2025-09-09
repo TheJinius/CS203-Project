@@ -97,7 +97,7 @@ public class TestEntityFactory {
                 return specificDuty;
         }
 
-        public static Duty createCombinedDuty() {
+        public static CombinedDuty createCombinedDuty() {
                 // CombinedDuty reuses fields from both AdValoremDuty and SpecificDuty
                 CombinedDuty combinedDuty = new CombinedDuty(
                                 TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
