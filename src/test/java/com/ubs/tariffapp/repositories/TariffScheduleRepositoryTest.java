@@ -29,6 +29,7 @@ public class TariffScheduleRepositoryTest {
 
     @Test
     void testSaveAndFindById() {
+        // TODO: Test with generic Duty (after we make Duty a concrete class)
         Duty duty = TestEntityFactory.createAdValoremDuty();
 
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
