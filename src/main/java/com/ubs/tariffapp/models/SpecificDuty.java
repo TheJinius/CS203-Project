@@ -17,7 +17,8 @@ public class SpecificDuty extends Duty {
     public SpecificDuty(Integer tariffId, TariffSchedule tariffSchedule, String dutyNature, String mathExpression,
             BigDecimal amount, String unit, Integer multiplier, String specificDutyRateRaw) {
         super(tariffId, tariffSchedule, dutyNature, mathExpression);
-        this.amount = amount;
+        // E.g. for 5 USD/100 kg": amount = 5, unit = "kg", multiplier = 100
+        this.amount = amount; 
         this.unit = unit;
         this.multiplier = multiplier;
         this.specificDutyRateRaw = specificDutyRateRaw;
