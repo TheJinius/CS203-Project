@@ -11,9 +11,27 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne; 
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint; 
 
 @Entity
+@Table(
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uq_tariff_business_key",
+            columnNames = {
+                "reporter_id",
+                "partner_id",
+                "tl_code",
+                "duty_type",
+                "duty_code",
+                "year",
+                "tls_suffix"
+            }
+        )
+    }
+)
 public class TariffSchedule {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
