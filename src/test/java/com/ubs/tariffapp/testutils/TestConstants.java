@@ -3,6 +3,7 @@ package com.ubs.tariffapp.testutils;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.time.LocalDateTime;
 
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.TariffSchedule;
@@ -73,5 +74,12 @@ public class TestConstants {
     public static final String COMBINED_DUTY_NATURE = "C"; // For CombinedDuty
     public static final String MIXED_OR_CONDITIONAL = "M"; // 'M'ixed or 'C'onditional
     public static final String COMBINED_MATH_EXPRESSION = SPECIFIC_MATH_EXPRESSION + " + " + AD_VALOREM_MATH_EXPRESSION;
+
+    // For AuditLogRepositoryTest
+    public static final Integer AUDIT_LOG_ID = null; // Changed to null to allow auto-generation
+    public static final String AUDIT_CHANGE_TYPE = "CREATE";
+    public static final String AUDIT_CHANGED_BY = "test_admin";
+    public static final LocalDateTime AUDIT_CHANGE_DATE = LocalDateTime.of(2023, 1, 1, 12, 0);
+    public static final String AUDIT_CHANGE_DETAILS = "Created tariff schedule entry for testing";
 
 }

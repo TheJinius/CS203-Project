@@ -1,6 +1,7 @@
 package com.ubs.tariffapp.testutils;
 
 import com.ubs.tariffapp.models.AdValoremDuty;
+import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.SpecificDuty;
 import com.ubs.tariffapp.models.CombinedDuty;
 import com.ubs.tariffapp.models.Country;
@@ -100,7 +101,7 @@ public class TestEntityFactory {
         public static CombinedDuty createCombinedDuty() {
                 // CombinedDuty reuses fields from both AdValoremDuty and SpecificDuty
                 CombinedDuty combinedDuty = new CombinedDuty(
-                                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                                TestConstants.TARIFF_ID, // null in TestConstants - ID will be set by auto-increment
                                 null, // TariffSchedule will be set later (see createTariffSchedule)
                                 TestConstants.COMBINED_DUTY_NATURE,
                                 TestConstants.COMBINED_MATH_EXPRESSION,
@@ -171,5 +172,16 @@ public class TestEntityFactory {
 
                 scheduleRepo.save(schedule);
                 return schedule;
+        }
+
+        public static AuditLog createAuditLog(TariffSchedule tariffSchedule) {
+                AuditLog log = new AuditLog(
+                                TestConstants.AUDIT_LOG_ID, // Null in TestConstants - ID will be set by auto-increment
+                                tariffSchedule,
+                                TestConstants.AUDIT_CHANGE_TYPE,
+                                TestConstants.AUDIT_CHANGED_BY,
+                                TestConstants.AUDIT_CHANGE_DATE,
+                                TestConstants.AUDIT_CHANGE_DETAILS);
+                return log;
         }
 }
