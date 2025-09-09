@@ -14,32 +14,34 @@ import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
 import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.testutils.TestConstants;
 
 @DataJpaTest
 public class TariffScheduleRepositoryTest {
     // Testing data is from a real dataset entry
-    private static final Integer TARIFF_ID = null; // Changed to null to allow auto-generation
-    private static final Integer TARIFF_YEAR = 2023;
-    private static final String TLS_SUFFIX = "";
-    private static final String NOTE = "TL_IN added";
+    private static final Integer TARIFF_ID = TestConstants.TARIFF_ID;
+    private static final Integer TARIFF_YEAR = TestConstants.TARIFF_YEAR;
+    private static final String TLS_SUFFIX = TestConstants.TLS_SUFFIX;
+    private static final String NOTE = TestConstants.NOTE;
 
-    private static final String REPORTER_ID = "840";
-    private static final String REPORTER_NAME = "United States";
-    private static final String REPORTER_ISO = "USA";
+    private static final String REPORTER_ID = TestConstants.REPORTER_ID;
+    private static final String REPORTER_NAME = TestConstants.REPORTER_NAME;
+    private static final String REPORTER_ISO = TestConstants.REPORTER_ISO;
 
-    private static final String PARTNER_ID = "000";
-    private static final String PARTNER_NAME = "World";
-    private static final String PARTNER_ISO = "WLD";
+    private static final String PARTNER_ID = TestConstants.PARTNER_ID;
+    private static final String PARTNER_NAME = TestConstants.PARTNER_NAME;
+    private static final String PARTNER_ISO = TestConstants.PARTNER_ISO;
 
-    private static final String PRODUCT_CODE = "19019061";
-    private static final String PRODUCT_DESC = "Malted milk described in additional US note 10 to chapter 4: provisional";
+    private static final String PRODUCT_CODE = TestConstants.PRODUCT_TL_CODE;
+    private static final String PRODUCT_DESC = TestConstants.PRODUCT_DESCRIPTION;
     private static final Integer PRODUCT_DIGITS = PRODUCT_CODE.length();
 
-    private static final String DUTY_TYPE = "1";
-    private static final String DUTY_CODE = "1";
-    private static final String DUTY_DESC = "Free-trade area duty rates for Mexico under the NAFTA";
+    private static final String DUTY_TYPE = TestConstants.DUTY_TYPE;
+    private static final String DUTY_CODE = TestConstants.DUTY_CODE;
+    private static final String DUTY_DESC = TestConstants.DUTY_TYPE_DESCRIPTION;
 
     // For AdValoremDuty
+    // TODO: Move to TestConstants if needed in other tests
     private static final String MATH_EXPRESSION = "0";
     private static final BigDecimal RATE_PERCENT = BigDecimal.ZERO;
 

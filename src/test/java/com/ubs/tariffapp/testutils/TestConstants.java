@@ -14,13 +14,27 @@ public class TestConstants {
     public static final List<TariffSchedule> COUNTRY_PARTNERED_TARIFFS = Collections.emptyList();
 
     // For ProductRepositoryTest
-    public static final String PRODUCT_TL_CODE = "72299005";
-    public static final String PRODUCT_DESCRIPTION = "Alloy high-speed steel, wire";
+    public static final String PRODUCT_TL_CODE = "19019061";
+    public static final String PRODUCT_DESCRIPTION = "Malted milk described in additional US note 10 to chapter 4: provisional";
     public static final List<TariffSchedule> PRODUCT_TARIFF_SCHEDULES = Collections.emptyList();
 
     // For DutyTypeRepositoryTest
     public static final String DUTY_TYPE = "1";
-	public static final String DUTY_CODE = "A";
-	public static final String DUTY_TYPE_DESCRIPTION = "Free Trade Area duty rate for Dominican Rep. and Central America (DR-CAFTA)";
+    public static final String DUTY_CODE = "1";
+    public static final String DUTY_TYPE_DESCRIPTION = "Free-trade area duty rates for Mexico under the NAFTA";
     public static final List<TariffSchedule> DUTY_TYPE_TARIFF_SCHEDULES = Collections.emptyList();
+
+    // For TariffScheduleRepositoryTest
+    public static final Integer TARIFF_ID = null; // Changed to null to allow auto-generation
+    public static final Integer TARIFF_YEAR = 2023;
+    public static final String TLS_SUFFIX = "";
+    public static final String NOTE = "TL_IN added";
+
+    public static final String REPORTER_ID = "840";
+    public static final String REPORTER_NAME = "United States";
+    public static final String REPORTER_ISO = "USA";
+
+    public static final String PARTNER_ID = "000";
+    public static final String PARTNER_NAME = "World";
+    public static final String PARTNER_ISO = "WLD";
 }
