@@ -1,101 +1,155 @@
 package com.ubs.tariffapp.testutils;
 
-import java.util.Collections;
-
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
 import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.DutyTypeRepository;
+import com.ubs.tariffapp.repositories.ProductRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.Duty;
+import com.ubs.tariffapp.models.SpecificDuty;
 
 public class TestEntityFactory {
-    // For CountryRepositoryTest
-    public static Country createCountry() {
-        Country country = new Country(
-                TestConstants.COUNTRY_ID,
-                TestConstants.COUNTRY_NAME,
-                TestConstants.COUNTRY_ISO_CODE,
-                TestConstants.COUNTRY_REPORTED_TARIFFS,
-                TestConstants.COUNTRY_PARTNERED_TARIFFS);
+        // For CountryRepositoryTest
+        public static Country createCountry() {
+                Country country = new Country(
+                                TestConstants.COUNTRY_ID,
+                                TestConstants.COUNTRY_NAME,
+                                TestConstants.COUNTRY_ISO_CODE,
+                                TestConstants.COUNTRY_REPORTED_TARIFFS,
+                                TestConstants.COUNTRY_PARTNERED_TARIFFS);
 
-        return country;
-    }
+                return country;
+        }
 
-    // For ProductRepositoryTest
-    public static Product createProduct() {
-        Product product = new Product(
-                TestConstants.PRODUCT_TL_CODE,
-                TestConstants.PRODUCT_DESCRIPTION,
-                TestConstants.PRODUCT_TL_CODE.length(),
-                TestConstants.PRODUCT_TARIFF_SCHEDULES);
+        // For ProductRepositoryTest
+        public static Product createProduct() {
+                Product product = new Product(
+                                TestConstants.PRODUCT_TL_CODE,
+                                TestConstants.PRODUCT_DESCRIPTION,
+                                TestConstants.PRODUCT_TL_CODE.length(),
+                                TestConstants.PRODUCT_TARIFF_SCHEDULES);
 
-        return product;
-    }
+                return product;
+        }
 
-    // For TariffScheduleRepositoryTest
-    public static Country createReporterCountry() {
-        Country reporter = new Country(
-                TestConstants.REPORTER_ID,
-                TestConstants.REPORTER_NAME,
-                TestConstants.REPORTER_ISO,
-                TestConstants.REPORTER_REPORTED_TARIFFS,
-                TestConstants.REPORTER_PARTNERED_TARIFFS);
+        // For TariffScheduleRepositoryTest
+        public static Country createReporterCountry() {
+                Country reporter = new Country(
+                                TestConstants.REPORTER_ID,
+                                TestConstants.REPORTER_NAME,
+                                TestConstants.REPORTER_ISO,
+                                TestConstants.REPORTER_REPORTED_TARIFFS,
+                                TestConstants.REPORTER_PARTNERED_TARIFFS);
 
-        return reporter;
-    }
+                return reporter;
+        }
 
-    public static Country createPartnerCountry() {
-        Country partner = new Country(
-                TestConstants.PARTNER_ID,
-                TestConstants.PARTNER_NAME,
-                TestConstants.PARTNER_ISO,
-                TestConstants.PARTNER_REPORTED_TARIFFS,
-                TestConstants.PARTNER_PARTNERED_TARIFFS);
+        public static Country createPartnerCountry() {
+                Country partner = new Country(
+                                TestConstants.PARTNER_ID,
+                                TestConstants.PARTNER_NAME,
+                                TestConstants.PARTNER_ISO,
+                                TestConstants.PARTNER_REPORTED_TARIFFS,
+                                TestConstants.PARTNER_PARTNERED_TARIFFS);
 
-        return partner;
-    }
+                return partner;
+        }
 
-    public static DutyType createDutyType() {
-        DutyTypeId dutyTypeId = new DutyTypeId(
-                TestConstants.DUTY_TYPE,
-                TestConstants.DUTY_CODE);
+        public static DutyType createDutyType() {
+                DutyTypeId dutyTypeId = new DutyTypeId(
+                                TestConstants.DUTY_TYPE,
+                                TestConstants.DUTY_CODE);
 
-        DutyType dutyType = new DutyType(
-                dutyTypeId,
-                TestConstants.DUTY_TYPE_DESCRIPTION,
-                TestConstants.DUTY_TYPE_TARIFF_SCHEDULES);
+                DutyType dutyType = new DutyType(
+                                dutyTypeId,
+                                TestConstants.DUTY_TYPE_DESCRIPTION,
+                                TestConstants.DUTY_TYPE_TARIFF_SCHEDULES);
 
-        return dutyType;
-    }
+                return dutyType;
+        }
 
-    public static Duty createAdValoremDuty() {
-        Duty duty = new AdValoremDuty(
-                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
-                null, // TariffSchedule will be set later (see createTariffSchedule)
-                TestConstants.DUTY_TYPE_DESCRIPTION,
-                TestConstants.MATH_EXPRESSION,
-                TestConstants.RATE_PERCENT);
-        return duty;
-    }
+        public static Duty createAdValoremDuty() {
+                AdValoremDuty adValoremDuty = new AdValoremDuty(
+                                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                                null, // TariffSchedule will be set later (see createTariffSchedule)
+                                TestConstants.DUTY_TYPE_DESCRIPTION,
+                                TestConstants.MATH_EXPRESSION,
+                                TestConstants.RATE_PERCENT);
+                return adValoremDuty;
+        }
 
-    public static TariffSchedule createTariffSchedule(Country reporter,
-            Country partner, Product product, DutyType dutyType, Duty duty) {
+        // public static Duty createSpecificDuty() {
+        // SpecificDuty specificDuty = new SpecificDuty(
+        // TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by
+        // @MapsId
+        // null, // TariffSchedule will be set later (see createTariffSchedule)
+        // TestConstants.DUTY_TYPE_DESCRIPTION,
+        // TestConstants.MATH_EXPRESSION,
+        // TestConstants.RATE_PERCENT);
+        // }
 
-        TariffSchedule schedule = new TariffSchedule(
-                TestConstants.TARIFF_ID,
-                reporter,
-                partner,
-                TestConstants.TARIFF_YEAR,
-                product,
-                TestConstants.TLS_SUFFIX,
-                dutyType,
-                TestConstants.NOTE,
-                duty,
-                TestConstants.AUDIT_LOGS);
+        public static TariffSchedule createTariffSchedule(Country reporter,
+                        Country partner, Product product, DutyType dutyType, Duty duty) {
 
-        duty.setTariffSchedule(schedule);
-        return schedule;
-    }
+                TariffSchedule schedule = new TariffSchedule(
+                                TestConstants.TARIFF_ID,
+                                reporter,
+                                partner,
+                                TestConstants.TARIFF_YEAR,
+                                product,
+                                TestConstants.TLS_SUFFIX,
+                                dutyType,
+                                TestConstants.NOTE,
+                                duty,
+                                TestConstants.AUDIT_LOGS);
+
+                duty.setTariffSchedule(schedule);
+                return schedule;
+        }
+
+        /**
+         * Higher level helper method to create and persist a complete TariffSchedule
+         * with all its parent entities persisted as well.
+         * 
+         * @param countryRepo
+         * @param productRepo
+         * @param dutyTypeRepo
+         * @param scheduleRepo
+         * @param childDuty
+         * @return
+         */
+        public static TariffSchedule createAndPersistTariffSchedule(
+                        CountryRepository countryRepo,
+                        ProductRepository productRepo,
+                        DutyTypeRepository dutyTypeRepo,
+                        TariffScheduleRepository scheduleRepo,
+                        Duty childDuty) {
+                // Note that parent Java objects do not have their lists updated 
+                // in memory when children are added
+                // But the database relationships are correctly established
+                Country reporter = createReporterCountry();
+                Country partner = createPartnerCountry();
+                Product product = createProduct();
+                DutyType dutyType = createDutyType();
+
+                countryRepo.save(reporter);
+                countryRepo.save(partner);
+                productRepo.save(product);
+                dutyTypeRepo.save(dutyType);
+
+                TariffSchedule schedule = createTariffSchedule(
+                                reporter,
+                                partner,
+                                product,
+                                dutyType,
+                                childDuty);
+
+                scheduleRepo.save(schedule);
+                return schedule;
+        }
 }
