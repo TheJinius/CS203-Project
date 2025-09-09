@@ -56,7 +56,11 @@ public class AdValoremDutyRepositoryTest {
     void testDelete() {
         AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
-            countryRepository, productRepository, dutyTypeRepository, scheduleRepository, duty
+            countryRepository, 
+            productRepository, 
+            dutyTypeRepository, 
+            scheduleRepository, 
+            duty
         );
 
         Integer generatedId = schedule.getTariffId();
