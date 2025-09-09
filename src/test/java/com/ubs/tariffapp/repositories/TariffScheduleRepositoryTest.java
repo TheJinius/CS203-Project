@@ -52,11 +52,6 @@ public class TariffScheduleRepositoryTest {
         assertThat(found.getDutyType().getDutyTypeDescription()).isEqualTo(schedule.getDutyType().getDutyTypeDescription());
         assertThat(found.getDuty()).isNotNull(); // Only check if duty is not null
         // We will check the duty's fields in the relevant subclasses repository tests
-
-        // Test for this in AdvaloremDutyRepositoryTest instead
-        // assertThat(found.getDuty().getDutyNature()).isEqualTo(schedule.getDuty().getDutyNature());
-        // assertThat(found.getDuty().getMathExpression()).isEqualTo(schedule.getDuty().getMathExpression());
-        // assertThat(((AdValoremDuty) found.getDuty()).getRatePercent()).isEqualByComparingTo(schedule.getDuty().getRatePercent());
     }
 
     @Test
