@@ -1,0 +1,101 @@
+package com.ubs.tariffapp.testutils;
+
+import java.util.Collections;
+
+import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.DutyType;
+import com.ubs.tariffapp.models.DutyTypeId;
+import com.ubs.tariffapp.models.Product;
+import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.AdValoremDuty;
+import com.ubs.tariffapp.models.Duty;
+
+public class TestEntityFactory {
+    // For CountryRepositoryTest
+    public static Country createCountry() {
+        Country country = new Country(
+                TestConstants.COUNTRY_ID,
+                TestConstants.COUNTRY_NAME,
+                TestConstants.COUNTRY_ISO_CODE,
+                TestConstants.COUNTRY_REPORTED_TARIFFS,
+                TestConstants.COUNTRY_PARTNERED_TARIFFS);
+
+        return country;
+    }
+
+    // For ProductRepositoryTest
+    public static Product createProduct() {
+        Product product = new Product(
+                TestConstants.PRODUCT_TL_CODE,
+                TestConstants.PRODUCT_DESCRIPTION,
+                TestConstants.PRODUCT_TL_CODE.length(),
+                TestConstants.PRODUCT_TARIFF_SCHEDULES);
+
+        return product;
+    }
+
+    // For TariffScheduleRepositoryTest
+    public static Country createReporterCountry() {
+        Country reporter = new Country(
+                TestConstants.REPORTER_ID,
+                TestConstants.REPORTER_NAME,
+                TestConstants.REPORTER_ISO,
+                TestConstants.REPORTER_REPORTED_TARIFFS,
+                TestConstants.REPORTER_PARTNERED_TARIFFS);
+
+        return reporter;
+    }
+
+    public static Country createPartnerCountry() {
+        Country partner = new Country(
+                TestConstants.PARTNER_ID,
+                TestConstants.PARTNER_NAME,
+                TestConstants.PARTNER_ISO,
+                TestConstants.PARTNER_REPORTED_TARIFFS,
+                TestConstants.PARTNER_PARTNERED_TARIFFS);
+
+        return partner;
+    }
+
+    public static DutyType createDutyType() {
+        DutyTypeId dutyTypeId = new DutyTypeId(
+                TestConstants.DUTY_TYPE,
+                TestConstants.DUTY_CODE);
+
+        DutyType dutyType = new DutyType(
+                dutyTypeId,
+                TestConstants.DUTY_TYPE_DESCRIPTION,
+                TestConstants.DUTY_TYPE_TARIFF_SCHEDULES);
+
+        return dutyType;
+    }
+
+    public static Duty createAdValoremDuty() {
+        Duty duty = new AdValoremDuty(
+                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                null, // TariffSchedule will be set later (see createTariffSchedule)
+                TestConstants.DUTY_TYPE_DESCRIPTION,
+                TestConstants.MATH_EXPRESSION,
+                TestConstants.RATE_PERCENT);
+        return duty;
+    }
+
+    public static TariffSchedule createTariffSchedule(Country reporter,
+            Country partner, Product product, DutyType dutyType, Duty duty) {
+
+        TariffSchedule schedule = new TariffSchedule(
+                TestConstants.TARIFF_ID,
+                reporter,
+                partner,
+                TestConstants.TARIFF_YEAR,
+                product,
+                TestConstants.TLS_SUFFIX,
+                dutyType,
+                TestConstants.NOTE,
+                duty,
+                TestConstants.AUDIT_LOGS);
+
+        duty.setTariffSchedule(schedule);
+        return schedule;
+    }
+}
