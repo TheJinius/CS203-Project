@@ -1,26 +1,24 @@
 package com.ubs.tariffapp.repositories;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 
-import java.math.BigDecimal;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.Country;
-import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
-import com.ubs.tariffapp.models.AdValoremDuty;
+import com.ubs.tariffapp.models.Product;
+import com.ubs.tariffapp.models.TariffSchedule;
 
 @DataJpaTest
 public class TariffScheduleRepositoryTest {
     // Testing data is from a real dataset entry
-    private static final Integer TARIFF_ID = 1;
+    private static final Integer TARIFF_ID = null; // Changed to null to allow auto-generation
     private static final Integer TARIFF_YEAR = 2023;
     private static final String TLS_SUFFIX = "";
     private static final String NOTE = "TL_IN added";
@@ -102,7 +100,9 @@ public class TariffScheduleRepositoryTest {
         duty.setTariffSchedule(schedule);
         repository.save(schedule);
 
-        TariffSchedule found = repository.findById(TARIFF_ID).orElse(null);
+        Integer generatedId = schedule.getTariffId();
+
+        TariffSchedule found = repository.findById(generatedId).orElse(null);
         assertThat(found).isNotNull();
         assertThat(found.getTariffYear()).isEqualTo(TARIFF_YEAR);
         assertThat(found.getTlsSuffix()).isEqualTo(TLS_SUFFIX);
@@ -155,7 +155,9 @@ public class TariffScheduleRepositoryTest {
         duty.setTariffSchedule(schedule);
         repository.save(schedule);
 
-        repository.deleteById(TARIFF_ID);
-        assertThat(repository.findById(TARIFF_ID)).isEmpty();
+        Integer generatedId = schedule.getTariffId();
+
+        repository.deleteById(generatedId);
+        assertThat(repository.findById(generatedId)).isEmpty();
     }
 }
