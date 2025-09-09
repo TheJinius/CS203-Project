@@ -69,5 +69,9 @@ public class TestConstants {
     public static final String SPECIFIC_DUTY_RATE_RAW = "0.34 cents/liter";
     // TODO: Find a way to parse raw representation into structured fields
 
+    // Note: We reuse the fields for CombinedDuty from both AdValoremDuty and SpecificDuty
+    public static final String COMBINED_DUTY_NATURE = "C"; // For CombinedDuty
+    public static final String MIXED_OR_CONDITIONAL = "M"; // 'M'ixed or 'C'onditional
+    public static final String COMBINED_MATH_EXPRESSION = SPECIFIC_MATH_EXPRESSION + " + " + AD_VALOREM_MATH_EXPRESSION;
 
 }

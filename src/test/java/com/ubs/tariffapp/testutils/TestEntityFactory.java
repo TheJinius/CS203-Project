@@ -2,6 +2,7 @@ package com.ubs.tariffapp.testutils;
 
 import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.SpecificDuty;
+import com.ubs.tariffapp.models.CombinedDuty;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.models.DutyType;
@@ -94,6 +95,22 @@ public class TestEntityFactory {
                                 TestConstants.SPECIFIC_MULTIPLIER,
                                 TestConstants.SPECIFIC_DUTY_RATE_RAW);
                 return specificDuty;
+        }
+
+        public static Duty createCombinedDuty() {
+                // CombinedDuty reuses fields from both AdValoremDuty and SpecificDuty
+                CombinedDuty combinedDuty = new CombinedDuty(
+                                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                                null, // TariffSchedule will be set later (see createTariffSchedule)
+                                TestConstants.COMBINED_DUTY_NATURE,
+                                TestConstants.COMBINED_MATH_EXPRESSION,
+                                TestConstants.MIXED_OR_CONDITIONAL,
+                                TestConstants.AD_VALOREM_RATE_PERCENT,
+                                TestConstants.SPECIFIC_AMOUNT,
+                                TestConstants.SPECIFIC_UNIT,
+                                TestConstants.SPECIFIC_MULTIPLIER,
+                                TestConstants.SPECIFIC_DUTY_RATE_RAW);
+                return combinedDuty;
         }
 
         public static TariffSchedule createTariffSchedule(Country reporter,
