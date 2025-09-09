@@ -47,8 +47,9 @@ public class TestConstants {
     public static final List<AuditLog> AUDIT_LOGS = Collections.emptyList();
 
     // For AdValoremDuty fields
-    public static final String MATH_EXPRESSION = "0";
-    public static final BigDecimal RATE_PERCENT = BigDecimal.ZERO;
+    public static final String AD_VALOREM_DUTY_NATURE = "A"; // For AdValoremDuty
+    public static final String AD_VALOREM_MATH_EXPRESSION = "0";
+    public static final BigDecimal AD_VALOREM_RATE_PERCENT = BigDecimal.ZERO;
 
     // For SpecificDuty fields
     

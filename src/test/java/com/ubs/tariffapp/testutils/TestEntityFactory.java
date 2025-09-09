@@ -1,6 +1,8 @@
 package com.ubs.tariffapp.testutils;
 
+import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
 import com.ubs.tariffapp.models.Product;
@@ -9,9 +11,6 @@ import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
 import com.ubs.tariffapp.repositories.TariffScheduleRepository;
-import com.ubs.tariffapp.models.AdValoremDuty;
-import com.ubs.tariffapp.models.Duty;
-import com.ubs.tariffapp.models.SpecificDuty;
 
 public class TestEntityFactory {
         // For CountryRepositoryTest
@@ -77,9 +76,9 @@ public class TestEntityFactory {
                 AdValoremDuty adValoremDuty = new AdValoremDuty(
                                 TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
                                 null, // TariffSchedule will be set later (see createTariffSchedule)
-                                TestConstants.DUTY_TYPE_DESCRIPTION,
-                                TestConstants.MATH_EXPRESSION,
-                                TestConstants.RATE_PERCENT);
+                                TestConstants.AD_VALOREM_DUTY_NATURE,
+                                TestConstants.AD_VALOREM_MATH_EXPRESSION,
+                                TestConstants.AD_VALOREM_RATE_PERCENT);
                 return adValoremDuty;
         }
 
