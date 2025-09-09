@@ -73,7 +73,7 @@ public class TestEntityFactory {
                 return dutyType;
         }
 
-        public static Duty createAdValoremDuty() {
+        public static AdValoremDuty createAdValoremDuty() {
                 AdValoremDuty adValoremDuty = new AdValoremDuty(
                                 TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
                                 null, // TariffSchedule will be set later (see createTariffSchedule)
@@ -83,7 +83,7 @@ public class TestEntityFactory {
                 return adValoremDuty;
         }
 
-        // public static Duty createSpecificDuty() {
+        // public static SpecificDuty createSpecificDuty() {
         // SpecificDuty specificDuty = new SpecificDuty(
         // TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by
         // @MapsId
