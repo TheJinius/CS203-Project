@@ -58,6 +58,12 @@
             <version>20250517</version>
         </dependency>
 
+        <!-- For building RESTful web services -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

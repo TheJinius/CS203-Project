@@ -26,12 +26,12 @@ public class TariffRepositoryTest {
     private static final String CURRENCY = "SGD";
 
     @Autowired
-    private TariffRepository tariffRepository;
+    private DutyRepository tariffRepository;
 
     @Test
     void testSaveAndFindTariff() {
         Surcharge surcharge = new Surcharge(TYPE, SURCHARGE_AMOUNT, CURRENCY);
-        Tariff tariff = new Tariff(
+        Duty tariff = new Duty(
             ORIGIN,
             LocalDateTime.now(),
             TAX_RATE,
@@ -43,7 +43,7 @@ public class TariffRepositoryTest {
 
         tariffRepository.save(tariff);
 
-        Tariff found = tariffRepository.findById(ORIGIN).orElse(null);
+        Duty found = tariffRepository.findById(ORIGIN).orElse(null);
         assertThat(found).isNotNull();
         assertThat(found.getBaseCurrency()).isEqualTo(CURRENCY);
         assertThat(found.getSurcharges()).hasSize(1); // We only added one surcharge

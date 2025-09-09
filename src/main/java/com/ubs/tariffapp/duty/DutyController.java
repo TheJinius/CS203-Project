@@ -1,17 +1,17 @@
-package com.ubs.tariffapp.tariff;
+package com.ubs.tariffapp.duty;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.ubs.tariffapp.models.Tariff;
+
 
 @RestController
 @RequestMapping("/api/tariffs")
-public class TariffController {
+public class DutyController {
     
-    private final TariffService tariffService;
+    private final DutyService tariffService;
 
     @Autowired
-    public TariffController(TariffService tariffService) {
+    public DutyController(DutyService tariffService) {
         this.tariffService = tariffService;
     }
 
