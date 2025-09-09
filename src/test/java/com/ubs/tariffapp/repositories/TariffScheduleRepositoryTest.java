@@ -6,9 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-import com.ubs.tariffapp.models.Country;
-import com.ubs.tariffapp.models.DutyType;
-import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.testutils.TestEntityFactory;
@@ -32,33 +29,15 @@ public class TariffScheduleRepositoryTest {
 
     @Test
     void testSaveAndFindById() {
-        // Parent Java objects do not have their lists updated in memory when children
-        // are added
-        // But the database relationships are correctly established
-        Country reporter = TestEntityFactory.createReporterCountry();
-        Country partner = TestEntityFactory.createPartnerCountry();
-        Product product = TestEntityFactory.createProduct();
-        DutyType dutyType = TestEntityFactory.createDutyType();
-
-        // Persist related entities first
-        countryRepository.save(reporter);
-        countryRepository.save(partner);
-        productRepository.save(product);
-        dutyTypeRepository.save(dutyType);
-
-        // No need to persist Duty, it will be cascaded (see TariffSchedule model):
-
         Duty duty = TestEntityFactory.createAdValoremDuty();
 
-        TariffSchedule schedule = TestEntityFactory.createTariffSchedule(
-                reporter,
-                partner,
-                product,
-                dutyType,
+        TariffSchedule schedule = TestEntityFactory.createAndPersistTariffSchedule(
+                countryRepository,
+                productRepository,
+                dutyTypeRepository,
+                repository,
                 duty
         );
-
-        repository.save(schedule);
 
         Integer generatedId = schedule.getTariffId();
 
@@ -81,27 +60,15 @@ public class TariffScheduleRepositoryTest {
 
     @Test
     void testDelete() {
-        Country reporter = TestEntityFactory.createReporterCountry();
-        Country partner = TestEntityFactory.createPartnerCountry();
-        Product product = TestEntityFactory.createProduct();
-        DutyType dutyType = TestEntityFactory.createDutyType();
-
-        // Persist related entities first
-        countryRepository.save(reporter);
-        countryRepository.save(partner);
-        productRepository.save(product);
-        dutyTypeRepository.save(dutyType);
-
         Duty duty = TestEntityFactory.createAdValoremDuty();
 
-        TariffSchedule schedule = TestEntityFactory.createTariffSchedule(
-                reporter,
-                partner,
-                product,
-                dutyType,
+        TariffSchedule schedule = TestEntityFactory.createAndPersistTariffSchedule(
+                countryRepository,
+                productRepository,
+                dutyTypeRepository,
+                repository,
                 duty
         );
-        repository.save(schedule);
 
         Integer generatedId = schedule.getTariffId();
 
