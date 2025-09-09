@@ -39,9 +39,6 @@ public class AdValoremDutyRepositoryTest {
             duty
         );
 
-        // Save the schedule which should cascade save the duty
-		scheduleRepository.save(schedule);
-
         // Retrieve and assert
         Integer generatedId = schedule.getTariffId();
         AdValoremDuty found = dutyRepository.findById(generatedId).orElse(null);
