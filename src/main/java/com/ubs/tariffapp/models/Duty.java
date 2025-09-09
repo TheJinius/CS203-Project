@@ -5,6 +5,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 
 // Base class for different types of duties
@@ -18,6 +19,7 @@ public abstract class Duty {
 
     @OneToOne
     @JoinColumn(name = "tariff_id")
+    @MapsId
     private TariffSchedule tariffSchedule;
 
     private String dutyNature;
