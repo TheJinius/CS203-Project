@@ -122,7 +122,7 @@ public class TestEntityFactory {
          * @param childDuty
          * @return
          */
-        public static TariffSchedule createAndPersistTariffSchedule(
+        public static TariffSchedule createAndSaveTariffSchedule(
                         CountryRepository countryRepo,
                         ProductRepository productRepo,
                         DutyTypeRepository dutyTypeRepo,

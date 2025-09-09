@@ -31,7 +31,7 @@ public class TariffScheduleRepositoryTest {
     void testSaveAndFindById() {
         Duty duty = TestEntityFactory.createAdValoremDuty();
 
-        TariffSchedule schedule = TestEntityFactory.createAndPersistTariffSchedule(
+        TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
                 countryRepository,
                 productRepository,
                 dutyTypeRepository,
@@ -58,7 +58,7 @@ public class TariffScheduleRepositoryTest {
     void testDelete() {
         Duty duty = TestEntityFactory.createAdValoremDuty();
 
-        TariffSchedule schedule = TestEntityFactory.createAndPersistTariffSchedule(
+        TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
                 countryRepository,
                 productRepository,
                 dutyTypeRepository,

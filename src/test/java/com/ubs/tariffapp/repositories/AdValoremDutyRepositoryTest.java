@@ -31,7 +31,7 @@ public class AdValoremDutyRepositoryTest {
     void testSaveAndFindById() {
         // Create and persist all required entities, including TariffSchedule
         AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
-        TariffSchedule schedule = TestEntityFactory.createAndPersistTariffSchedule(
+        TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
             countryRepository, 
             productRepository, 
             dutyTypeRepository,
@@ -55,7 +55,7 @@ public class AdValoremDutyRepositoryTest {
     @Test
     void testDelete() {
         AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
-        TariffSchedule schedule = TestEntityFactory.createAndPersistTariffSchedule(
+        TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
             countryRepository, productRepository, dutyTypeRepository, scheduleRepository, duty
         );
 
