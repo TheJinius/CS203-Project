@@ -3,10 +3,13 @@ package com.ubs.tariffapp.models;
 import java.math.BigDecimal;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 
 @Entity
 public class CombinedDuty extends Duty {
-    private char mixedOrConditional;
+    @Column(name = "mixed_or_conditional", columnDefinition = "CHAR(1)")
+    private String mixedOrConditional;
+    
     private BigDecimal ratePercent; // For exact float precision
     private BigDecimal amount; // For exact float precision
     private String unit;
@@ -17,7 +20,7 @@ public class CombinedDuty extends Duty {
     }
 
     public CombinedDuty(Integer tariffId, TariffSchedule tariffSchedule, String dutyNature, String mathExpression,
-            char mixedOrConditional, BigDecimal ratePercent, BigDecimal amount, String unit,
+            String mixedOrConditional, BigDecimal ratePercent, BigDecimal amount, String unit,
             Integer multiplier, String specificDutyRateRaw) {
         super(tariffId, tariffSchedule, dutyNature, mathExpression);
         this.mixedOrConditional = mixedOrConditional;
@@ -28,11 +31,11 @@ public class CombinedDuty extends Duty {
         this.specificDutyRateRaw = specificDutyRateRaw;
     }
 
-    public char getMixedOrConditional() {
+    public String getMixedOrConditional() {
         return mixedOrConditional;
     }
 
-    public void setMixedOrConditional(char mixedOrConditional) {
+    public void setMixedOrConditional(String mixedOrConditional) {
         this.mixedOrConditional = mixedOrConditional;
     }
 
