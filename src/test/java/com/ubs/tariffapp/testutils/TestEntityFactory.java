@@ -10,6 +10,7 @@ import com.ubs.tariffapp.models.duty.AdValoremDuty;
 import com.ubs.tariffapp.models.duty.CombinedDuty;
 import com.ubs.tariffapp.models.duty.Duty;
 import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.models.duty.OtherDuty;
 import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
@@ -121,6 +122,17 @@ public class TestEntityFactory {
                                 TestConstants.SPECIFIC_MULTIPLIER,
                                 TestConstants.SPECIFIC_DUTY_RATE_RAW);
                 return combinedDuty;
+        }
+
+        public static OtherDuty createOtherDuty() {
+                OtherDuty otherDuty = new OtherDuty(
+                                TestConstants.TARIFF_ID, // null in TestConstants - ID will be set by auto-increment
+                                null, // TariffSchedule will be set later (see createTariffSchedule)
+                                TestConstants.OTHER_DUTY_NATURE,
+                                TestConstants.OTHER_MATH_EXPRESSION,
+                                TestConstants.OTHER_RAW_TEXT,
+                                TestConstants.OTHER_COMPUTABLE);
+                return otherDuty;
         }
 
         public static TariffSchedule createTariffSchedule(Country reporter,

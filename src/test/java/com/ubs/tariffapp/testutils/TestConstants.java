@@ -59,7 +59,6 @@ public class TestConstants {
     public static final String NONE_DUTY_NATURE = "N"; // For NoneDuty
     public static final String NONE_MATH_EXPRESSION = ""; // No duty
 
-
     
     // For AdValoremDuty fields
     public static final String AD_VALOREM_DUTY_NATURE = "A"; // For AdValoremDuty
@@ -80,6 +79,12 @@ public class TestConstants {
     public static final String COMBINED_DUTY_NATURE = "C"; // For CombinedDuty
     public static final String MIXED_OR_CONDITIONAL = "M"; // 'M'ixed or 'C'onditional
     public static final String COMBINED_MATH_EXPRESSION = SPECIFIC_MATH_EXPRESSION + " + " + AD_VALOREM_MATH_EXPRESSION;
+
+    // For OtherDuty fields
+    public static final String OTHER_DUTY_NATURE = "O"; // For OtherDuty
+    public static final String OTHER_MATH_EXPRESSION = "";
+    public static final String OTHER_RAW_TEXT = "See 9822.04.01-9822.04.03";
+    public static final Boolean OTHER_COMPUTABLE = false;
 
     // For AuditLogRepositoryTest
     public static final Integer AUDIT_LOG_ID = null; // Changed to null to allow auto-generation
