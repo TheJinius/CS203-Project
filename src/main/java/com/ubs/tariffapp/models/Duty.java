@@ -13,7 +13,7 @@ import jakarta.persistence.OneToOne;
 // In other words, each instance of Duty must be one of its subclasses
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class Duty {
+public class Duty {
     @Id
     private Integer tariffId;
 
