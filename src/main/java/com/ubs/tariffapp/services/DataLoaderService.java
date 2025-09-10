@@ -64,48 +64,48 @@ public class DataLoaderService {
                 BigDecimal specificRate = new BigDecimal(columns[10].trim());
                 String industry = columns[11].trim();
 
-                // Fetch or create related entities
-                Country reporter = countryRepository.findById(reporterId)
-                        .orElseGet(() -> countryRepository.save(new Country(reporterId, null, null, null, null)));
+                // // Fetch or create related entities
+                // Country reporter = countryRepository.findById(reporterId)
+                //         .orElseGet(() -> countryRepository.save(new Country(reporterId, null, null, null, null)));
 
-                Country partner = countryRepository.findById(partnerId)
-                        .orElseGet(() -> countryRepository.save(new Country(partnerId, null, null, null, null)));
+                // Country partner = countryRepository.findById(partnerId)
+                //         .orElseGet(() -> countryRepository.save(new Country(partnerId, null, null, null, null)));
 
-                Product product = productRepository.findById(hsCode)
-                        .orElseGet(() -> productRepository.save(new Product(hsCode, hsDescription, industry, null)));
+                // Product product = productRepository.findById(hsCode)
+                //         .orElseGet(() -> productRepository.save(new Product(hsCode, hsDescription, industry, null)));
 
-                DutyTypeId dutyTypeId = new DutyTypeId(dutyTypeCode, dutyCode);
-                DutyType dutyType = dutyTypeRepository.findById(dutyTypeId)
-                        .orElseGet(() -> dutyTypeRepository.save(new DutyType(dutyTypeId, null, null)));
+                // DutyTypeId dutyTypeId = new DutyTypeId(dutyTypeCode, dutyCode);
+                // DutyType dutyType = dutyTypeRepository.findById(dutyTypeId)
+                //         .orElseGet(() -> dutyTypeRepository.save(new DutyType(dutyTypeId, null, null)));
 
-                // Create and save AdValoremDuty
-                AdValoremDuty adValoremDuty = new AdValoremDuty();
-                adValoremDuty.setRatePercent(adValoremRate);
-                adValoremDuty = adValoremDutyRepository.save(adValoremDuty);
+                // // Create and save AdValoremDuty
+                // AdValoremDuty adValoremDuty = new AdValoremDuty();
+                // adValoremDuty.setRatePercent(adValoremRate);
+                // adValoremDuty = adValoremDutyRepository.save(adValoremDuty);
 
-                // Create and save SpecificDuty
-                SpecificDuty specificDuty = new SpecificDuty();
-                specificDuty.setRate(specificRate);
-                specificDuty = specificDutyRepository.save(specificDuty);
+                // // Create and save SpecificDuty
+                // SpecificDuty specificDuty = new SpecificDuty();
+                // specificDuty.setRate(specificRate);
+                // specificDuty = specificDutyRepository.save(specificDuty);
 
-                // Create and save CombinedDuty
-                CombinedDuty combinedDuty = new CombinedDuty();
-                combinedDuty.setAdValoremDuty(adValoremDuty);
-                combinedDuty.setSpecificDuty(specificDuty);
-                combinedDuty = combinedDutyRepository.save(combinedDuty);
+                // // Create and save CombinedDuty
+                // CombinedDuty combinedDuty = new CombinedDuty();
+                // combinedDuty.setAdValoremDuty(adValoremDuty);
+                // combinedDuty.setSpecificDuty(specificDuty);
+                // combinedDuty = combinedDutyRepository.save(combinedDuty);
 
-                // Create and save TariffSchedule
-                TariffSchedule tariffSchedule = new TariffSchedule();
-                tariffSchedule.setReporter(reporter);
-                tariffSchedule.setPartner(partner);
-                tariffSchedule.setYear(year);
-                tariffSchedule.setProduct(product);
-                tariffSchedule.setTlsSuffix(tlsSuffix);
-                tariffSchedule.setDutyType(dutyType);
-                tariffSchedule.setNote(note);
-                tariffSchedule.setCombinedDuty(combinedDuty);
+                // // Create and save TariffSchedule
+                // TariffSchedule tariffSchedule = new TariffSchedule();
+                // tariffSchedule.setReporter(reporter);
+                // tariffSchedule.setPartner(partner);
+                // tariffSchedule.setYear(year);
+                // tariffSchedule.setProduct(product);
+                // tariffSchedule.setTlsSuffix(tlsSuffix);
+                // tariffSchedule.setDutyType(dutyType);
+                // tariffSchedule.setNote(note);
+                // tariffSchedule.setCombinedDuty(combinedDuty);
 
-                tariffSchedules.add(tariffSchedule);
+                // tariffSchedules.add(tariffSchedule);
             }
 
             // Save all TariffSchedules
