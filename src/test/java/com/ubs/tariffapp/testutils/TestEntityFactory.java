@@ -131,7 +131,7 @@ public class TestEntityFactory {
                                 TestConstants.OTHER_DUTY_NATURE,
                                 TestConstants.OTHER_MATH_EXPRESSION,
                                 TestConstants.OTHER_RAW_TEXT,
-                                TestConstants.OTHER_COMPUTABLE);
+                                TestConstants.OTHER_IS_COMPUTABLE);
                 return otherDuty;
         }
 

@@ -50,7 +50,7 @@ public class OtherDutyRepositoryTest {
         assertThat(found.getDutyNature()).isEqualTo(duty.getDutyNature());
         assertThat(found.getMathExpression()).isEqualTo(duty.getMathExpression());
         assertThat(found.getRawText()).isEqualTo(duty.getRawText());
-        assertThat(found.getComputable()).isEqualTo(duty.getComputable());
+        assertThat(found.getIsComputable()).isEqualTo(duty.getIsComputable());
         assertThat(found.getTariffSchedule()).isNotNull(); 
         // Only check if TariffSchedule is not null
     }
@@ -68,7 +68,7 @@ public class OtherDutyRepositoryTest {
 
         Integer generatedId = schedule.getTariffId();
         dutyRepository.deleteById(generatedId);
-        
+
         assertThat(dutyRepository.findById(generatedId)).isEmpty();
     }
 }

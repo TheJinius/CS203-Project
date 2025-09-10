@@ -11,17 +11,17 @@ public class OtherDuty extends Duty {
      * always a rate e.g. "See 9822.04.01-9822.04.03"
      */
     private String rawText;
-    private Boolean computable; // Whether this duty can be computed or not
+    private Boolean isComputable; // Whether this duty can be computed or not
 
     public OtherDuty() {
     }
 
     public OtherDuty(Integer tariffId, TariffSchedule tariffSchedule,
             String dutyNature, String mathExpression, String rawText,
-            Boolean computable) {
+            Boolean isComputable) {
         super(tariffId, tariffSchedule, dutyNature, mathExpression);
         this.rawText = rawText;
-        this.computable = computable;
+        this.isComputable = isComputable;
     }
 
     public String getRawText() {
@@ -32,11 +32,11 @@ public class OtherDuty extends Duty {
         this.rawText = rawText;
     }
 
-    public Boolean getComputable() {
-        return computable;
+    public Boolean getIsComputable() {
+        return isComputable;
     }
 
-    public void setComputable(Boolean computable) {
-        this.computable = computable;
+    public void setIsComputable(Boolean isComputable) {
+        this.isComputable = isComputable;
     }
 }

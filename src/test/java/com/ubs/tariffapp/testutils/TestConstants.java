@@ -84,7 +84,7 @@ public class TestConstants {
     public static final String OTHER_DUTY_NATURE = "O"; // For OtherDuty
     public static final String OTHER_MATH_EXPRESSION = "";
     public static final String OTHER_RAW_TEXT = "See 9822.04.01-9822.04.03";
-    public static final Boolean OTHER_COMPUTABLE = false;
+    public static final Boolean OTHER_IS_COMPUTABLE = false;
 
     // For AuditLogRepositoryTest
     public static final Integer AUDIT_LOG_ID = null; // Changed to null to allow auto-generation
