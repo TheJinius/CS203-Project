@@ -1,26 +1,24 @@
 package com.ubs.tariffapp.utils;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.Map;
-
-import com.opencsv.CSVReader;
-import com.opencsv.CSVWriter;
-import com.opencsv.exceptions.CsvException;
+import java.util.NavigableMap;
 
  /* Steps to compile for quick testing
   * We assume that the csv file and this class is in ./src/main/java
   * 
-  * mvn compile exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.HSDataCleaner"
+  * mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.HSDataCleaner"
   */
  
  /*  Current Format of Raw Dataset:
@@ -71,80 +69,101 @@ public class HSDataCleaner {
         String outputFileName = "clean_" + inputFileName;
         String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
-        try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream));
-             CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
 
-            List<String[]> allRows = reader.readAll();
-            List<String[]> cleanedRows = new ArrayList<>();
+            String line = reader.readLine();
+            if (line == null) {
+                System.err.println("Input file is empty.");
+                return;
+            }
 
-            // Keep header
-            String[] header = allRows.get(0);
-            String[] newHeader = Arrays.copyOf(header, header.length + 1);
-            newHeader[newHeader.length - 1] = "Industry";
-            cleanedRows.add(newHeader);
-
-            // Use a Set to deduplicate
+            // Write the header with an additional "Industry" column
+            writer.write(line + ",Industry");
+            writer.newLine();
+        
+            // Use a HashSet to deduplicate
             Set<String> seen = new HashSet<>();
 
-            for (int i = 1; i < allRows.size(); i++) {
-                String[] row = allRows.get(i);
+            // Process each line
+            while ((line = reader.readLine()) != null) {
 
-                String hsCode = row[5].trim();
-                String hsDesc = row[11].trim();
+                String[] columns = line.split(",");
 
-                // Drop empty HS codes
+                // Skip rows with empty HS codes
+                String hsCode = columns[5].trim();
                 if (hsCode.isEmpty()) {
-                    continue; 
+                    continue;
                 }
 
-                // Normalize HS code to 8 digits (pad if necessary)
-                hsCode = String.format("%-8s", hsCode).replace(' ', '0');
+                // Normalize HS code to 8 digits
+                hsCode = hsCode.length() < 8
+                       ? String.format("%-8d", Integer.parseInt(hsCode)).replace(' ', '0')
+                       : hsCode;
 
                 // Deduplication key
-                String key = hsCode + "|" + hsDesc;
+                String hsDesc = columns[11].trim();
+                String key = hsCode + "|" + hsDesc; // Combine HS code and description for deduplication
                 if (seen.contains(key)) {
                     continue;
                 }
                 seen.add(key);
 
-                // Industry tagging
+                // Classify industry based on HS code
                 String industry = classifyIndustry(hsCode);
 
-                // Add industry column
-                String[] newRow = Arrays.copyOf(row, row.length + 1);
-                newRow[newRow.length - 1] = industry;
-
-                // Replace original HS code with normalized one
-                newRow[5] = hsCode;
-
                 // Standardise ReporterName and PartnerName to Title Case
-                newRow[1] = capitalizeWordsStream(row[1].trim());
-                newRow[3] = capitalizeWordsStream(row[3].trim());
+                columns[1] = capitalizeWordsStream(columns[1].trim());
+                columns[3] = capitalizeWordsStream(columns[3].trim());
 
-                cleanedRows.add(newRow);
+                // Add the industry column to the row
+                String[] updatedColumns = Arrays.copyOf(columns, columns.length + 1);
+                updatedColumns[updatedColumns.length - 1] = industry;
+
+                // Use StringBuilder to reconstruct the line
+                StringBuilder updatedLineBuilder = new StringBuilder();
+                for (int i = 0; i < updatedColumns.length; i++) {
+                    if (i > 0) {
+                        updatedLineBuilder.append(","); // Add a comma between columns
+                    }
+                    updatedLineBuilder.append(updatedColumns[i]);
+                }
+                String updatedLine = updatedLineBuilder.toString();
+
+                // Write the cleaned row to the output file
+                writer.write(updatedLine);
+                writer.newLine();
             }
 
-            writer.writeAll(cleanedRows);
             System.out.println("Output saved to " + outputFile);
 
-        } catch (IOException | CsvException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    // Define industry ranges using a TreeMap
+    private static final NavigableMap<Integer, String> INDUSTRY_MAP = new TreeMap<>();
+
+    static {
+        INDUSTRY_MAP.put(1, "Agriculture"); // Covers 1 to 24
+        INDUSTRY_MAP.put(25, "Energy");     // Covers 25 to 27
+        INDUSTRY_MAP.put(72, "Metals");     // Covers 72 to 83
+        INDUSTRY_MAP.put(84, "Other");      // Covers everything else
+    }
+    
     private static String classifyIndustry(String hsCode) {
         int chapter = Integer.parseInt(hsCode.substring(0, 2));
-
-        if (chapter >= 1 && chapter <= 24) {
-            return "Agriculture";
+        Map.Entry<Integer, String> entry = INDUSTRY_MAP.floorEntry(chapter);
+        if (entry != null) {
+            String industry = entry.getValue();
+            if ((entry.getKey() == 1 && chapter <= 24) || // Agriculture: 1-24
+                (entry.getKey() == 25 && chapter <= 27) || // Energy: 25-27
+                (entry.getKey() == 72 && chapter <= 83)) { // Metals: 72-83
+                return industry;
+            }
         }
-        if (chapter >= 25 && chapter <= 27) {
-            return "Energy"; // coal, oil, gas
-        }
-        if (chapter >= 72 && chapter <= 83) {
-            return "Metals";
-        }
-        return "Other";
+        return "Other"; // Default if no range matches
     }
 
     private static String capitalizeWordsStream(String str) {
