@@ -6,10 +6,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
@@ -58,7 +60,7 @@ public class HSDataCleaner {
 
     public static void main(String[] args) {
         // Read input from resources
-        String inputFileName = "HS2017SGYear2023.csv"; // Original file name
+        String inputFileName = "HS2017USAYear2023.csv"; // Original file name
         InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
         if (inputStream == null) {
             System.err.println("Input CSV file not found in resources folder.");
@@ -67,7 +69,7 @@ public class HSDataCleaner {
 
         //String outputFile = "target/clean_hsca_data.csv";
         String outputFileName = "clean_" + inputFileName;
-        String outputFile = "src/main/resources/data/" + outputFileName;
+        String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
         try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream));
              CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
@@ -151,5 +153,27 @@ public class HSDataCleaner {
     return Arrays.stream(str.toLowerCase().split("\\s+"))
             .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
             .collect(Collectors.joining(" "));
-}
+    }
+
+
+    // Static lookup map
+    private static final Map<String, String> avMethodMap = new HashMap<>();
+
+    static {
+        avMethodMap.put("A", "Ad valorem (percentage of value, e.g. 5% of import value)");
+        avMethodMap.put("S", "Specific duty (fixed per unit, e.g. $10 per kg)");
+        avMethodMap.put("O", "Other / mixed method (compound, formula-based, or special cases)");
+        avMethodMap.put("C", "Compound (ad valorem + specific)");
+        avMethodMap.put("M", "Mixed (either/or, whichever is higher/lower)");
+        avMethodMap.put("P", "Formula-based or price-band system");
+        avMethodMap.put("X", "Not elsewhere classified");
+    }
+    
+    // Method to get AV description from AVMethod column
+    public static String getDescription(String code) {
+        if (code == null || code.isEmpty()) {
+            return "Invalid code";
+        }
+        return avMethodMap.getOrDefault(code.toUpperCase(), "Unknown method");
+    }
 }
