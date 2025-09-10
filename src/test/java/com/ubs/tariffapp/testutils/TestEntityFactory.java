@@ -1,15 +1,15 @@
 package com.ubs.tariffapp.testutils;
 
-import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.AuditLog;
-import com.ubs.tariffapp.models.CombinedDuty;
 import com.ubs.tariffapp.models.Country;
-import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
 import com.ubs.tariffapp.models.Product;
-import com.ubs.tariffapp.models.SpecificDuty;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.Duty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
