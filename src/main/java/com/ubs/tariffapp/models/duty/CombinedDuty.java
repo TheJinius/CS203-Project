@@ -1,9 +1,11 @@
-package com.ubs.tariffapp.models;
+package com.ubs.tariffapp.models.duty;
 
 import java.math.BigDecimal;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Column;
+
+import com.ubs.tariffapp.models.TariffSchedule;
 
 @Entity
 public class CombinedDuty extends Duty {

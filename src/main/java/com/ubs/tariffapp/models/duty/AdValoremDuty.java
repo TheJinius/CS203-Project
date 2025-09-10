@@ -1,6 +1,8 @@
-package com.ubs.tariffapp.models;
+package com.ubs.tariffapp.models.duty;
 
 import java.math.BigDecimal;
+
+import com.ubs.tariffapp.models.TariffSchedule;
 
 import jakarta.persistence.Entity;
 

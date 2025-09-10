@@ -1,19 +1,23 @@
-package com.ubs.tariffapp.repositories;
+package com.ubs.tariffapp.repositories.duty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-import com.ubs.tariffapp.models.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.DutyTypeRepository;
+import com.ubs.tariffapp.repositories.ProductRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.testutils.TestEntityFactory;
 
 @DataJpaTest
-public class AdValoremDutyRepositoryTest {
+public class SpecificDutyRepositoryTest {
 
     @Autowired
-    private AdValoremDutyRepository dutyRepository;
+    private SpecificDutyRepository dutyRepository;
 
     @Autowired
     private TariffScheduleRepository scheduleRepository;
@@ -29,8 +33,7 @@ public class AdValoremDutyRepositoryTest {
 
     @Test
     void testSaveAndFindById() {
-        // Create and persist all required entities, including TariffSchedule
-        AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+        SpecificDuty duty = TestEntityFactory.createSpecificDuty();
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
                 countryRepository,
                 productRepository,
@@ -38,23 +41,25 @@ public class AdValoremDutyRepositoryTest {
                 scheduleRepository,
                 duty);
 
-        // Retrieve and assert
         Integer generatedId = schedule.getTariffId();
-        AdValoremDuty found = dutyRepository.findById(generatedId).orElse(null);
+        SpecificDuty found = dutyRepository.findById(generatedId).orElse(null);
 
         assertThat(found).isNotNull();
         assertThat(found.getTariffId()).isEqualTo(generatedId);
         assertThat(found.getDutyNature()).isEqualTo(duty.getDutyNature());
         assertThat(found.getMathExpression()).isEqualTo(duty.getMathExpression());
-        assertThat(found.getRatePercent()).isEqualByComparingTo(duty.getRatePercent());
-        assertThat(found.getTariffSchedule()).isNotNull(); // Only check if TariffSchedule is not null
-        // We will check the TariffSchedule's fields in the TariffScheduleRepositoryTest
-        // instead
+        assertThat(found.getAmount()).isEqualByComparingTo(duty.getAmount());
+        assertThat(found.getUnit()).isEqualTo(duty.getUnit());
+        assertThat(found.getMultiplier()).isEqualTo(duty.getMultiplier());
+        assertThat(found.getSpecificDutyRateRaw()).isEqualTo(duty.getSpecificDutyRateRaw());
+
+        assertThat(found.getTariffSchedule()).isNotNull();
+        // Only check if TariffSchedule is not null
     }
 
     @Test
     void testDelete() {
-        AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+        SpecificDuty duty = TestEntityFactory.createSpecificDuty();
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
                 countryRepository,
                 productRepository,

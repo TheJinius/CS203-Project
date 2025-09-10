@@ -1,15 +1,15 @@
 package com.ubs.tariffapp.testutils;
 
-import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.AuditLog;
-import com.ubs.tariffapp.models.SpecificDuty;
-import com.ubs.tariffapp.models.CombinedDuty;
 import com.ubs.tariffapp.models.Country;
-import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.models.DutyType;
 import com.ubs.tariffapp.models.DutyTypeId;
 import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.Duty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
@@ -75,9 +75,18 @@ public class TestEntityFactory {
                 return dutyType;
         }
 
+        public static Duty createNoneDuty() {
+                Duty noneDuty = new Duty(
+                                TestConstants.TARIFF_ID, // null in TestConstants - ID will be set by auto-increment
+                                null, // TariffSchedule will be set later (see createTariffSchedule)
+                                TestConstants.NONE_DUTY_NATURE,
+                                TestConstants.NONE_MATH_EXPRESSION);
+                return noneDuty;
+        }
+
         public static AdValoremDuty createAdValoremDuty() {
                 AdValoremDuty adValoremDuty = new AdValoremDuty(
-                                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                                TestConstants.TARIFF_ID, // null in TestConstants - ID will be set by auto-increment
                                 null, // TariffSchedule will be set later (see createTariffSchedule)
                                 TestConstants.AD_VALOREM_DUTY_NATURE,
                                 TestConstants.AD_VALOREM_MATH_EXPRESSION,
@@ -87,7 +96,7 @@ public class TestEntityFactory {
 
         public static SpecificDuty createSpecificDuty() {
                 SpecificDuty specificDuty = new SpecificDuty(
-                                TestConstants.TARIFF_ID, // null in TariffConstants - ID will be set by @MapsId
+                                TestConstants.TARIFF_ID, // null in TestConstants - ID will be set by auto-increment
                                 null, // TariffSchedule will be set later (see createTariffSchedule)
                                 TestConstants.SPECIFIC_DUTY_NATURE,
                                 TestConstants.SPECIFIC_MATH_EXPRESSION,

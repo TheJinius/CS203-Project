@@ -1,4 +1,6 @@
-package com.ubs.tariffapp.models;
+package com.ubs.tariffapp.models.duty;
+
+import com.ubs.tariffapp.models.TariffSchedule;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,7 +15,7 @@ import jakarta.persistence.OneToOne;
 // In other words, each instance of Duty must be one of its subclasses
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class Duty {
+public class Duty {
     @Id
     private Integer tariffId;
 

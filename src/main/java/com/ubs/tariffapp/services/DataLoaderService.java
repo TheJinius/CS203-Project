@@ -1,7 +1,9 @@
 package com.ubs.tariffapp.services;
 
 import com.ubs.tariffapp.models.*;
+import com.ubs.tariffapp.models.duty.*;
 import com.ubs.tariffapp.repositories.*;
+import com.ubs.tariffapp.repositories.duty.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
