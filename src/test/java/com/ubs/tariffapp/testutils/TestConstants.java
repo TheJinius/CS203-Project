@@ -1,9 +1,9 @@
 package com.ubs.tariffapp.testutils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.time.LocalDateTime;
 
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.TariffSchedule;
@@ -55,6 +55,12 @@ public class TestConstants {
 
     public static final List<AuditLog> AUDIT_LOGS = Collections.emptyList();
 
+    // For generic Duty fields (for a none duty where dutyNature = "N")
+    public static final String NONE_DUTY_NATURE = "N"; // For NoneDuty
+    public static final String NONE_MATH_EXPRESSION = ""; // No duty
+
+
+    
     // For AdValoremDuty fields
     public static final String AD_VALOREM_DUTY_NATURE = "A"; // For AdValoremDuty
     public static final String AD_VALOREM_MATH_EXPRESSION = "0 * value";
