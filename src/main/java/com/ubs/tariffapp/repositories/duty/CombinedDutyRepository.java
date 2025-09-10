@@ -1,4 +1,4 @@
-package com.ubs.tariffapp.repositories;
+package com.ubs.tariffapp.repositories.duty;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
