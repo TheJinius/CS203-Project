@@ -13,11 +13,53 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+ /*  Current Format of Raw Dataset:
+     *  Column Index	Description
+     *  0	"Reporter"
+     *  1	"ReporterName"
+     *  2	"Partner"
+     *  3	"Partner Name"
+     *  4	"Year"
+     *  5	"TL (HS Code)"
+     *  6	"TLS (Additional HS Code Sub-classification - if any)"
+     *  7	"Duty Type"
+     *  8	"Duty Code"
+     *  9	"Ad Valorem Duty Rate (%)"
+     *  10	"Specific Duty Rate"
+     *  11	"HS Code Description"
+     *  12	"Duty Type Description"
+     *  13	"Duty Nature"
+     *  14	"Ad Valorem Calculation Code/Description"
+     *  15	"Notes"
+     *  16  "Industry"
+*/
+
 @Service
 public class DataLoaderService {
 
     @Autowired
+    private AdValoremDutyRepository adValoremDutyRepository;   
+
+    @Autowired
+    private CombinedDutyRepository combinedDutyRepository;
+
+    @Autowired
+    private DutyRepository dutyRepository;
+
+    @Autowired
+    private OtherDutyRepository otherDutyRepository;
+
+    @Autowired
+    private SpecificDutyRepository specificDutyRepository;
+
+    @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
     private CountryRepository countryRepository;
+
+    @Autowired
+    private DutyTypeRepository dutyTypeRepository;
 
     @Autowired
     private ProductRepository productRepository;
@@ -25,17 +67,6 @@ public class DataLoaderService {
     @Autowired
     private TariffScheduleRepository tariffScheduleRepository;
 
-    @Autowired
-    private DutyTypeRepository dutyTypeRepository;
-
-    @Autowired
-    private AdValoremDutyRepository adValoremDutyRepository;
-
-    @Autowired
-    private SpecificDutyRepository specificDutyRepository;
-
-    @Autowired
-    private CombinedDutyRepository combinedDutyRepository;
 
     public void loadCleanedData(String filePath) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
@@ -54,65 +85,76 @@ public class DataLoaderService {
 
                 // Parse the data
                 String reporterId = columns[0].trim();
-                String partnerId = columns[1].trim();
-                Integer year = Integer.parseInt(columns[2].trim());
-                String hsCode = columns[3].trim();
-                String hsDescription = columns[4].trim();
-                String dutyTypeCode = columns[5].trim();
-                String dutyCode = columns[6].trim();
-                String tlsSuffix = columns[7].trim();
-                String note = columns[8].trim();
+                String reporterName = columns[1].trim();
+                String partnerId = columns[2].trim();
+                String partnerName = columns[3].trim();
+                int year = Integer.parseInt(columns[4].trim());
+                String hsCode = columns[5].trim();
+                String tls = columns[6].trim();
+                String dutyTypeCode = columns[7].trim();
+                String dutyCode = columns[8].trim();
                 BigDecimal adValoremRate = new BigDecimal(columns[9].trim());
                 BigDecimal specificRate = new BigDecimal(columns[10].trim());
-                String industry = columns[11].trim();
+                String hsDescription = columns[11].trim();
+                String dutyTypeDescription = columns[12].trim();
+                String dutyNature = columns[13].trim();
+                String adValoremCalcDesc = columns[14].trim();
+                String notes = columns[15].trim();
+                String industry = columns[16].trim();
 
-                // // Fetch or create related entities
-                // Country reporter = countryRepository.findById(reporterId)
-                //         .orElseGet(() -> countryRepository.save(new Country(reporterId, null, null, null, null)));
+                // Create related entities and add to the repository
+                
+                // Create or fetch related entities
+                Country reporter = countryRepository.findById(reporterId)
+                        .orElseGet(() -> countryRepository.save(new Country(reporterId, reporterName, null, null, null)));
 
-                // Country partner = countryRepository.findById(partnerId)
-                //         .orElseGet(() -> countryRepository.save(new Country(partnerId, null, null, null, null)));
+                Country partner = countryRepository.findById(partnerId)
+                        .orElseGet(() -> countryRepository.save(new Country(partnerId, partnerName, null, null, null)));
 
-                // Product product = productRepository.findById(hsCode)
-                //         .orElseGet(() -> productRepository.save(new Product(hsCode, hsDescription, industry, null)));
+                Product product = productRepository.findById(hsCode)
+                        .orElseGet(() -> productRepository.save(new Product(hsCode, hsDescription, null, null)));
 
-                // DutyTypeId dutyTypeId = new DutyTypeId(dutyTypeCode, dutyCode);
-                // DutyType dutyType = dutyTypeRepository.findById(dutyTypeId)
-                //         .orElseGet(() -> dutyTypeRepository.save(new DutyType(dutyTypeId, null, null)));
+                DutyTypeId dutyTypeId = new DutyTypeId(dutyTypeCode, dutyCode);
+                DutyType dutyType = dutyTypeRepository.findById(dutyTypeId)
+                        .orElseGet(() -> dutyTypeRepository.save(new DutyType(dutyTypeId, dutyTypeDescription, null)));
 
-                // // Create and save AdValoremDuty
-                // AdValoremDuty adValoremDuty = new AdValoremDuty();
-                // adValoremDuty.setRatePercent(adValoremRate);
-                // adValoremDuty = adValoremDutyRepository.save(adValoremDuty);
+                // Create TariffSchedule
+                TariffSchedule tariffSchedule = new TariffSchedule();
+                tariffSchedule.setReporter(reporter);
+                tariffSchedule.setPartner(partner);
+                tariffSchedule.setTariffYear(year);
+                tariffSchedule.setProduct(product);
+                tariffSchedule.setTlsSuffix(tls);
+                tariffSchedule.setDutyType(dutyType);
+                tariffSchedule.setNote(notes);
 
-                // // Create and save SpecificDuty
-                // SpecificDuty specificDuty = new SpecificDuty();
-                // specificDuty.setRate(specificRate);
-                // specificDuty = specificDutyRepository.save(specificDuty);
+                // Create Duty based on type
+                Duty duty;
+                if (adValoremRate.compareTo(BigDecimal.ZERO) > 0) {
+                    duty = new AdValoremDuty(null, tariffSchedule, dutyNature, adValoremCalcDesc, adValoremRate);
+                    adValoremDutyRepository.save((AdValoremDuty) duty);
+                } else if (specificRate.compareTo(BigDecimal.ZERO) > 0) {
+                    duty = new SpecificDuty(null, tariffSchedule, dutyNature, null, specificRate, "kg", 100, null);
+                    specificDutyRepository.save((SpecificDuty) duty);
+                } else {
+                    duty = new OtherDuty(null, tariffSchedule, dutyNature, null, columns[10].trim(), false);
+                    otherDutyRepository.save((OtherDuty) duty);
+                }
 
-                // // Create and save CombinedDuty
-                // CombinedDuty combinedDuty = new CombinedDuty();
-                // combinedDuty.setAdValoremDuty(adValoremDuty);
-                // combinedDuty.setSpecificDuty(specificDuty);
-                // combinedDuty = combinedDutyRepository.save(combinedDuty);
+                tariffSchedule.setDuty(duty);
+                tariffSchedules.add(tariffSchedule);
 
-                // // Create and save TariffSchedule
-                // TariffSchedule tariffSchedule = new TariffSchedule();
-                // tariffSchedule.setReporter(reporter);
-                // tariffSchedule.setPartner(partner);
-                // tariffSchedule.setYear(year);
-                // tariffSchedule.setProduct(product);
-                // tariffSchedule.setTlsSuffix(tlsSuffix);
-                // tariffSchedule.setDutyType(dutyType);
-                // tariffSchedule.setNote(note);
-                // tariffSchedule.setCombinedDuty(combinedDuty);
-
-                // tariffSchedules.add(tariffSchedule);
+                // Batch save every 1000 records to optimize performance
+                if (tariffSchedules.size() >= 1000) {
+                    tariffScheduleRepository.saveAll(tariffSchedules);
+                    tariffSchedules.clear();
+                }
             }
 
-            // Save all TariffSchedules
+            // Save all TariffSchedules in batch
             tariffScheduleRepository.saveAll(tariffSchedules);
-            System.out.println("Cleaned data loaded successfully into the database.");
+
+            System.out.println("Data loaded successfully.");
         } catch (Exception e) {
             e.printStackTrace();
         }
