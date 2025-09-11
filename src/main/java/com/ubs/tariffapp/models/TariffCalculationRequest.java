@@ -4,6 +4,7 @@ public class TariffCalculationRequest {
     private String importerCountry;
     private String exporterCountry;
     private String product;
+    private double amountOfProduct;
     public String getImporterCountry() {
         return importerCountry;
     }
@@ -22,5 +23,10 @@ public class TariffCalculationRequest {
     public void setProduct(String product) {
         this.product = product;
     }
-
+    public double getAmountOfProduct() {
+        return amountOfProduct;
+    }
+    public void setAmountOfProduct(double amountOfProduct) {
+        this.amountOfProduct = amountOfProduct;
+    }
 }

@@ -16,10 +16,12 @@ public class DutyController {
     }
 
     @PostMapping("/calculate")
-    public String calculateTariff(@RequestBody TariffCalculationRequest request) {
+    public double calculateTariff(@RequestBody TariffCalculationRequest request) {
         return dutyService.calculateTariff(
                 request.getImporterCountry(),
                 request.getExporterCountry(),
-                request.getProduct());
+                request.getProduct(),
+                request.getAmountOfProduct());
+
     }
 }

@@ -6,6 +6,8 @@ import com.ubs.tariffapp.models.AdValoremDuty;
 import com.ubs.tariffapp.models.CombinedDuty;
 import com.ubs.tariffapp.models.Duty;
 import com.ubs.tariffapp.models.SpecificDuty;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 
 @Service
@@ -24,35 +26,42 @@ public class DutyService {
     }
 
     // DutyController calls this to calculate
-    public String calculateTariff(String importerCountry, String exporterCountry, String product) {
+    public double calculateTariff(String importerCountry, String exporterCountry, String product, double amountOfProduct) {
         Duty duty = getDuty(importerCountry, exporterCountry, product);
-        // Add your calculation logic here using the Duty object
+        
         if (duty == null) {
-            return "No applicable duty found."; // or should i return null or throw exception?
+            throw new RuntimeException("No duty found for the given countries and product.");
         }
+        
+        double tariffAmount = 0.0;
         
         if (duty instanceof AdValoremDuty) {
             AdValoremDuty adValoremDuty = (AdValoremDuty) duty;
-            return "Ad Valorem Duty Rate: " + adValoremDuty.getRatePercent() + "%";
+            tariffAmount = amountOfProduct * adValoremDuty.getRatePercent().doubleValue() / 100.0;
         } else if (duty instanceof SpecificDuty) {
             SpecificDuty specificDuty = (SpecificDuty) duty;
-            return "Specific Duty Amount: " + specificDuty.getAmount() + " per " + specificDuty.getMultiplier() + " " + specificDuty.getUnit();
-            
+            tariffAmount = (amountOfProduct / specificDuty.getMultiplier().doubleValue()) * specificDuty.getAmount().doubleValue();
         } else if (duty instanceof CombinedDuty) {
             CombinedDuty combinedDuty = (CombinedDuty) duty;
-            if (combinedDuty.getMixedOrConditional().equals("M")) {
-                return "Combined Duty (Mixed): " +
-                        "Ad Valorem Rate: " + combinedDuty.getRatePercent() + "%, " +
-                        "Specific Amount: " + combinedDuty.getAmount() + " per " + combinedDuty.getMultiplier() + " " + combinedDuty.getUnit();
-            } else if (combinedDuty.getMixedOrConditional().equals("C")) {
-                return "Combined Duty (Conditional): " +
-                        "Ad Valorem Rate: " + combinedDuty.getRatePercent() + "%, " +
-                        "Specific Amount: " + combinedDuty.getAmount() + " per " + combinedDuty.getMultiplier() + " " + combinedDuty.getUnit();
-                
-            }
+            double adValorem = amountOfProduct * combinedDuty.getRatePercent().doubleValue() / 100.0;
+            double specific = (amountOfProduct / combinedDuty.getMultiplier().doubleValue()) * combinedDuty.getAmount().doubleValue();
             
+            if (combinedDuty.getMixedOrConditional().equals("M")) {
+                // Mixed: sum of ad valorem and specific duty
+                tariffAmount = adValorem + specific;
+            } else if (combinedDuty.getMixedOrConditional().equals("C")) {
+                // Conditional: choose the higher of ad valorem or specific duty
+                tariffAmount = Math.max(adValorem, specific);
+            } else {
+                throw new RuntimeException("Invalid mixed/conditional type for combined duty.");
+            }
+        } else {
+            throw new RuntimeException("Unknown duty type.");
         }
 
-        return null;
+        // Round to 2 decimal places using banker's rounding (HALF_EVEN)
+        return BigDecimal.valueOf(tariffAmount)
+                .setScale(2, RoundingMode.HALF_EVEN)
+                .doubleValue();
     }
 }
