@@ -1,6 +1,7 @@
 package com.ubs.tariffapp.testutils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -54,6 +55,11 @@ public class TestConstants {
 
     public static final List<AuditLog> AUDIT_LOGS = Collections.emptyList();
 
+    // For generic Duty fields (for a none duty where dutyNature = "N")
+    public static final String NONE_DUTY_NATURE = "N"; // For NoneDuty
+    public static final String NONE_MATH_EXPRESSION = ""; // No duty
+
+    
     // For AdValoremDuty fields
     public static final String AD_VALOREM_DUTY_NATURE = "A"; // For AdValoremDuty
     public static final String AD_VALOREM_MATH_EXPRESSION = "0 * value";
@@ -73,5 +79,18 @@ public class TestConstants {
     public static final String COMBINED_DUTY_NATURE = "C"; // For CombinedDuty
     public static final String MIXED_OR_CONDITIONAL = "M"; // 'M'ixed or 'C'onditional
     public static final String COMBINED_MATH_EXPRESSION = SPECIFIC_MATH_EXPRESSION + " + " + AD_VALOREM_MATH_EXPRESSION;
+
+    // For OtherDuty fields
+    public static final String OTHER_DUTY_NATURE = "O"; // For OtherDuty
+    public static final String OTHER_MATH_EXPRESSION = "";
+    public static final String OTHER_RAW_TEXT = "See 9822.04.01-9822.04.03";
+    public static final Boolean OTHER_IS_COMPUTABLE = false;
+
+    // For AuditLogRepositoryTest
+    public static final Integer AUDIT_LOG_ID = null; // Changed to null to allow auto-generation
+    public static final String AUDIT_CHANGE_TYPE = "CREATE";
+    public static final String AUDIT_CHANGED_BY = "test_admin";
+    public static final LocalDateTime AUDIT_CHANGE_DATE = LocalDateTime.of(2023, 1, 1, 12, 0);
+    public static final String AUDIT_CHANGE_DETAILS = "Created tariff schedule entry for testing";
 
 }
