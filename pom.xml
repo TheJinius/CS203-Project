@@ -44,6 +44,29 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Core test container -->
+        <!-- https://mvnrepository.com/artifact/org.testcontainers/testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- PostgreSQL module for Testcontainers -->
+        <!-- Transitively pulls in jdbc from org.testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- PostgreSQL JDBC Driver (for runtime use with PostgreSQL DB) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- For CSV parsing of raw_hsca_data.csv -->
         <dependency>
             <groupId>com.opencsv</groupId>

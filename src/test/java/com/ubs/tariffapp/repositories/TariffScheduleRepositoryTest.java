@@ -5,13 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
-import com.ubs.tariffapp.models.Duty;
+import com.ubs.tariffapp.models.duty.Duty;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.testutils.TestEntityFactory;
 
 
 @DataJpaTest
+@ActiveProfiles("test") // loads application-test.properties
 public class TariffScheduleRepositoryTest {
 
     @Autowired
@@ -29,6 +31,7 @@ public class TariffScheduleRepositoryTest {
 
     @Test
     void testSaveAndFindById() {
+        // TODO: Test with generic Duty (after we make Duty a concrete class)
         Duty duty = TestEntityFactory.createAdValoremDuty();
 
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
