@@ -1,5 +1,7 @@
 package com.ubs.tariffapp.audit;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -10,37 +12,47 @@ import jakarta.persistence.PostUpdate;
 
 /**
  * JPA entity listeners are not Spring managed beans by default.
- * So constructor injection via @Autowired does not work.
- * 
- * We use a static reference to the AuditLogService, which is set in the
- * constructor, together with @Component to make Spring manage this bean.
- * When JPA calls a listener instance, it uses the
- * static reference to register a transaction synchronization that executes
- * just before commit to avoid ConcurrentModificationException.
+ * We use ApplicationContextAware to get access to Spring beans
+ * from within JPA entity listener methods.
  */
 
 @Component // Make Spring manage this bean
-public class AuditListener {
+public class AuditListener implements ApplicationContextAware {
 
-    private static AuditLogService auditLogService;
+    private static ApplicationContext applicationContext;
+
+    @Override
+    public void setApplicationContext(ApplicationContext context) {
+        AuditListener.applicationContext = context;
+        System.out.println("ApplicationContext set in AuditListener");
+    }
 
     public AuditListener() {
         // Default constructor required by JPA
     }
 
     public AuditListener(AuditLogService service) {
+        // This constructor is for Spring configuration
         System.out.println("AuditListener constructor called with service: " + (service != null ? "NOT NULL" : "NULL"));
-        AuditListener.auditLogService = service; // static reference
-        System.out.println("Static auditLogService set to: " + (AuditListener.auditLogService != null ? "NOT NULL" : "NULL"));
+    }
+
+    // Helper to get AuditLogService bean from ApplicationContext
+    private AuditLogService getAuditLogService() {
+        if (applicationContext != null) {
+            return applicationContext.getBean(AuditLogService.class);
+        }
+        return null;
     }
 
     @PostPersist
     public void postPersist(Object entity) {
         System.out.println("AuditListener.postPersist called for: " + entity.getClass().getSimpleName());
-        System.out.println("auditLogService is null: " + (auditLogService == null));
+        
+        AuditLogService auditService = getAuditLogService();
+        System.out.println("auditService is null: " + (auditService == null));
         System.out.println("TransactionSynchronizationManager.isSynchronizationActive(): " + TransactionSynchronizationManager.isSynchronizationActive());
         
-        if (auditLogService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
+        if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
             System.out.println("Registering transaction synchronization for INSERT");
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -48,7 +60,7 @@ public class AuditListener {
                     System.out.println("beforeCommit called, readOnly: " + readOnly);
                     if (!readOnly) {
                         System.out.println("Calling auditLogService.logChange for INSERT");
-                        auditLogService.logChange(entity, "INSERT");
+                        auditService.logChange(entity, "INSERT");
                     }
                 }
             });
@@ -57,12 +69,13 @@ public class AuditListener {
 
     @PostUpdate
     public void postUpdate(Object entity) {
-        if (auditLogService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
+        AuditLogService auditService = getAuditLogService();
+        if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void beforeCommit(boolean readOnly) {
                     if (!readOnly) {
-                        auditLogService.logChange(entity, "UPDATE");
+                        auditService.logChange(entity, "UPDATE");
                     }
                 }
             });
@@ -71,12 +84,13 @@ public class AuditListener {
 
     @PostRemove
     public void postRemove(Object entity) {
-        if (auditLogService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
+        AuditLogService auditService = getAuditLogService();
+        if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void beforeCommit(boolean readOnly) {
                     if (!readOnly) {
-                        auditLogService.logChange(entity, "DELETE");
+                        auditService.logChange(entity, "DELETE");
                     }
                 }
             });

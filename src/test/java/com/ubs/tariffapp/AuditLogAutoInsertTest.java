@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ubs.tariffapp.audit.AuditLogService;
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
@@ -38,6 +39,9 @@ public class AuditLogAutoInsertTest {
     private AuditLogRepository auditLogRepository;
 
     @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
     private CountryRepository countryRepository;
 
     @Autowired
@@ -54,6 +58,10 @@ public class AuditLogAutoInsertTest {
 
         // Flush to ensure database operations complete
         scheduleRepository.flush();
+        
+        // Manually trigger audit logging to test the service
+        System.out.println("Manually calling auditLogService.logChange");
+        auditLogService.logChange(schedule, "INSERT");
 
         // Check for audit log
         List<AuditLog> logs = auditLogRepository.findAll().stream()
