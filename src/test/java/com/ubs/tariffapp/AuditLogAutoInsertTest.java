@@ -24,8 +24,8 @@ import com.ubs.tariffapp.repositories.duty.DutyRepository;
 import com.ubs.tariffapp.audit.AuditLogService;
 import com.ubs.tariffapp.audit.AuditListener;
 
-@SpringBootTest
-// @Import({AuditLogService.class, AuditListener.class}) // Import AuditLogService for dependency injection
+@DataJpaTest
+@Import({AuditLogService.class, AuditListener.class}) // Import AuditLogService for dependency injection
 @ActiveProfiles("test") // loads application-test.properties
 public class AuditLogAutoInsertTest {
     @Autowired
