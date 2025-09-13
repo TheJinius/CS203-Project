@@ -149,8 +149,7 @@ public class TestEntityFactory {
                                 TestConstants.TLS_SUFFIX,
                                 dutyType,
                                 TestConstants.NOTE,
-                                duty,
-                                new ArrayList<>());
+                                duty);
 
                 duty.setTariffSchedule(schedule);
                 return schedule;

@@ -1,7 +1,5 @@
 package com.ubs.tariffapp.models;
 
-import java.util.List;
-
 import com.ubs.tariffapp.audit.AuditListener;
 import com.ubs.tariffapp.models.duty.Duty;
 
@@ -14,7 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -69,9 +66,6 @@ public class TariffSchedule {
     @OneToOne(mappedBy = "tariffSchedule", cascade = CascadeType.ALL)
     private Duty duty;
 
-    @OneToMany(mappedBy = "tariffSchedule")
-    private List<AuditLog> auditLogs;
-
     // No-argument constructor
     public TariffSchedule() {
     }
@@ -79,7 +73,7 @@ public class TariffSchedule {
     // All-argument constructor
     public TariffSchedule(Integer tariffId, Country reporter, Country partner, 
              Integer tariffYear, Product product, String tariffLineSuffix,  
-             DutyType dutyType, String note, Duty duty, List<AuditLog> auditLogs) {
+             DutyType dutyType, String note, Duty duty) {
         this.tariffId = tariffId;
         this.reporter = reporter;
         this.partner = partner;
@@ -89,7 +83,6 @@ public class TariffSchedule {
         this.dutyType = dutyType;
         this.note = note;
         this.duty = duty;
-        this.auditLogs = auditLogs;
     }
 
     // Getters and setters
@@ -155,14 +148,6 @@ public class TariffSchedule {
 
     public void setNote(String note) {
         this.note = note;
-    }
-
-    public List<AuditLog> getAuditLogs() {
-        return auditLogs;
-    }
-
-    public void setAuditLogs(List<AuditLog> auditLogs) {
-        this.auditLogs = auditLogs;
     }
 
     public Duty getDuty() {
