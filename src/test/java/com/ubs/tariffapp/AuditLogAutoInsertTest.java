@@ -1,4 +1,4 @@
-package com.ubs.tariffapp.repositories;
+package com.ubs.tariffapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,6 +15,11 @@ import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.duty.Duty;
 import com.ubs.tariffapp.testutils.TestEntityFactory;
+import com.ubs.tariffapp.repositories.AuditLogRepository;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.DutyTypeRepository;
+import com.ubs.tariffapp.repositories.ProductRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.repositories.duty.DutyRepository;
 import com.ubs.tariffapp.audit.AuditLogService;
 import com.ubs.tariffapp.audit.AuditListener;
