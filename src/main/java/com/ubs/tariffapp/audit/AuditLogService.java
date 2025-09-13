@@ -23,12 +23,10 @@ public class AuditLogService {
 
     @Transactional
     public void logChange(Object entity, String changeType) {
-        System.out.println("AuditLogService.logChange called: " + changeType + " for " + entity.getClass().getSimpleName());
-        
         AuditLog log = new AuditLog();
         log.setChangeType(changeType);
-        log.setChangeDate(LocalDateTime.now());
         log.setChangedBy(getCurrentUsername());
+        log.setChangeDate(LocalDateTime.now());
 
         if (entity instanceof TariffSchedule ts) {
             log.setTariffId(ts.getTariffId());

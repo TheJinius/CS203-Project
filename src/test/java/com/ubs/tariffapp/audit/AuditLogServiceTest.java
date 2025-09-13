@@ -62,7 +62,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "INSERT");
 
                 // Check for audit log
@@ -88,7 +87,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "INSERT");
 
                 // Update the schedule
@@ -97,7 +95,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "UPDATE");
 
                 // Check for audit logs
@@ -123,7 +120,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "INSERT");
 
                 Integer scheduleId = schedule.getTariffId();
@@ -133,7 +129,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "DELETE");
 
                 // Check for audit logs (using the stored ID since entity is deleted)
@@ -156,7 +151,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "INSERT");
 
                 // Create and save a duty
@@ -169,7 +163,6 @@ public class AuditLogServiceTest {
                 dutyRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(duty, "INSERT");
 
                 // Check for audit logs
@@ -196,7 +189,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "INSERT");
 
                 Duty duty = new Duty();
@@ -208,7 +200,6 @@ public class AuditLogServiceTest {
                 dutyRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(duty, "INSERT");
 
                 // Update the duty
@@ -217,7 +208,6 @@ public class AuditLogServiceTest {
                 dutyRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(duty, "UPDATE");
 
                 // Check for audit logs
@@ -243,7 +233,6 @@ public class AuditLogServiceTest {
                 scheduleRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(schedule, "INSERT");
 
                 Duty duty = new Duty();
@@ -255,7 +244,6 @@ public class AuditLogServiceTest {
                 dutyRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(duty, "INSERT");
 
                 // Delete the duty
@@ -263,7 +251,6 @@ public class AuditLogServiceTest {
                 dutyRepository.flush();
 
                 // Manually trigger audit logging to test the service
-                System.out.println("Manually calling auditLogService.logChange");
                 auditLogService.logChange(duty, "DELETE");
 
                 // Check for audit logs

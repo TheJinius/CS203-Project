@@ -24,7 +24,6 @@ public class AuditListener implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext context) {
         AuditListener.applicationContext = context;
-        System.out.println("ApplicationContext set in AuditListener");
     }
 
     public AuditListener() {
@@ -33,7 +32,6 @@ public class AuditListener implements ApplicationContextAware {
 
     public AuditListener(AuditLogService service) {
         // This constructor is for Spring configuration
-        System.out.println("AuditListener constructor called with service: " + (service != null ? "NOT NULL" : "NULL"));
     }
 
     // Helper to get AuditLogService bean from ApplicationContext
@@ -46,20 +44,13 @@ public class AuditListener implements ApplicationContextAware {
 
     @PostPersist
     public void postPersist(Object entity) {
-        System.out.println("AuditListener.postPersist called for: " + entity.getClass().getSimpleName());
-        
         AuditLogService auditService = getAuditLogService();
-        System.out.println("auditService is null: " + (auditService == null));
-        System.out.println("TransactionSynchronizationManager.isSynchronizationActive(): " + TransactionSynchronizationManager.isSynchronizationActive());
         
         if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
-            System.out.println("Registering transaction synchronization for INSERT");
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void beforeCommit(boolean readOnly) {
-                    System.out.println("beforeCommit called, readOnly: " + readOnly);
                     if (!readOnly) {
-                        System.out.println("Calling auditLogService.logChange for INSERT");
                         auditService.logChange(entity, "INSERT");
                     }
                 }
