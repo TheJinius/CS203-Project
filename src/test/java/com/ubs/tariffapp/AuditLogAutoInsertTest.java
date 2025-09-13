@@ -168,7 +168,7 @@ public class AuditLogAutoInsertTest {
 
                 // Manually trigger audit logging to test the service
                 System.out.println("Manually calling auditLogService.logChange");
-                auditLogService.logChange(schedule, "INSERT");
+                auditLogService.logChange(duty, "INSERT");
 
                 // Check for audit logs
                 List<AuditLog> logs = auditLogRepository.findAll().stream()
@@ -207,7 +207,7 @@ public class AuditLogAutoInsertTest {
 
                 // Manually trigger audit logging to test the service
                 System.out.println("Manually calling auditLogService.logChange");
-                auditLogService.logChange(schedule, "INSERT");
+                auditLogService.logChange(duty, "INSERT");
 
                 // Update the duty
                 duty.setMathExpression("updated expression");
@@ -216,7 +216,7 @@ public class AuditLogAutoInsertTest {
 
                 // Manually trigger audit logging to test the service
                 System.out.println("Manually calling auditLogService.logChange");
-                auditLogService.logChange(schedule, "UPDATE");
+                auditLogService.logChange(duty, "UPDATE");
 
                 // Check for audit logs
                 List<AuditLog> logs = auditLogRepository.findAll().stream()
@@ -254,7 +254,7 @@ public class AuditLogAutoInsertTest {
 
                 // Manually trigger audit logging to test the service
                 System.out.println("Manually calling auditLogService.logChange");
-                auditLogService.logChange(schedule, "INSERT");
+                auditLogService.logChange(duty, "INSERT");
 
                 // Delete the duty
                 dutyRepository.delete(duty);
@@ -262,7 +262,7 @@ public class AuditLogAutoInsertTest {
 
                 // Manually trigger audit logging to test the service
                 System.out.println("Manually calling auditLogService.logChange");
-                auditLogService.logChange(schedule, "DELETE");
+                auditLogService.logChange(duty, "DELETE");
 
                 // Check for audit logs
                 List<AuditLog> logs = auditLogRepository.findAll().stream()
