@@ -65,8 +65,7 @@ public class AuditLogAutoInsertTest {
 
         // Check for audit log
         List<AuditLog> logs = auditLogRepository.findAll().stream()
-                .filter(log -> log.getTariffSchedule() != null && 
-                              log.getTariffSchedule().getTariffId().equals(schedule.getTariffId()))
+                .filter(log -> log.getTariffId().equals(schedule.getTariffId()))
                 .toList();
 
         assertThat(logs).hasSizeGreaterThanOrEqualTo(1);
@@ -93,8 +92,7 @@ public class AuditLogAutoInsertTest {
 
         // Check for audit logs
         List<AuditLog> logs = auditLogRepository.findAll().stream()
-                .filter(log -> log.getTariffSchedule() != null && 
-                              log.getTariffSchedule().getTariffId().equals(schedule.getTariffId()))
+                .filter(log -> log.getTariffId().equals(schedule.getTariffId()))
                 .toList();
 
         assertThat(logs).hasSizeGreaterThanOrEqualTo(2); // Should have INSERT + UPDATE
@@ -122,8 +120,7 @@ public class AuditLogAutoInsertTest {
 
         // Check for audit logs (using the stored ID since entity is deleted)
         List<AuditLog> logs = auditLogRepository.findAll().stream()
-                .filter(log -> log.getTariffSchedule() != null && 
-                              log.getTariffSchedule().getTariffId().equals(scheduleId))
+                .filter(log -> log.getTariffId().equals(scheduleId))
                 .toList();
 
         assertThat(logs).hasSizeGreaterThanOrEqualTo(2); // Should have INSERT + DELETE
@@ -151,8 +148,7 @@ public class AuditLogAutoInsertTest {
 
         // Check for audit logs
         List<AuditLog> logs = auditLogRepository.findAll().stream()
-                .filter(log -> log.getTariffSchedule() != null && 
-                              log.getTariffSchedule().getTariffId().equals(schedule.getTariffId()))
+                .filter(log -> log.getTariffId().equals(schedule.getTariffId()))
                 .toList();
 
         // Should have logs for both schedule and duty
@@ -162,7 +158,7 @@ public class AuditLogAutoInsertTest {
         boolean hasDutyInsert = logs.stream()
                 .anyMatch(log -> "INSERT".equals(log.getChangeType()) && 
                                 log.getChangeDetails() != null &&
-                                log.getChangeDetails().contains("Duty"));
+                                log.getChangeDetails().contains(duty.getClass().getSimpleName()));
         assertThat(hasDutyInsert).isTrue();
     }
 
@@ -188,8 +184,7 @@ public class AuditLogAutoInsertTest {
 
         // Check for audit logs
         List<AuditLog> logs = auditLogRepository.findAll().stream()
-                .filter(log -> log.getTariffSchedule() != null && 
-                              log.getTariffSchedule().getTariffId().equals(schedule.getTariffId()))
+                .filter(log -> log.getTariffId().equals(schedule.getTariffId()))
                 .toList();
 
         assertThat(logs).hasSizeGreaterThanOrEqualTo(3); // Schedule INSERT + Duty INSERT + Duty UPDATE
@@ -198,7 +193,7 @@ public class AuditLogAutoInsertTest {
         boolean hasDutyUpdate = logs.stream()
                 .anyMatch(log -> "UPDATE".equals(log.getChangeType()) && 
                                 log.getChangeDetails() != null &&
-                                log.getChangeDetails().contains("Duty"));
+                                log.getChangeDetails().contains(duty.getClass().getSimpleName()));
         assertThat(hasDutyUpdate).isTrue();
     }
 
@@ -223,8 +218,7 @@ public class AuditLogAutoInsertTest {
 
         // Check for audit logs
         List<AuditLog> logs = auditLogRepository.findAll().stream()
-                .filter(log -> log.getTariffSchedule() != null && 
-                              log.getTariffSchedule().getTariffId().equals(schedule.getTariffId()))
+                .filter(log -> log.getTariffId().equals(schedule.getTariffId()))
                 .toList();
 
         assertThat(logs).hasSizeGreaterThanOrEqualTo(3); // Schedule INSERT + Duty INSERT + Duty DELETE
@@ -233,7 +227,7 @@ public class AuditLogAutoInsertTest {
         boolean hasDutyDelete = logs.stream()
                 .anyMatch(log -> "DELETE".equals(log.getChangeType()) && 
                                 log.getChangeDetails() != null &&
-                                log.getChangeDetails().contains("Duty"));
+                                log.getChangeDetails().contains(duty.getClass().getSimpleName()));
         assertThat(hasDutyDelete).isTrue();
     }
 
