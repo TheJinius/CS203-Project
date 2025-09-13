@@ -9,8 +9,8 @@ import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.duty.AdValoremDuty;
 import com.ubs.tariffapp.models.duty.CombinedDuty;
 import com.ubs.tariffapp.models.duty.Duty;
-import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.models.duty.OtherDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
@@ -195,14 +195,74 @@ public class TestEntityFactory {
                 return schedule;
         }
 
+        // // Unused variant of above method:
+        // public static TariffSchedule createAndSaveTariffSchedule(
+        //                 CountryRepository countryRepo,
+        //                 ProductRepository productRepo,
+        //                 DutyTypeRepository dutyTypeRepo,
+        //                 TariffScheduleRepository scheduleRepo,
+        //                 Duty childDuty) {
+        //         // Note that parent Java objects do not have their lists updated
+        //         // in memory when children are added
+        //         // But the database relationships are correctly established
+        //         Country reporter = createReporterCountry();
+        //         Country partner = createPartnerCountry();
+        //         Product product = createProduct();
+        //         DutyType dutyType = createDutyType();
+
+        //         countryRepo.save(reporter);
+        //         countryRepo.save(partner);
+        //         productRepo.save(product);
+        //         dutyTypeRepo.save(dutyType);
+
+        //         countryRepo.flush();
+        //         productRepo.flush();
+        //         dutyTypeRepo.flush(); // forces persistence context to track this entity
+
+        //         TariffSchedule schedule = createTariffSchedule(
+        //                         reporter,
+        //                         partner,
+        //                         product,
+        //                         dutyType,
+        //                         childDuty);
+
+        //         // set bidirectional link
+        //         if (childDuty != null) {
+        //                 childDuty.setTariffSchedule(schedule);
+        //         }
+
+        //         dutyType.getTariffSchedules().add(schedule);
+        //         scheduleRepo.save(schedule);
+        //         scheduleRepo.flush(); // forces persistence context to track this entity
+
+        //         return schedule;
+        // }
+
+        // Unused for manual AuditLog creation in tests
         public static AuditLog createAuditLog(TariffSchedule tariffSchedule) {
                 AuditLog log = new AuditLog(
                                 TestConstants.AUDIT_LOG_ID, // Null in TestConstants - ID will be set by auto-increment
                                 tariffSchedule,
+                                tariffSchedule.getClass().getSimpleName(),
                                 TestConstants.AUDIT_CHANGE_TYPE,
                                 TestConstants.AUDIT_CHANGED_BY,
                                 TestConstants.AUDIT_CHANGE_DATE,
                                 TestConstants.AUDIT_CHANGE_DETAILS);
+                return log;
+        }
+
+        // Unused for manual AuditLog creation in tests
+        public static AuditLog createAuditLog(Duty duty) {
+                AuditLog log = new AuditLog(
+                                null,
+                                duty.getTariffSchedule(),
+                                duty.getClass().getSimpleName(),
+                                TestConstants.AUDIT_CHANGE_TYPE,
+                                TestConstants.AUDIT_CHANGED_BY,
+                                TestConstants.AUDIT_CHANGE_DATE,
+                                TestConstants.AUDIT_CHANGE_DETAILS
+
+                );
                 return log;
         }
 }
