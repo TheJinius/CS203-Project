@@ -23,6 +23,11 @@ public class AuditLog {
     public AuditLog() {
     }
 
+    private String changeType;
+    private String changedBy;
+    private LocalDateTime changeDate;
+    private String changeDetails;
+
     // All-argument constructor
     public AuditLog(Integer logId, TariffSchedule tariffSchedule, String changeType, String changedBy,
             LocalDateTime changeDate, String changeDetails) {
@@ -33,11 +38,6 @@ public class AuditLog {
         this.changeDate = changeDate;
         this.changeDetails = changeDetails;
     }
-
-    private String changeType;
-    private String changedBy;
-    private LocalDateTime changeDate;
-    private String changeDetails;
 
     // Getters and setters
     public Integer getLogId() {

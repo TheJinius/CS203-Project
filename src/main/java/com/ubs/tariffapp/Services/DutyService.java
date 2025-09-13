@@ -1,11 +1,11 @@
-package com.ubs.tariffapp.Services;
+package com.ubs.tariffapp.services;
 
 import org.springframework.stereotype.Service;
 import com.ubs.tariffapp.repositories.DutyRepository;
-import com.ubs.tariffapp.models.AdValoremDuty;
-import com.ubs.tariffapp.models.CombinedDuty;
-import com.ubs.tariffapp.models.Duty;
-import com.ubs.tariffapp.models.SpecificDuty;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.Duty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
