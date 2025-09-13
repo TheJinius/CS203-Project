@@ -89,7 +89,7 @@ public class TestConstants {
 
     // For AuditLogRepositoryTest
     public static final Integer AUDIT_LOG_ID = null; // Changed to null to allow auto-generation
-    public static final String AUDIT_CHANGE_TYPE = "CREATE";
+    public static final String AUDIT_CHANGE_TYPE = "INSERT";
     public static final String AUDIT_CHANGED_BY = "test_admin";
     public static final LocalDateTime AUDIT_CHANGE_DATE = LocalDateTime.of(2023, 1, 1, 12, 0);
     public static final String AUDIT_CHANGE_DETAILS = "Created tariff schedule entry for testing";
