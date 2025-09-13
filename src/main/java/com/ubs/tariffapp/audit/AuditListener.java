@@ -1,7 +1,8 @@
 package com.ubs.tariffapp.audit;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PostRemove;
@@ -14,9 +15,8 @@ import jakarta.persistence.PostUpdate;
  * We use a static reference to the AuditLogService, which is set in the
  * constructor, together with @Component to make Spring manage this bean.
  * When JPA calls a listener instance, it uses the
- * static reference to the Spring-managed service instead of trying to
- * inject a new instance. auditLogService is static, so all instances of
- * AuditListener (including those created by JPA) share it.
+ * static reference to register a transaction synchronization that executes
+ * just before commit to avoid ConcurrentModificationException.
  */
 
 @Component // Make Spring manage this bean
@@ -28,29 +28,58 @@ public class AuditListener {
         // Default constructor required by JPA
     }
 
-    @Autowired
     public AuditListener(AuditLogService service) {
+        System.out.println("AuditListener constructor called with service: " + (service != null ? "NOT NULL" : "NULL"));
         AuditListener.auditLogService = service; // static reference
+        System.out.println("Static auditLogService set to: " + (AuditListener.auditLogService != null ? "NOT NULL" : "NULL"));
     }
 
     @PostPersist
     public void postPersist(Object entity) {
-        if (auditLogService != null) {
-            auditLogService.logChange(entity, "INSERT");
+        System.out.println("AuditListener.postPersist called for: " + entity.getClass().getSimpleName());
+        System.out.println("auditLogService is null: " + (auditLogService == null));
+        System.out.println("TransactionSynchronizationManager.isSynchronizationActive(): " + TransactionSynchronizationManager.isSynchronizationActive());
+        
+        if (auditLogService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
+            System.out.println("Registering transaction synchronization for INSERT");
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void beforeCommit(boolean readOnly) {
+                    System.out.println("beforeCommit called, readOnly: " + readOnly);
+                    if (!readOnly) {
+                        System.out.println("Calling auditLogService.logChange for INSERT");
+                        auditLogService.logChange(entity, "INSERT");
+                    }
+                }
+            });
         }
     }
 
     @PostUpdate
     public void postUpdate(Object entity) {
-        if (auditLogService != null) {
-            auditLogService.logChange(entity, "UPDATE");
+        if (auditLogService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void beforeCommit(boolean readOnly) {
+                    if (!readOnly) {
+                        auditLogService.logChange(entity, "UPDATE");
+                    }
+                }
+            });
         }
     }
 
     @PostRemove
     public void postRemove(Object entity) {
-        if (auditLogService != null) {
-            auditLogService.logChange(entity, "DELETE");
+        if (auditLogService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void beforeCommit(boolean readOnly) {
+                    if (!readOnly) {
+                        auditLogService.logChange(entity, "DELETE");
+                    }
+                }
+            });
         }
     }
 }
