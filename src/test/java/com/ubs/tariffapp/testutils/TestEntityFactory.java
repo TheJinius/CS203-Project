@@ -16,6 +16,8 @@ import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
 import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 
+import java.util.ArrayList;
+
 public class TestEntityFactory {
         // For CountryRepositoryTest
         public static Country createCountry() {
@@ -23,8 +25,8 @@ public class TestEntityFactory {
                                 TestConstants.COUNTRY_ID,
                                 TestConstants.COUNTRY_NAME,
                                 TestConstants.COUNTRY_ISO_CODE,
-                                TestConstants.COUNTRY_REPORTED_TARIFFS,
-                                TestConstants.COUNTRY_PARTNERED_TARIFFS);
+                                new ArrayList<>(),
+                                new ArrayList<>());
 
                 return country;
         }
@@ -35,7 +37,7 @@ public class TestEntityFactory {
                                 TestConstants.PRODUCT_TL_CODE,
                                 TestConstants.PRODUCT_DESCRIPTION,
                                 TestConstants.PRODUCT_TL_CODE.length(),
-                                TestConstants.PRODUCT_TARIFF_SCHEDULES);
+                                new ArrayList<>());
 
                 return product;
         }
@@ -46,8 +48,8 @@ public class TestEntityFactory {
                                 TestConstants.REPORTER_ID,
                                 TestConstants.REPORTER_NAME,
                                 TestConstants.REPORTER_ISO,
-                                TestConstants.REPORTER_REPORTED_TARIFFS,
-                                TestConstants.REPORTER_PARTNERED_TARIFFS);
+                                new ArrayList<>(),
+                                new ArrayList<>());
 
                 return reporter;
         }
@@ -57,8 +59,8 @@ public class TestEntityFactory {
                                 TestConstants.PARTNER_ID,
                                 TestConstants.PARTNER_NAME,
                                 TestConstants.PARTNER_ISO,
-                                TestConstants.PARTNER_REPORTED_TARIFFS,
-                                TestConstants.PARTNER_PARTNERED_TARIFFS);
+                                new ArrayList<>(),
+                                new ArrayList<>());
 
                 return partner;
         }
@@ -71,7 +73,7 @@ public class TestEntityFactory {
                 DutyType dutyType = new DutyType(
                                 dutyTypeId,
                                 TestConstants.DUTY_TYPE_DESCRIPTION,
-                                TestConstants.DUTY_TYPE_TARIFF_SCHEDULES);
+                                new ArrayList<>());
 
                 return dutyType;
         }
@@ -148,7 +150,7 @@ public class TestEntityFactory {
                                 dutyType,
                                 TestConstants.NOTE,
                                 duty,
-                                TestConstants.AUDIT_LOGS);
+                                new ArrayList<>());
 
                 duty.setTariffSchedule(schedule);
                 return schedule;
