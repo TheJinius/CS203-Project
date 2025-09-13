@@ -1,5 +1,7 @@
 package com.ubs.tariffapp.testutils;
 
+import java.util.ArrayList;
+
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
@@ -15,8 +17,6 @@ import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
 import com.ubs.tariffapp.repositories.TariffScheduleRepository;
-
-import java.util.ArrayList;
 
 public class TestEntityFactory {
         // For CountryRepositoryTest
@@ -244,7 +244,7 @@ public class TestEntityFactory {
         public static AuditLog createAuditLog(TariffSchedule tariffSchedule) {
                 AuditLog log = new AuditLog(
                                 TestConstants.AUDIT_LOG_ID, // Null in TestConstants - ID will be set by auto-increment
-                                tariffSchedule,
+                                tariffSchedule.getTariffId(),
                                 tariffSchedule.getClass().getSimpleName(),
                                 TestConstants.AUDIT_CHANGE_TYPE,
                                 TestConstants.AUDIT_CHANGED_BY,
@@ -257,7 +257,7 @@ public class TestEntityFactory {
         public static AuditLog createAuditLog(Duty duty) {
                 AuditLog log = new AuditLog(
                                 null,
-                                duty.getTariffSchedule(),
+                                duty.getTariffSchedule().getTariffId(),
                                 duty.getClass().getSimpleName(),
                                 TestConstants.AUDIT_CHANGE_TYPE,
                                 TestConstants.AUDIT_CHANGED_BY,
