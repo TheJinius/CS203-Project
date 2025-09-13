@@ -195,51 +195,7 @@ public class TestEntityFactory {
                 scheduleRepo.save(schedule);
                 return schedule;
         }
-
-        // // Unused variant of above method:
-        // public static TariffSchedule createAndSaveTariffSchedule(
-        //                 CountryRepository countryRepo,
-        //                 ProductRepository productRepo,
-        //                 DutyTypeRepository dutyTypeRepo,
-        //                 TariffScheduleRepository scheduleRepo,
-        //                 Duty childDuty) {
-        //         // Note that parent Java objects do not have their lists updated
-        //         // in memory when children are added
-        //         // But the database relationships are correctly established
-        //         Country reporter = createReporterCountry();
-        //         Country partner = createPartnerCountry();
-        //         Product product = createProduct();
-        //         DutyType dutyType = createDutyType();
-
-        //         countryRepo.save(reporter);
-        //         countryRepo.save(partner);
-        //         productRepo.save(product);
-        //         dutyTypeRepo.save(dutyType);
-
-        //         countryRepo.flush();
-        //         productRepo.flush();
-        //         dutyTypeRepo.flush(); // forces persistence context to track this entity
-
-        //         TariffSchedule schedule = createTariffSchedule(
-        //                         reporter,
-        //                         partner,
-        //                         product,
-        //                         dutyType,
-        //                         childDuty);
-
-        //         // set bidirectional link
-        //         if (childDuty != null) {
-        //                 childDuty.setTariffSchedule(schedule);
-        //         }
-
-        //         dutyType.getTariffSchedules().add(schedule);
-        //         scheduleRepo.save(schedule);
-        //         scheduleRepo.flush(); // forces persistence context to track this entity
-
-        //         return schedule;
-        // }
-
-        // Unused for manual AuditLog creation in tests
+        
         public static AuditLog createAuditLog(TariffSchedule tariffSchedule) {
                 AuditLog log = new AuditLog(
                                 TestConstants.AUDIT_LOG_ID, // Null in TestConstants - ID will be set by auto-increment
@@ -252,7 +208,6 @@ public class TestEntityFactory {
                 return log;
         }
 
-        // Unused for manual AuditLog creation in tests
         public static AuditLog createAuditLog(Duty duty) {
                 AuditLog log = new AuditLog(
                                 null,

@@ -24,6 +24,7 @@ import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.repositories.duty.DutyRepository;
 
 // A test for the AuditLogService class in com.ubs.tariffapp.audit package
+// Does not use TestEntityFactory because we need full control over flushing and entity relationships
 
 @SpringBootTest // Use full Spring Boot context instead of @DataJpaTest
 @ActiveProfiles("test")
