@@ -3,9 +3,9 @@ package com.ubs.tariffapp.audit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreRemove;
-import jakarta.persistence.PreUpdate;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.PostRemove;
+import jakarta.persistence.PostUpdate;
 
 /**
  * JPA entity listeners are not Spring managed beans by default.
@@ -33,22 +33,22 @@ public class AuditListener {
         AuditListener.auditLogService = service; // static reference
     }
 
-    @PrePersist
-    public void prePersist(Object entity) {
+    @PostPersist
+    public void postPersist(Object entity) {
         if (auditLogService != null) {
             auditLogService.logChange(entity, "INSERT");
         }
     }
 
-    @PreUpdate
-    public void preUpdate(Object entity) {
+    @PostUpdate
+    public void postUpdate(Object entity) {
         if (auditLogService != null) {
             auditLogService.logChange(entity, "UPDATE");
         }
     }
 
-    @PreRemove
-    public void preRemove(Object entity) {
+    @PostRemove
+    public void postRemove(Object entity) {
         if (auditLogService != null) {
             auditLogService.logChange(entity, "DELETE");
         }
