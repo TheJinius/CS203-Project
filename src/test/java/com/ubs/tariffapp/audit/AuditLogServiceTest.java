@@ -1,4 +1,4 @@
-package com.ubs.tariffapp;
+package com.ubs.tariffapp.audit;
 
 import java.util.List;
 
@@ -9,7 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ubs.tariffapp.audit.AuditLogService;
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
@@ -24,10 +23,12 @@ import com.ubs.tariffapp.repositories.ProductRepository;
 import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.repositories.duty.DutyRepository;
 
+// A test for the AuditLogService class in com.ubs.tariffapp.audit package
+
 @SpringBootTest // Use full Spring Boot context instead of @DataJpaTest
 @ActiveProfiles("test")
 @Transactional // Each test runs in its own transaction (rollback by default)
-public class AuditLogAutoInsertTest {
+public class AuditLogServiceTest {
 
         @Autowired
         private TariffScheduleRepository scheduleRepository;
