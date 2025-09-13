@@ -2,10 +2,12 @@ package com.ubs.tariffapp.models;
 
 import java.util.List;
 
+import com.ubs.tariffapp.audit.AuditListener;
 import com.ubs.tariffapp.models.duty.Duty;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,6 +20,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
+@EntityListeners(AuditListener.class)
 @Table(
     uniqueConstraints = {
         @UniqueConstraint(
@@ -28,7 +31,7 @@ import jakarta.persistence.UniqueConstraint;
                 "tl_code",
                 "duty_type",
                 "duty_code",
-                "year",
+                "tariff_year",
                 "tls_suffix"
             }
         )
