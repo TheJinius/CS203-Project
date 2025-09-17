@@ -1,4 +1,4 @@
-package com.ubs.tariffapp.services;
+package com.ubs.tariffapp.Services;
 
 import com.ubs.tariffapp.models.*;
 import com.ubs.tariffapp.models.duty.*;

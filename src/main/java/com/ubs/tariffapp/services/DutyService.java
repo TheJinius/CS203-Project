@@ -1,4 +1,4 @@
-package com.ubs.tariffapp.services;
+package com.ubs.tariffapp.Services;
 
 import org.springframework.stereotype.Service;
 import com.ubs.tariffapp.repositories.DutyRepository;
