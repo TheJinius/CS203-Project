@@ -1,9 +1,12 @@
-package com.ubs.tariffapp.Services;
+package com.ubs.tariffapp.services;
 
 import com.ubs.tariffapp.models.*;
 import com.ubs.tariffapp.models.duty.*;
 import com.ubs.tariffapp.repositories.*;
 import com.ubs.tariffapp.repositories.duty.*;
+
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +33,7 @@ import java.util.List;
      *  12	"Duty Type Description"
      *  13	"Duty Nature"
      *  14	"Ad Valorem Calculation Code/Description"
-     *  15	"Notes"
+     *  15	"Notes"   
      *  16  "Industry"
 */
 
