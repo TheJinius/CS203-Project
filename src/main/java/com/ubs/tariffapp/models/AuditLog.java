@@ -22,7 +22,8 @@ public class AuditLog {
     public AuditLog() {
     }
 
-    private String changeType;
+    private String targetEntity; // e.g., "TariffSchedule", "AdValoremDuty"
+    private String changeType; // INSERT / UPDATE / DELETE
     private String changedBy;
     private LocalDateTime changeDate;
     private String changeDetails;
@@ -39,12 +40,6 @@ public class AuditLog {
         this.changeDate = changeDate;
         this.changeDetails = changeDetails;
     }
-
-    private String targetEntity; // e.g., "TariffSchedule", "AdValoremDuty"
-    private String changeType; // INSERT / UPDATE / DELETE
-    private String changedBy;
-    private LocalDateTime changeDate;
-    private String changeDetails;
 
     // Getters and setters
     public Integer getLogId() {

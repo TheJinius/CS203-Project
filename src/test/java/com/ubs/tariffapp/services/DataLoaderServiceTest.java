@@ -2,6 +2,8 @@ package com.ubs.tariffapp.services;
 
 import com.ubs.tariffapp.repositories.*;
 import com.ubs.tariffapp.repositories.duty.*;
+import com.ubs.tariffapp.services.DataLoaderService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
