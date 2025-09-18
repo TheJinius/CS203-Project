@@ -15,6 +15,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class DataLoaderService {
@@ -43,6 +45,111 @@ public class DataLoaderService {
     @Autowired
     private OtherDutyRepository otherDutyRepository;
 
+    // Static map loaded once when class is first loaded
+    private static final Map<String, String> COUNTRY_CODE_MAP = new HashMap<>();
+    
+    static {
+        loadCountryCodeMap();
+    }
+
+    private static void loadCountryCodeMap() {
+        try {
+            InputStream inputStream = DataLoaderService.class.getResourceAsStream("/data/country_iso_and_wits_code_data.csv");
+            if (inputStream == null) {
+                System.err.println("Country code mapping file not found");
+                return;
+            }
+            
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                String line = reader.readLine(); // Skip header
+                
+                while ((line = reader.readLine()) != null) {
+                    String[] columns = parseCsvLine(line);
+                    if (columns.length >= 2) {
+                        String countryName = columns[0].trim().toLowerCase();
+                        String isoCode = columns[1].trim();
+                        
+                        COUNTRY_CODE_MAP.put(countryName, isoCode);
+                        addCountryVariationsStatic(countryName, isoCode);
+                    }
+                }
+                
+                System.out.println("Loaded " + COUNTRY_CODE_MAP.size() + " country code mappings");
+                
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading country code mappings: " + e.getMessage());
+        }
+    }
+
+    private String deriveIsoCode(String countryName) {
+        String isoCode = COUNTRY_CODE_MAP.get(countryName.toLowerCase());
+        if (isoCode != null) {
+            return isoCode;
+        }
+        
+        // Fuzzy matching for variations
+        String normalizedName = countryName.toLowerCase().trim();
+        for (Map.Entry<String, String> entry : COUNTRY_CODE_MAP.entrySet()) {
+            String countryKey = entry.getKey();
+            if (countryKey.contains(normalizedName) || normalizedName.contains(countryKey)) {
+                return entry.getValue();
+            }
+        }
+        
+        System.out.println("Warning: No ISO code found for country: " + countryName);
+        return countryName.length() >= 3 ? countryName.substring(0, 3).toUpperCase() : countryName.toUpperCase();
+    }
+
+    private static void addCountryVariationsStatic(String countryName, String isoCode) {
+        // Same logic as before but using static context
+        String baseName = countryName
+                .replace(", the", "")
+                .replace("the ", "")
+                .replace(" rep.", "")
+                .replace(" republic", "");
+        
+        if (!baseName.equals(countryName)) {
+            COUNTRY_CODE_MAP.put(baseName.trim(), isoCode);
+        }
+        
+        // Add specific variations
+        switch (isoCode) {
+            case "USA":
+                COUNTRY_CODE_MAP.put("united states", isoCode);
+                COUNTRY_CODE_MAP.put("us", isoCode);
+                break;
+            case "GBR":
+                COUNTRY_CODE_MAP.put("united kingdom", isoCode);
+                COUNTRY_CODE_MAP.put("uk", isoCode);
+                break;
+            // Add more as needed
+        }
+    }
+
+    private static String[] parseCsvLine(String line) {
+        // Same CSV parsing logic
+        List<String> result = new ArrayList<>();
+        boolean inQuotes = false;
+        StringBuilder current = new StringBuilder();
+        
+        for (char c : line.toCharArray()) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                result.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
+            }
+        }
+        result.add(current.toString());
+        
+        return result.toArray(new String[0]);
+    }
+    
+// ====================================================================================================================
+    // Main method to load cleaned data
     @Transactional
     public void loadCleanedData(String fileName) {
         try {
@@ -261,33 +368,6 @@ public class DataLoaderService {
         // Simple parsing logic - unused 
         // Example: "5 USD per 100 kg" -> amount=5, unit=kg, multiplier=100
         // For now, just store the raw text
-    }
-
-    private String deriveIsoCode(String countryName) {
-        // Simple mapping - you might want a proper lookup table
-        if (countryName.toLowerCase().contains("singapore")) return "SG";
-        if (countryName.toLowerCase().contains("world")) return "WLD";
-        return countryName.length() >= 3 ? countryName.substring(0, 3).toUpperCase() : countryName.toUpperCase();
-    }
-
-    private String[] parseCsvLine(String line) {
-        List<String> result = new ArrayList<>();
-        boolean inQuotes = false;
-        StringBuilder current = new StringBuilder();
-        
-        for (char c : line.toCharArray()) {
-            if (c == '"') {
-                inQuotes = !inQuotes;
-            } else if (c == ',' && !inQuotes) {
-                result.add(current.toString());
-                current = new StringBuilder();
-            } else {
-                current.append(c);
-            }
-        }
-        result.add(current.toString());
-        
-        return result.toArray(new String[0]);
     }
 
     // Helper methods for testing
