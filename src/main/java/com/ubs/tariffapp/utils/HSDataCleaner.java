@@ -77,14 +77,12 @@ public class HSDataCleaner {
                 return;
             }
 
-            // Write the header with an additional "Industry" column
             writer.write(line + ",Industry");
             writer.newLine();
         
             // Use a HashSet to deduplicate
             Set<String> seen = new HashSet<>();
 
-            // Process each line
             while ((line = reader.readLine()) != null) {
                 String[] columns = line.split(",", -1); // Use -1 to preserve empty columns
 
@@ -107,10 +105,8 @@ public class HSDataCleaner {
                 }
                 seen.add(key);
 
-                // Classify industry based on HS code
                 String industry = classifyIndustry(hsCode);
 
-                // Standardise ReporterName and PartnerName to Title Case
                 columns[1] = toTitleCase(columns[1].trim());
                 columns[3] = toTitleCase(columns[3].trim());
 
