@@ -94,3 +94,6 @@ nb-configuration.xml
 *.tfstate
 *.hcl
 *.tfstate.backup
+
+#deployment zip files
+*.zip
