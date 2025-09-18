@@ -192,6 +192,9 @@ public class DataLoaderService {
                 errors.forEach(System.err::println);
             }
 
+            // Print database summary after loading
+            printDatabaseSummary();
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to load data from file: " + fileName, e);
         }
@@ -396,5 +399,16 @@ public class DataLoaderService {
 
     public long getSpecificDutyCount() {
         return specificDutyRepository.count();
+    }
+
+    public void printDatabaseSummary() {
+        System.out.println("=== DATABASE SUMMARY ===");
+        System.out.println("Tariff Schedules: " + getTariffScheduleCount());
+        System.out.println("Countries: " + getCountryCount());
+        System.out.println("Products: " + getProductCount());
+        System.out.println("Duty Types: " + getDutyTypeCount());
+        System.out.println("Ad Valorem Duties: " + getAdValoremDutyCount());
+        System.out.println("Specific Duties: " + getSpecificDutyCount());
+        System.out.println("========================");
     }
 }
