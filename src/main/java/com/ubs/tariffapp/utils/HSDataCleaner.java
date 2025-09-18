@@ -65,7 +65,6 @@ public class HSDataCleaner {
             return;
         }
 
-        //String outputFile = "target/clean_hsca_data.csv";
         String outputFileName = "clean_" + inputFileName;
         String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
@@ -113,8 +112,8 @@ public class HSDataCleaner {
                 String industry = classifyIndustry(hsCode);
 
                 // Standardise ReporterName and PartnerName to Title Case
-                columns[1] = capitalizeWordsStream(columns[1].trim());
-                columns[3] = capitalizeWordsStream(columns[3].trim());
+                columns[1] = toTitleCase(columns[1].trim());
+                columns[3] = toTitleCase(columns[3].trim());
 
                 // Add the industry column to the row
                 String[] updatedColumns = Arrays.copyOf(columns, columns.length + 1);
@@ -166,10 +165,10 @@ public class HSDataCleaner {
         return "Other"; // Default if no range matches
     }
 
-    private static String capitalizeWordsStream(String str) {
-    if (str == null || str.isEmpty()) return str;
+    private static String toTitleCase(String input) {
+    if (input == null || input.isEmpty()) return input;
 
-    return Arrays.stream(str.toLowerCase().split("\\s+"))
+    return Arrays.stream(input.toLowerCase().split("\\s+"))
             .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
             .collect(Collectors.joining(" "));
     }
