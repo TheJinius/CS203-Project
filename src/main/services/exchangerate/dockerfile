@@ -1,0 +1,17 @@
+# Dockerfile for creating AWS Lambda Layer
+FROM public.ecr.aws/lambda/python:3.13
+
+# Create the layer directory structure
+RUN mkdir -p /opt/python
+
+# Copy requirements file
+COPY requirements.txt /opt/
+
+# Install packages to the correct location for Lambda layers
+RUN pip install -r /opt/requirements.txt -t /opt/python/
+
+# Set working directory
+WORKDIR /opt
+
+# Command to keep container running so we can copy files
+CMD ["tail", "-f", "/dev/null"]
