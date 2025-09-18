@@ -1,8 +1,9 @@
 package com.ubs.tariffapp.models;
 
 import java.io.Serializable;
-import java.util.Objects;
+import java.util.Objects;import jakarta.persistence.Embeddable;  // Add this import
 
+//@Embeddable  // Add this annotation - REQUIRED for JPA composite keys
 // Composite key class for DutyType
 public class DutyTypeId implements Serializable {
     private String dutyType;

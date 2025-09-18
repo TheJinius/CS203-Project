@@ -6,8 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 
 @Entity
 public class AuditLog {
@@ -15,26 +13,35 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer logId;
 
-    @ManyToOne
-    @JoinColumn(name = "tariff_id")
-    private TariffSchedule tariffSchedule;
+    // We use tariffId instead of a full entity reference to avoid issues with
+    // referential integrity - otherwise we would not be able to delete a TariffSchedule
+    // if there are AuditLog entries referencing it.
+    private Integer tariffId;
 
     // No-argument constructor
     public AuditLog() {
     }
 
+    private String changeType;
+    private String changedBy;
+    private LocalDateTime changeDate;
+    private String changeDetails;
+
     // All-argument constructor
-    public AuditLog(Integer logId, TariffSchedule tariffSchedule, String changeType, String changedBy,
+    public AuditLog(Integer logId, Integer tariffId,
+            String targetEntity, String changeType, String changedBy,
             LocalDateTime changeDate, String changeDetails) {
         this.logId = logId;
-        this.tariffSchedule = tariffSchedule;
+        this.tariffId = tariffId;
+        this.targetEntity = targetEntity;
         this.changeType = changeType;
         this.changedBy = changedBy;
         this.changeDate = changeDate;
         this.changeDetails = changeDetails;
     }
 
-    private String changeType;
+    private String targetEntity; // e.g., "TariffSchedule", "AdValoremDuty"
+    private String changeType; // INSERT / UPDATE / DELETE
     private String changedBy;
     private LocalDateTime changeDate;
     private String changeDetails;
@@ -48,12 +55,20 @@ public class AuditLog {
         this.logId = logId;
     }
 
-    public TariffSchedule getTariffSchedule() {
-        return tariffSchedule;
+    public Integer getTariffId() {
+        return tariffId;
     }
 
-    public void setTariffSchedule(TariffSchedule tariffSchedule) {
-        this.tariffSchedule = tariffSchedule;
+    public void setTariffId(Integer tariffId) {
+        this.tariffId = tariffId;
+    }
+
+    public String getTargetEntity() {
+        return targetEntity;
+    }
+
+    public void setTargetEntity(String targetEntity) {
+        this.targetEntity = targetEntity;
     }
 
     public String getChangeType() {

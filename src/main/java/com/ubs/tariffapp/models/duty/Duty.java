@@ -1,8 +1,10 @@
 package com.ubs.tariffapp.models.duty;
 
+import com.ubs.tariffapp.audit.AuditListener;
 import com.ubs.tariffapp.models.TariffSchedule;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
@@ -14,6 +16,7 @@ import jakarta.persistence.OneToOne;
 // Adheres to the total specialisation rule for completeness constraint
 // In other words, each instance of Duty must be one of its subclasses
 @Entity
+@EntityListeners(AuditListener.class)
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Duty {
     @Id
