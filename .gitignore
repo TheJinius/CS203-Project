@@ -97,3 +97,6 @@ nb-configuration.xml
 
 #deployment zip files
 *.zip
+
+#env files
+.env

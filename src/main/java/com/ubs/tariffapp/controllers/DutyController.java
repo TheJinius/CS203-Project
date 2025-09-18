@@ -3,8 +3,9 @@ package com.ubs.tariffapp.controllers;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.ubs.tariffapp.Services.DutyService;
 import com.ubs.tariffapp.models.TariffCalculationRequest;
+import com.ubs.tariffapp.services.DutyService;
+
 import java.util.Map;
 
 @RestController
