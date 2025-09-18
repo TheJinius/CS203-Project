@@ -59,8 +59,9 @@ public class DataLoaderServiceTest {
     @Test
     void testLoadCleanedData() {
         // Arrange
-        String testFileName = "clean_HS2017SGYear2023.csv";
-        
+        String testFileName = "clean_HS2017USAYear2023.csv";
+        System.out.println("Testing with file: " + testFileName);
+
         // Get initial counts
         long initialTariffCount = dataLoaderService.getTariffScheduleCount();
         long initialCountryCount = dataLoaderService.getCountryCount();
@@ -69,14 +70,25 @@ public class DataLoaderServiceTest {
         // Act
         assertDoesNotThrow(() -> dataLoaderService.loadCleanedData(testFileName));
 
-        // Assert
+        // Debug: Print counts after loading
         long finalTariffCount = dataLoaderService.getTariffScheduleCount();
         long finalCountryCount = dataLoaderService.getCountryCount();
         long finalProductCount = dataLoaderService.getProductCount();
 
-        assertTrue(finalTariffCount > initialTariffCount, "Tariff schedules should be loaded");
-        assertTrue(finalCountryCount > initialCountryCount, "Countries should be loaded");
-        assertTrue(finalProductCount > initialProductCount, "Products should be loaded");
+        System.out.println("Initial Tariff Count: " + initialTariffCount);
+        System.out.println("Final Tariff Count: " + finalTariffCount);
+        System.out.println("Initial Country Count: " + initialCountryCount);
+        System.out.println("Final Country Count: " + finalCountryCount);
+        System.out.println("Initial Product Count: " + initialProductCount);
+        System.out.println("Final Product Count: " + finalProductCount);
+
+        // Assert
+        assertTrue(finalTariffCount > initialTariffCount, 
+            "Tariff schedules should be loaded. Initial: " + initialTariffCount + ", Final: " + finalTariffCount);
+        assertTrue(finalCountryCount > initialCountryCount, 
+            "Countries should be loaded. Initial: " + initialCountryCount + ", Final: " + finalCountryCount);
+        assertTrue(finalProductCount > initialProductCount, 
+            "Products should be loaded. Initial: " + initialProductCount + ", Final: " + finalProductCount);
 
         System.out.println("Loaded " + (finalTariffCount - initialTariffCount) + " tariff schedules");
         System.out.println("Loaded " + (finalCountryCount - initialCountryCount) + " countries");
@@ -85,9 +97,11 @@ public class DataLoaderServiceTest {
 
     @Test
     void testLoadDataWithInvalidFile() {
+        String invalidFileName = "non_existent_file.csv";
         RuntimeException exception = assertThrows(RuntimeException.class, () -> 
-            dataLoaderService.loadCleanedData("non_existent_file.csv"));
+            dataLoaderService.loadCleanedData(invalidFileName));
         
-        assertTrue(exception.getMessage().contains("not found"));
+        assertTrue(exception.getMessage().contains("Cleaned data file not found: " + invalidFileName), 
+            "Exception message should indicate the file was not found. Actual: " + exception.getMessage());
     }
 }

@@ -152,44 +152,46 @@ public class DataLoaderService {
     // Main method to load cleaned data
     @Transactional
     public void loadCleanedData(String fileName) {
-        try {
-            InputStream inputStream = getClass().getResourceAsStream("/data/clean_data/" + fileName);
-            if (inputStream == null) {
-                throw new RuntimeException("Cleaned data file not found: " + fileName);
+        System.out.println("Attempting to load file: " + fileName);
+        InputStream inputStream = getClass().getResourceAsStream("/data/clean_data/" + fileName);
+        if (inputStream == null) {
+            throw new RuntimeException("Cleaned data file not found: " + fileName);
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String headerLine = reader.readLine(); // Skip header
+            if (headerLine == null) {
+                throw new RuntimeException("File is empty or invalid");
             }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                String headerLine = reader.readLine(); // Skip header
-                if (headerLine == null) {
-                    throw new RuntimeException("File is empty or invalid");
-                }
+            System.out.println("Header: " + headerLine);
 
-                String line;
-                int processedCount = 0;
-                List<String> errors = new ArrayList<>();
+            String line;
+            int processedCount = 0;
+            List<String> errors = new ArrayList<>();
 
-                while ((line = reader.readLine()) != null) {
-                    try {
-                        processDataRow(line);
-                        processedCount++;
-                        
-                        if (processedCount % 100 == 0) {
-                            System.out.println("Processed " + processedCount + " rows");
-                        }
-                    } catch (Exception e) {
-                        String error = "Error processing row " + (processedCount + 1) + ": " + e.getMessage();
-                        errors.add(error);
-                        System.err.println(error);
+            while ((line = reader.readLine()) != null) {
+                try {
+                    System.out.println("Processing row: " + line);
+                    processDataRow(line);
+                    processedCount++;
+                    
+                    if (processedCount % 100 == 0) {
+                        System.out.println("Processed " + processedCount + " rows");
                     }
+                } catch (Exception e) {
+                    String error = "Error processing row " + (processedCount + 1) + ": " + e.getMessage();
+                    errors.add(error);
+                    System.err.println(error);
                 }
-
-                System.out.println("Data loading completed. Processed: " + processedCount + " rows");
-                if (!errors.isEmpty()) {
-                    System.err.println("Errors encountered: " + errors.size());
-                    errors.forEach(System.err::println);
-                }
-
             }
+
+            System.out.println("Data loading completed. Processed: " + processedCount + " rows");
+            if (!errors.isEmpty()) {
+                System.err.println("Errors encountered: " + errors.size());
+                errors.forEach(System.err::println);
+            }
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to load data from file: " + fileName, e);
         }
@@ -197,9 +199,10 @@ public class DataLoaderService {
 
     private void processDataRow(String line) {
         String[] columns = parseCsvLine(line);
-        
+
         if (columns.length < 17) {
-            throw new RuntimeException("Invalid row format - expected 17 columns, got " + columns.length);
+            System.err.println("Skipping row due to insufficient columns. Expected 17, got " + columns.length);
+            return; // Skip this row
         }
 
         // Extract data from columns based on your CSV format
