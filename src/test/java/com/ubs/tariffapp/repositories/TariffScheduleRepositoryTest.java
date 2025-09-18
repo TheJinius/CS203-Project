@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.ubs.tariffapp.models.duty.Duty;
 import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.duty.Duty;
 import com.ubs.tariffapp.testutils.TestEntityFactory;
 
 
@@ -31,8 +31,7 @@ public class TariffScheduleRepositoryTest {
 
     @Test
     void testSaveAndFindById() {
-        // TODO: Test with generic Duty (after we make Duty a concrete class)
-        Duty duty = TestEntityFactory.createAdValoremDuty();
+        Duty duty = TestEntityFactory.createNoneDuty();
 
         TariffSchedule schedule = TestEntityFactory.createAndSaveTariffSchedule(
                 countryRepository,

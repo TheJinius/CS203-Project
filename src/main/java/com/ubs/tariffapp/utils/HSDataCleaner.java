@@ -58,14 +58,13 @@ public class HSDataCleaner {
 
     public static void main(String[] args) {
         // Read input from resources
-        String inputFileName = "HS2017USAYear2023.csv"; // Original file name
+        String inputFileName = "HS2017SGYear2023.csv"; // Original file name
         InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
         if (inputStream == null) {
             System.err.println("Input CSV file not found in resources folder.");
             return;
         }
 
-        //String outputFile = "target/clean_hsca_data.csv";
         String outputFileName = "clean_" + inputFileName;
         String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
@@ -78,17 +77,14 @@ public class HSDataCleaner {
                 return;
             }
 
-            // Write the header with an additional "Industry" column
             writer.write(line + ",Industry");
             writer.newLine();
         
             // Use a HashSet to deduplicate
             Set<String> seen = new HashSet<>();
 
-            // Process each line
             while ((line = reader.readLine()) != null) {
-
-                String[] columns = line.split(",");
+                String[] columns = line.split(",", -1); // Use -1 to preserve empty columns
 
                 // Skip rows with empty HS codes
                 String hsCode = columns[5].trim();
@@ -109,26 +105,24 @@ public class HSDataCleaner {
                 }
                 seen.add(key);
 
-                // Classify industry based on HS code
                 String industry = classifyIndustry(hsCode);
 
-                // Standardise ReporterName and PartnerName to Title Case
-                columns[1] = capitalizeWordsStream(columns[1].trim());
-                columns[3] = capitalizeWordsStream(columns[3].trim());
+                columns[1] = toTitleCase(columns[1].trim());
+                columns[3] = toTitleCase(columns[3].trim());
+
+                // Ensure the row has exactly 17 columns
+                String[] updatedColumns = Arrays.copyOf(columns, 17); // Ensure array has 17 elements
+                for (int i = columns.length; i < 17; i++) {
+                    updatedColumns[i] = ""; // Fill missing columns with empty strings
+                }
 
                 // Add the industry column to the row
-                String[] updatedColumns = Arrays.copyOf(columns, columns.length + 1);
-                updatedColumns[updatedColumns.length - 1] = industry;
+                updatedColumns[16] = industry; // Add industry as the 17th column
 
                 // Use StringBuilder to reconstruct the line
-                StringBuilder updatedLineBuilder = new StringBuilder();
-                for (int i = 0; i < updatedColumns.length; i++) {
-                    if (i > 0) {
-                        updatedLineBuilder.append(","); // Add a comma between columns
-                    }
-                    updatedLineBuilder.append(updatedColumns[i]);
-                }
-                String updatedLine = updatedLineBuilder.toString();
+                String updatedLine = Arrays.stream(updatedColumns)
+                    .map(value -> value == null ? "" : value) // Ensure null values are replaced with empty strings
+                    .collect(Collectors.joining(","));
 
                 // Write the cleaned row to the output file
                 writer.write(updatedLine);
@@ -166,10 +160,10 @@ public class HSDataCleaner {
         return "Other"; // Default if no range matches
     }
 
-    private static String capitalizeWordsStream(String str) {
-    if (str == null || str.isEmpty()) return str;
+    private static String toTitleCase(String input) {
+    if (input == null || input.isEmpty()) return input;
 
-    return Arrays.stream(str.toLowerCase().split("\\s+"))
+    return Arrays.stream(input.toLowerCase().split("\\s+"))
             .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
             .collect(Collectors.joining(" "));
     }

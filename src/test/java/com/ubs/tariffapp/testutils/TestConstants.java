@@ -2,6 +2,7 @@ package com.ubs.tariffapp.testutils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -21,19 +22,19 @@ public class TestConstants {
     public static final String COUNTRY_ID = "004";
     public static final String COUNTRY_NAME = "Afghanistan";
     public static final String COUNTRY_ISO_CODE = "AFG";
-    public static final List<TariffSchedule> COUNTRY_REPORTED_TARIFFS = Collections.emptyList();
-    public static final List<TariffSchedule> COUNTRY_PARTNERED_TARIFFS = Collections.emptyList();
+    // public static final List<TariffSchedule> COUNTRY_REPORTED_TARIFFS = new ArrayList<>();
+    // public static final List<TariffSchedule> COUNTRY_PARTNERED_TARIFFS = new ArrayList<>();
 
     // For ProductRepositoryTest
     public static final String PRODUCT_TL_CODE = "19019061";
     public static final String PRODUCT_DESCRIPTION = "Malted milk described in additional US note 10 to chapter 4: provisional";
-    public static final List<TariffSchedule> PRODUCT_TARIFF_SCHEDULES = Collections.emptyList();
+    // public static final List<TariffSchedule> PRODUCT_TARIFF_SCHEDULES = new ArrayList<>();
 
     // For DutyTypeRepositoryTest
     public static final String DUTY_TYPE = "1";
     public static final String DUTY_CODE = "1";
     public static final String DUTY_TYPE_DESCRIPTION = "Free-trade area duty rates for Mexico under the NAFTA";
-    public static final List<TariffSchedule> DUTY_TYPE_TARIFF_SCHEDULES = Collections.emptyList();
+    // public static final List<TariffSchedule> DUTY_TYPE_TARIFF_SCHEDULES = new ArrayList<>();
 
     // For TariffScheduleRepositoryTest
     public static final Integer TARIFF_ID = null; // Changed to null to allow auto-generation
@@ -44,16 +45,16 @@ public class TestConstants {
     public static final String REPORTER_ID = "840";
     public static final String REPORTER_NAME = "United States";
     public static final String REPORTER_ISO = "USA";
-    public static final List<TariffSchedule> REPORTER_REPORTED_TARIFFS = Collections.emptyList();
-    public static final List<TariffSchedule> REPORTER_PARTNERED_TARIFFS = Collections.emptyList();
+    // public static final List<TariffSchedule> REPORTER_REPORTED_TARIFFS = new ArrayList<>();
+    // public static final List<TariffSchedule> REPORTER_PARTNERED_TARIFFS = new ArrayList<>();
 
     public static final String PARTNER_ID = "000";
     public static final String PARTNER_NAME = "World";
     public static final String PARTNER_ISO = "WLD";
-    public static final List<TariffSchedule> PARTNER_REPORTED_TARIFFS = Collections.emptyList();
-    public static final List<TariffSchedule> PARTNER_PARTNERED_TARIFFS = Collections.emptyList();
+    // public static final List<TariffSchedule> PARTNER_REPORTED_TARIFFS = new ArrayList<>();
+    // public static final List<TariffSchedule> PARTNER_PARTNERED_TARIFFS = new ArrayList<>();
 
-    public static final List<AuditLog> AUDIT_LOGS = Collections.emptyList();
+    // public static final List<AuditLog> AUDIT_LOGS = new ArrayList<>();
 
     // For generic Duty fields (for a none duty where dutyNature = "N")
     public static final String NONE_DUTY_NATURE = "N"; // For NoneDuty
@@ -88,7 +89,7 @@ public class TestConstants {
 
     // For AuditLogRepositoryTest
     public static final Integer AUDIT_LOG_ID = null; // Changed to null to allow auto-generation
-    public static final String AUDIT_CHANGE_TYPE = "CREATE";
+    public static final String AUDIT_CHANGE_TYPE = "INSERT";
     public static final String AUDIT_CHANGED_BY = "test_admin";
     public static final LocalDateTime AUDIT_CHANGE_DATE = LocalDateTime.of(2023, 1, 1, 12, 0);
     public static final String AUDIT_CHANGE_DETAILS = "Created tariff schedule entry for testing";

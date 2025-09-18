@@ -1,5 +1,7 @@
 package com.ubs.tariffapp.testutils;
 
+import java.util.ArrayList;
+
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
@@ -9,8 +11,8 @@ import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.duty.AdValoremDuty;
 import com.ubs.tariffapp.models.duty.CombinedDuty;
 import com.ubs.tariffapp.models.duty.Duty;
-import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.models.duty.OtherDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.DutyTypeRepository;
 import com.ubs.tariffapp.repositories.ProductRepository;
@@ -23,8 +25,8 @@ public class TestEntityFactory {
                                 TestConstants.COUNTRY_ID,
                                 TestConstants.COUNTRY_NAME,
                                 TestConstants.COUNTRY_ISO_CODE,
-                                TestConstants.COUNTRY_REPORTED_TARIFFS,
-                                TestConstants.COUNTRY_PARTNERED_TARIFFS);
+                                new ArrayList<>(),
+                                new ArrayList<>());
 
                 return country;
         }
@@ -35,7 +37,7 @@ public class TestEntityFactory {
                                 TestConstants.PRODUCT_TL_CODE,
                                 TestConstants.PRODUCT_DESCRIPTION,
                                 TestConstants.PRODUCT_TL_CODE.length(),
-                                TestConstants.PRODUCT_TARIFF_SCHEDULES);
+                                new ArrayList<>());
 
                 return product;
         }
@@ -46,8 +48,8 @@ public class TestEntityFactory {
                                 TestConstants.REPORTER_ID,
                                 TestConstants.REPORTER_NAME,
                                 TestConstants.REPORTER_ISO,
-                                TestConstants.REPORTER_REPORTED_TARIFFS,
-                                TestConstants.REPORTER_PARTNERED_TARIFFS);
+                                new ArrayList<>(),
+                                new ArrayList<>());
 
                 return reporter;
         }
@@ -57,8 +59,8 @@ public class TestEntityFactory {
                                 TestConstants.PARTNER_ID,
                                 TestConstants.PARTNER_NAME,
                                 TestConstants.PARTNER_ISO,
-                                TestConstants.PARTNER_REPORTED_TARIFFS,
-                                TestConstants.PARTNER_PARTNERED_TARIFFS);
+                                new ArrayList<>(),
+                                new ArrayList<>());
 
                 return partner;
         }
@@ -71,7 +73,7 @@ public class TestEntityFactory {
                 DutyType dutyType = new DutyType(
                                 dutyTypeId,
                                 TestConstants.DUTY_TYPE_DESCRIPTION,
-                                TestConstants.DUTY_TYPE_TARIFF_SCHEDULES);
+                                new ArrayList<>());
 
                 return dutyType;
         }
@@ -147,8 +149,7 @@ public class TestEntityFactory {
                                 TestConstants.TLS_SUFFIX,
                                 dutyType,
                                 TestConstants.NOTE,
-                                duty,
-                                TestConstants.AUDIT_LOGS);
+                                duty);
 
                 duty.setTariffSchedule(schedule);
                 return schedule;
@@ -194,15 +195,30 @@ public class TestEntityFactory {
                 scheduleRepo.save(schedule);
                 return schedule;
         }
-
+        
         public static AuditLog createAuditLog(TariffSchedule tariffSchedule) {
                 AuditLog log = new AuditLog(
                                 TestConstants.AUDIT_LOG_ID, // Null in TestConstants - ID will be set by auto-increment
-                                tariffSchedule,
+                                tariffSchedule.getTariffId(),
+                                tariffSchedule.getClass().getSimpleName(),
                                 TestConstants.AUDIT_CHANGE_TYPE,
                                 TestConstants.AUDIT_CHANGED_BY,
                                 TestConstants.AUDIT_CHANGE_DATE,
                                 TestConstants.AUDIT_CHANGE_DETAILS);
+                return log;
+        }
+
+        public static AuditLog createAuditLog(Duty duty) {
+                AuditLog log = new AuditLog(
+                                null,
+                                duty.getTariffSchedule().getTariffId(),
+                                duty.getClass().getSimpleName(),
+                                TestConstants.AUDIT_CHANGE_TYPE,
+                                TestConstants.AUDIT_CHANGED_BY,
+                                TestConstants.AUDIT_CHANGE_DATE,
+                                TestConstants.AUDIT_CHANGE_DETAILS
+
+                );
                 return log;
         }
 }

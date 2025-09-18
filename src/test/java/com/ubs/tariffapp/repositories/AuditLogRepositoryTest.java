@@ -51,7 +51,7 @@ public class AuditLogRepositoryTest {
 
         assertThat(found).isNotNull();
         assertThat(found.getLogId()).isEqualTo(generatedId);
-        assertThat(found.getTariffSchedule()).isNotNull();
+        assertThat(found.getTariffId()).isEqualTo(schedule.getTariffId());
         assertThat(found.getChangeType()).isEqualTo(log.getChangeType());
         assertThat(found.getChangedBy()).isEqualTo(log.getChangedBy());
         assertThat(found.getChangeDate()).isEqualTo(log.getChangeDate());
