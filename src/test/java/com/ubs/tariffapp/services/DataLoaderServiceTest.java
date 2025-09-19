@@ -1,5 +1,6 @@
 package com.ubs.tariffapp.services;
 
+import com.ubs.tariffapp.models.*;
 import com.ubs.tariffapp.repositories.*;
 import com.ubs.tariffapp.repositories.duty.*;
 import com.ubs.tariffapp.services.DataLoaderService;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,6 +85,23 @@ public class DataLoaderServiceTest {
         System.out.println("Final Country Count: " + finalCountryCount);
         System.out.println("Initial Product Count: " + initialProductCount);
         System.out.println("Final Product Count: " + finalProductCount);
+
+        // Debug: Print first few rows of loaded data
+        System.out.println("\n=== First 3 Countries ===");
+        countryRepository.findAll(PageRequest.of(0, 3)).forEach(country -> 
+            System.out.println("Country: " + country.getCountryId() + " - " + country.getCountryName()));
+
+        System.out.println("\n=== First 3 Products ===");
+        productRepository.findAll(PageRequest.of(0, 3)).forEach(product -> 
+            System.out.println("Product: " + product.getTlCode() + " - " + product.getDescription()));
+
+        System.out.println("\n=== First 3 Tariff Schedules ===");
+        tariffScheduleRepository.findAll(PageRequest.of(0, 3)).forEach(tariff -> 
+            System.out.println("Tariff ID: " + tariff.getTariffId() + 
+                " | Reporter: " + tariff.getReporter().getCountryId() + 
+                " | Partner: " + tariff.getPartner().getCountryId() +
+                " | Product: " + tariff.getProduct().getTlCode() + 
+                " | Duty Nature: " + (tariff.getDuty() != null ? tariff.getDuty().getDutyNature() : "N/A")));
 
         // Assert
         assertTrue(finalTariffCount > initialTariffCount, 

@@ -17,6 +17,11 @@ public class AuditLog {
     // referential integrity - otherwise we would not be able to delete a TariffSchedule
     // if there are AuditLog entries referencing it.
     private Integer tariffId;
+    private String targetEntity; // e.g., "TariffSchedule", "AdValoremDuty"
+    private String changeType; // INSERT / UPDATE / DELETE
+    private String changedBy;
+    private LocalDateTime changeDate;
+    private String changeDetails;
 
     // No-argument constructor
     public AuditLog() {
