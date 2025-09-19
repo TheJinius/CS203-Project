@@ -27,12 +27,6 @@ public class AuditLog {
     public AuditLog() {
     }
 
-    private String targetEntity; // e.g., "TariffSchedule", "AdValoremDuty"
-    private String changeType; // INSERT / UPDATE / DELETE
-    private String changedBy;
-    private LocalDateTime changeDate;
-    private String changeDetails;
-
     // All-argument constructor
     public AuditLog(Integer logId, Integer tariffId,
             String targetEntity, String changeType, String changedBy,
