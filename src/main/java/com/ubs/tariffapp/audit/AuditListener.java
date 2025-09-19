@@ -1,5 +1,6 @@
 package com.ubs.tariffapp.audit;
 
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,12 @@ public class AuditListener implements ApplicationContextAware {
     // Helper to get AuditLogService bean from ApplicationContext
     private AuditLogService getAuditLogService() {
         if (applicationContext != null) {
-            return applicationContext.getBean(AuditLogService.class);
+            try {
+                return applicationContext.getBean(AuditLogService.class);
+            } catch (NoSuchBeanDefinitionException e) {
+                // AuditLogService bean not available, which is fine for some test contexts
+                return null;
+            }
         }
         return null;
     }
