@@ -10,7 +10,7 @@ export default function UnauthorizedPage() {
   const router = useRouter();
 
   const handleGoBack = () => {
-    router.push('/dashboard');
+    router.push('/');
   };
 
   const handleSignOut = async () => {

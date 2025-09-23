@@ -1,87 +1,54 @@
-// components/ProtectedRoute.tsx
-
-//------------------------------USAGE--------------------------------
-// // app/dashboard/page.tsx - Protected for all authenticated users
-// 'use client';
-// import { ProtectedRoute } from '../../components/ProtectedRoute';
-
-// export default function Dashboard() {
-//   return (
-//     <ProtectedRoute>
-//       <h1>User Dashboard</h1>
-//       {/* Dashboard content */}
-//     </ProtectedRoute>
-//   );
-// }
-
-// // app/admin/page.tsx - Protected for Admins only
-// 'use client';
-// import { ProtectedRoute } from '../../components/ProtectedRoute';
-
-// export default function AdminPanel() {
-//   return (
-//     <ProtectedRoute requireAdmin={true}>
-//       <h1>Admin Panel</h1>
-//       {/* Admin content */}
-//     </ProtectedRoute>
-//   );
-// }
-// Conditional rendering based on user role
-// 'use client';
-// import { useAuth } from '../../contexts/AuthContext';
-
-// export default function SomeComponent() {
-//   const { isAdmin, user } = useAuth();
-  
-//   return (
-//     <div>
-//       <h1>Welcome, {user?.username}</h1>
-//       {isAdmin() && (
-//         <button>Admin Only Action</button>
-//       )}
-//     </div>
-//   );
-// }
-//-------------------------------------------------------------------
-'use client';
-import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect, ReactNode } from 'react';
+"use client"
+import { useSession } from "next-auth/react"
+import { type ReactNode } from "react"
 
 interface ProtectedRouteProps {
-  children: ReactNode;
-  requireAdmin?: boolean;
+  children: ReactNode
+  requireAdmin?: boolean
+  fallback?: ReactNode
 }
 
-export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
-  const router = useRouter();
+export function ProtectedRoute({ 
+  children, 
+  requireAdmin = false, 
+  fallback 
+}: ProtectedRouteProps) {
+  const { data: session, status } = useSession()
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated()) {
-        router.push('/api/auth/signin');
-        return;
-      }
-      
-      if (requireAdmin && !isAdmin()) {
-        router.push('/unauthorized');
-        return;
+  // Show loading state while session is loading
+  if (status === "loading") {
+    return (
+      fallback || (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-pulse">
+            <div className="text-lg">Loading...</div>
+          </div>
+        </div>
+      )
+    )
+  }
+
+  // At this point, middleware has already handled redirects
+  // If we're here and have a session, user is authorized
+  if (session) {
+    // Optional: Additional client-side admin check (though middleware should handle this)
+    if (requireAdmin) {
+      const userGroups = (session as any)?.groups || []
+      if (!userGroups.includes('Admins')) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+              <p className="mt-2">You don't have permission to access this page.</p>
+            </div>
+          </div>
+        )
       }
     }
-  }, [isAuthenticated, isAdmin, isLoading, router, requireAdmin]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    
+    return <>{children}</>
   }
 
-  if (!isAuthenticated() || (requireAdmin && !isAdmin())) {
-    return null;
-  }
-
-  return <>{children}</>;
+  // If no session, middleware should have redirected, but just in case:
+  return null
 }

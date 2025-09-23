@@ -1,4 +1,3 @@
-// app/admin/page.tsx
 'use client';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { useAuth } from '../../contexts/AuthContext';

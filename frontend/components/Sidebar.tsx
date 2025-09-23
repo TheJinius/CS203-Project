@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { X, Calculator, Package, MapPin, FileText, TrendingUp } from "lucide-react"
+import { useEffect } from "react"
+import { X, Calculator, Package, MapPin, FileText, TrendingUp, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
@@ -10,6 +10,8 @@ import ProductsTab from "./tabs/ProductsTab"
 import CountriesTab from "./tabs/CountriesTab"
 import TariffsTab from "./tabs/TariffsTab"
 import ResultsTab from "./tabs/ResultsTab"
+import EditTariffTab from "./tabs/EditTariffTab"
+import { useAuth } from "../contexts/AuthContext"
 
 interface SidebarProps {
   isOpen: boolean
@@ -28,12 +30,23 @@ export default function Sidebar({
   calculationResult, 
   onCalculationResult 
 }: SidebarProps) {
+  const { isAdmin } = useAuth();
+
+  // If a non-admin somehow lands on "edit", send them to a safe tab
+  useEffect(() => {
+    if (activeTab === "edit" && !isAdmin()) {
+      onTabChange("calculate")
+    }
+  }, [activeTab, isAdmin, onTabChange])
+
   const sidebarItems = [
     { id: "calculate", label: "Calculate Tariff", icon: Calculator },
     { id: "products", label: "Products", icon: Package },
     { id: "countries", label: "Countries", icon: MapPin },
     { id: "tariffs", label: "Tariffs", icon: FileText },
     { id: "results", label: "Results", icon: TrendingUp },
+    // Only include "Edit tariffs" if user is admin
+    ...(isAdmin() ? [{ id: "edit", label: "Edit Tariffs", icon: Edit }] : []),
   ]
 
   return (
@@ -74,7 +87,11 @@ export default function Sidebar({
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
-                onClick={() => onTabChange(item.id)}
+                onClick={() => {
+                  // Extra guard: ignore clicks to "edit" if not admin
+                  if (item.id === "edit" && !isAdmin()) return
+                  onTabChange(item.id)
+                }}
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
@@ -98,6 +115,8 @@ export default function Sidebar({
           {activeTab === "results" && (
             <ResultsTab calculationResult={calculationResult} />
           )}
+          {/* Access control: only render edit tab for admins */}
+          {activeTab === "edit" && isAdmin() && <EditTariffTab />}
         </div>
       </div>
     </div>

@@ -12,12 +12,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      router.push('/dashboard');
+      router.push('/');
     }
   }, [session, router]);
 
   const handleSignIn = async () => {
-    await signIn('cognito', { callbackUrl: '/dashboard' });
+    await signIn('cognito', { callbackUrl: '/' });
   };
 
   if (status === 'loading') {
