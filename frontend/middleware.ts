@@ -1,30 +1,28 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { withAuth } from "next-auth/middleware"
 
-export function middleware(request: NextRequest) {
-  // Define protected routes
-  const adminRoutes = ['/admin', '/dashboard/admin'];
-  const protectedRoutes = ['/dashboard', '/profile', ...adminRoutes];
-  
-  const { pathname } = request.nextUrl;
-  
-  // Check if the route requires protection
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-  
-  if (isProtectedRoute) {
-    // In a real implementation, you'd validate the JWT token here
-    // For now, we'll rely on client-side protection
-    const token = request.cookies.get('cognito-session');
-    
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
+export default withAuth(
+  function middleware(req) {
+    // Additional middleware logic can go here
+    const { pathname } = req.nextUrl;
+    const token = req.nextauth.token;
+
+    // Check if user has required permissions for admin routes
+    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard/admin')) {
+      const userGroups = token?.groups as string[] || [];
+      if (!userGroups.includes('Admins')) {
+        return Response.redirect(new URL('/unauthorized', req.url));
+      }
+    }
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token
+    },
+    pages: {
+      signIn: '/login',
     }
   }
-  
-  return NextResponse.next();
-}
+)
 
 export const config = {
   matcher: ['/dashboard/:path*', '/admin/:path*', '/profile/:path*']

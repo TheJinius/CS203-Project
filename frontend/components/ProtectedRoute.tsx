@@ -60,7 +60,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated()) {
-        router.push('/login');
+        router.push('/api/auth/signin');
         return;
       }
       
@@ -72,7 +72,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   }, [isAuthenticated, isAdmin, isLoading, router, requireAdmin]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
   }
 
   if (!isAuthenticated() || (requireAdmin && !isAdmin())) {

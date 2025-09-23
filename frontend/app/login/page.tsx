@@ -1,55 +1,63 @@
 // app/login/page.tsx
 'use client';
-import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useEffect } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const { signIn } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await signIn(username, password);
+  useEffect(() => {
+    if (session) {
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
     }
+  }, [session, router]);
+
+  const handleSignIn = async () => {
+    await signIn('cognito', { callbackUrl: '/dashboard' });
   };
 
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (session) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Redirecting...</div>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-8">
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-      <div className="mb-4">
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
-      <button 
-        type="submit"
-        className="w-full bg-blue-500 text-white p-2 rounded"
-      >
-        Sign In
-      </button>
-    </form>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <Card className="w-full max-w-md p-8 space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">Sign In</h1>
+          <p className="mt-2 text-gray-600">
+            Access your tariff application dashboard
+          </p>
+        </div>
+        
+        <Button 
+          onClick={handleSignIn}
+          className="w-full"
+          size="lg"
+        >
+          Sign in with AWS Cognito
+        </Button>
+        
+        <div className="text-center text-sm text-gray-500">
+          <p>You will be redirected to AWS Cognito for authentication</p>
+        </div>
+      </Card>
+    </div>
   );
 }
