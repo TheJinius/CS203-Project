@@ -104,3 +104,4 @@ nb-configuration.xml
 
 #application-local file
 application-local.properties
+application-test-local.properties
