@@ -79,6 +79,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="76109099">Aluminium Plates</SelectItem>
+              <SelectItem value="1012100">Pure Bred Breeding Horses</SelectItem>
               <SelectItem value="steel">Steel Products</SelectItem>
               <SelectItem value="copper">Copper Wire</SelectItem>
             </SelectContent>

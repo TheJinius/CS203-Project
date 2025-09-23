@@ -1,6 +1,10 @@
 package com.ubs.tariffapp.services;
 
 import org.springframework.stereotype.Service;
+
+import com.ubs.tariffapp.exceptions.DutyNotFoundException;
+import com.ubs.tariffapp.exceptions.InvalidRequestException;
+import com.ubs.tariffapp.exceptions.TariffNotFoundException;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.duty.*;
 import java.math.BigDecimal;
@@ -16,18 +20,22 @@ public class DutyService {
     }
 
     public double calculateTariff(String reporterCode, String partnerCode, String productCode, double amountOfProduct) {
-        // Get TariffSchedule first
+        
+        if (amountOfProduct <= 0) {
+            throw new InvalidRequestException("Amount of product must be greater than 0");
+        }
         TariffSchedule tariffSchedule = tariffScheduleService.getTariffSchedule(reporterCode, partnerCode, productCode);
         
         if (tariffSchedule == null) {
-            throw new RuntimeException("No tariff schedule found for the given countries and product.");
+            throw new TariffNotFoundException("No tariff schedule found for Reporter: " + reporterCode + 
+                                            ", Partner: " + partnerCode + ", Product: " + productCode);
         }
         
         // Get Duty directly from the one-to-one relationship
         Duty duty = tariffSchedule.getDuty();
         
         if (duty == null) {
-            throw new RuntimeException("No duty found for tariff schedule.");
+            throw new DutyNotFoundException("No duty information found for TariffSchedule ID: " + tariffSchedule.getTariffId());
         }
         
         // Calculate tariff using the existing Duty entity
