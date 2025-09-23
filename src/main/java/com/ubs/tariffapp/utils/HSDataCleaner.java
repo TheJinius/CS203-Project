@@ -58,7 +58,7 @@ public class HSDataCleaner {
 
     public static void main(String[] args) {
         // Read input from resources
-        String inputFileName = "HS2017CNYear2023.csv"; // Original file name
+        String inputFileName = "HS2017JPYear2023.csv"; // Original file name
         InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
         if (inputStream == null) {
             System.err.println("Input CSV file not found in resources folder.");
