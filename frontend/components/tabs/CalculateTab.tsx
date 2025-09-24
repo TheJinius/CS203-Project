@@ -12,54 +12,85 @@ interface CalculateTabProps {
 }
 
 export default function CalculateTab({ onCalculationResult }: CalculateTabProps) {
+  // Search state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
-  const [tradeValue, setTradeValue] = useState<number | null>(null)
+  const [selectedYear, setSelectedYear] = useState<string>("2023")
+  
+  // Results state
+  const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
+  const [selectedTariff, setSelectedTariff] = useState<string>("")
+  const [tradeValue, setTradeValue] = useState<string>("")
+  
+  // UI state
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<number | null>(null)
+  const [error, setError] = useState("")
+  const [step, setStep] = useState(1) // 1 = search, 2 = calculate
 
-  const handleCalculate = async () => {
-    if (!selectedProduct || !selectedSource || !selectedDestination || !tradeValue) {
-      setError("Please select all fields and enter a trade value.")
-      return
+  // Step 1: Search for available tariffs
+  const handleSearchTariffs = async () => {
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch("http://localhost:8080/api/tariffs/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reporterCode: selectedDestination,
+          partnerCode: selectedSource,
+          productCode: selectedProduct,
+          year: parseInt(selectedYear)
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableTariffs(data.tariffs)
+        setStep(2)
+        setError(`✅ Found ${data.count} tariff(s)`)
+      } else {
+        const errorData = await response.json()
+        setError(`❌ ${errorData.error}`)
+      }
+
+    } catch (e) {
+        const error = e as Error
+        setError(`❌ Connection failed: ${error.message}`)
     }
     
+    setLoading(false)
+  }
+
+  // Step 2: Calculate tariff with selected tariff
+  const handleCalculate = async () => {
     setLoading(true)
-    setError(null)
-    setResult(null)
-    
+    setError("")
+
     try {
-      console.log("Attempting to connect to backend...")
-      
       const response = await fetch("http://localhost:8080/api/tariffs/calculate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reporterCode: selectedDestination,      // Changed from importerCountry
-          partnerCode: selectedSource,            // Changed from exporterCountry
-          productCode: selectedProduct,           // Changed from product
-          amountOfProduct: tradeValue,
+          tariffId: parseInt(selectedTariff),
+          amountOfProduct: parseFloat(tradeValue),
           currency: "SGD"
         }),
       })
-      
-      console.log("Response status:", response.status)
-      
-      const data = await response.json()
-      console.log("Response data:", data)
-      
-      if (data.status === "success") {
-        setResult(data.tariffAmount)
+
+      if (response.ok) {
+        const data = await response.json()
         onCalculationResult(data.tariffAmount)
-        setError("✅ Backend connection successful!")
+        setError(`✅ Tariff: $${data.tariffAmount} ${data.currency}`)
       } else {
-        setError(`❌ Calculation failed: ${data.error || "Unknown error"}`)
+        const errorData = await response.json()
+        setError(`❌ ${errorData.error}`)
       }
+
     } catch (e) {
-      console.error("🔥 Network error:", e)
-      setError(`❌ Cannot connect to backend: ${e}`)
+        const error = e as Error
+        setError(`❌ Connection failed: ${error.message}`)
     }
     
     setLoading(false)
@@ -67,88 +98,108 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Calculate Tariff</CardTitle>
-      </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label htmlFor="product">Product</Label>
-          <Select onValueChange={setSelectedProduct}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select product" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="76109099">Aluminium Plates</SelectItem>
-              <SelectItem value="1012100">Pure Bred Breeding Horses</SelectItem>
-              <SelectItem value="steel">Steel Products</SelectItem>
-              <SelectItem value="copper">Copper Wire</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="source">Source Country</Label>
-          <Select onValueChange={setSelectedSource}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="702">Singapore</SelectItem>
-              <SelectItem value="840">United States</SelectItem>
-              <SelectItem value="156">China</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="destination">Destination Country</Label>
-          <Select onValueChange={setSelectedDestination}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select destination" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="840">United States</SelectItem>
-              <SelectItem value="918">European Union</SelectItem>
-              <SelectItem value="392">Japan</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="value">Trade Value ($)</Label>
-          <Input
-            id="value"
-            type="number"
-            placeholder="Enter trade value"
-            onChange={(e) => setTradeValue(Number.parseFloat(e.target.value))}
-          />
-        </div>
-        <Button className="w-full" onClick={handleCalculate} disabled={loading}>
-          {loading ? "Testing Backend Connection..." : "Calculate Tariff"}
-        </Button>
-        
-        {/* Connection Status */}
-        {error && (
-          <div className={`text-sm p-2 rounded ${
-            error.includes("✅") ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
-          }`}>
-            {error}
-          </div>
+        {step === 1 ? (
+          // Step 1: Search Form
+          <>
+            <div>
+              <Label htmlFor="product">Product</Label>
+              <Select onValueChange={setSelectedProduct}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select product" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="76109099">Aluminium Plates</SelectItem>
+                  <SelectItem value="1012100">Pure Bred Breeding Horses</SelectItem>
+                  <SelectItem value="steel">Steel Products</SelectItem>
+                  <SelectItem value="copper">Copper Wire</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="source">Source Country</Label>
+              <Select onValueChange={setSelectedSource}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="702">Singapore</SelectItem>
+                  <SelectItem value="840">United States</SelectItem>
+                  <SelectItem value="156">China</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="destination">Destination Country</Label>
+              <Select onValueChange={setSelectedDestination}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="840">United States</SelectItem>
+                  <SelectItem value="918">European Union</SelectItem>
+                  <SelectItem value="392">Japan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="year">Year</Label>
+              <Select onValueChange={setSelectedYear} value={selectedYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2023">2023</SelectItem>
+                  <SelectItem value="2022">2022</SelectItem>
+                  <SelectItem value="2021">2021</SelectItem>
+                  <SelectItem value="2020">2020</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSearchTariffs} disabled={loading}>
+              {loading ? "Searching..." : "Search Available Tariffs"}
+            </Button>
+          </>
+        ) : (
+          // Step 2: Select tariff and calculate
+          <>
+            <Button variant="outline" onClick={() => setStep(1)}>
+              ← Back to Search
+            </Button>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Tariff</label>
+              <Select onValueChange={setSelectedTariff}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a tariff" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTariffs.map(tariff => (
+                    <SelectItem key={tariff.tariffId} value={tariff.tariffId.toString()}>
+                      {tariff.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Trade Value</label>
+              <Input
+                type="number"
+                value={tradeValue}
+                onChange={(e) => setTradeValue(e.target.value)}
+                placeholder="Enter trade value"
+              />
+            </div>
+
+            <Button onClick={handleCalculate} disabled={loading || !selectedTariff}>
+              {loading ? "Calculating..." : "Calculate Tariff"}
+            </Button>
+          </>
         )}
-        
-        {result !== null && (
-          <Card className="bg-accent/10">
-            <CardContent className="pt-4">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Estimated Tariff</p>
-                <p className="text-2xl font-bold text-accent">${result.toFixed(2)}</p>
-                <p className="text-xs text-green-600 mt-1">✅ Backend Connected</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Instructions */}
-        <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
-          💡 Fill out all fields and click Calculate to test backend connection
-        </div>
+
+        {error && <p className="text-sm text-gray-600">{error}</p>}
       </CardContent>
     </Card>
   )
