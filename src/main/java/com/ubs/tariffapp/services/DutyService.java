@@ -118,4 +118,21 @@ public class DutyService {
                 .setScale(2, RoundingMode.HALF_EVEN)
                 .doubleValue();
     }
+    public double calculateTariff(TariffSchedule tariffSchedule, double amountOfProduct) {
+        if (amountOfProduct <= 0) {
+            throw new InvalidRequestException("Amount of product must be greater than 0");
+        }
+        
+        if (tariffSchedule == null) {
+            throw new TariffNotFoundException("TariffSchedule is null");
+        }
+        
+        Duty duty = tariffSchedule.getDuty();
+        
+        if (duty == null) {
+            throw new DutyNotFoundException("No duty information found for TariffSchedule ID: " + tariffSchedule.getTariffId());
+        }
+        
+        return calculateTariffAmount(duty, amountOfProduct);
+    }
 }

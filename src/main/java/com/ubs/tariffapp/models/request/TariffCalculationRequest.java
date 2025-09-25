@@ -4,6 +4,9 @@ public class TariffCalculationRequest {
     private Integer tariffId; // Use specific tariff ID
     private double amountOfProduct;
     private String currency;
+    private String tariffLineSuffix;
+    private Integer year;
+    private Integer tariffId;
 
     // Constructors
     public TariffCalculationRequest() {}

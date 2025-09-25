@@ -4,13 +4,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.ubs.tariffapp.models.request.TariffCalculationRequest;
+<<<<<<< HEAD
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
+=======
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.services.DutyService;
+import com.ubs.tariffapp.services.TariffScheduleService;
 import com.ubs.tariffapp.exceptions.*;
+import com.ubs.tariffapp.models.dto.TariffOptionsResponse;
 
+<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.HashMap;
+=======
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -20,9 +28,11 @@ import java.util.stream.Collectors;
 public class DutyController {
 
     private final DutyService dutyService;
+    private final TariffScheduleService tariffScheduleService;
 
-    public DutyController(DutyService dutyService) {
+    public DutyController(DutyService dutyService, TariffScheduleService tariffScheduleService) {
         this.dutyService = dutyService;
+        this.tariffScheduleService = tariffScheduleService;
     }
 
     // NEW ENDPOINT 1: Search for available tariffs
@@ -135,9 +145,14 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
                 "status", "success"
             );
             
+            System.out.println("SUCCESS: Calculated tariff = " + tariffAmount);
             return ResponseEntity.ok(response);
             
         } catch (TariffNotFoundException e) {
+<<<<<<< HEAD
+=======
+            System.err.println("TariffNotFoundException: " + e.getMessage());
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
             Map<String, Object> errorResponse = Map.of(
                 "error", e.getMessage(),
                 "status", "tariff_not_found"
@@ -145,6 +160,10 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
             return ResponseEntity.status(404).body(errorResponse);
             
         } catch (DutyNotFoundException e) {
+<<<<<<< HEAD
+=======
+            System.err.println("DutyNotFoundException: " + e.getMessage());
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
             Map<String, Object> errorResponse = Map.of(
                 "error", e.getMessage(),
                 "status", "duty_not_found"
@@ -152,6 +171,10 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
             return ResponseEntity.status(404).body(errorResponse);
             
         } catch (InvalidRequestException e) {
+<<<<<<< HEAD
+=======
+            System.err.println("InvalidRequestException: " + e.getMessage());
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
             Map<String, Object> errorResponse = Map.of(
                 "error", e.getMessage(),
                 "status", "bad_request"
@@ -159,6 +182,11 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
             return ResponseEntity.badRequest().body(errorResponse);
             
         } catch (Exception e) {
+<<<<<<< HEAD
+=======
+            System.err.println("Unexpected error: " + e.getMessage());
+            e.printStackTrace();
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
             Map<String, Object> errorResponse = Map.of(
                 "error", "Internal server error: " + e.getMessage(),
                 "status", "internal_error"
@@ -166,6 +194,7 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
+<<<<<<< HEAD
 
     // Helper method to build user-friendly tariff description
     private String buildTariffDescription(TariffSchedule ts) {
@@ -185,4 +214,6 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
         
         return desc.toString();
     }
+=======
+>>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
 }
