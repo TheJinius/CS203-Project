@@ -73,6 +73,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- If you need PostgreSQL copy functionality specifically -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.1</version>
+        </dependency>
+        
         <!-- Mainly for Security authentification (used later when we include the user) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
