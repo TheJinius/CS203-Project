@@ -14,13 +14,15 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
  * HSDataCleaner - A comprehensive data cleaning utility for HS Tariff data
+ * 
+ *  * Usage:
+ * * - Place the input CSV file in the resources/data/test_data/ folder
+ * * - Run the file using: mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.HSDataCleaner"
  * 
  * This class performs the following operations on raw HS (Harmonized System) tariff data:
  * 
@@ -62,7 +64,34 @@ import java.math.RoundingMode;
  * - Currency: Currency type (USD, EUR, GBP, etc.)
  * - Unit: Standardized unit (kg, liter, each, etc.)
  * - OriginalSpecificDuty: Original specific duty text for reference
+ * 
+ * Output Columns:
+ * The output CSV will have the following columns:
+ *  0	"Reporter"
+ *  1	"ReporterName"
+ *  2	"Partner"
+ *  3	"Partner Name"
+ *  4	"Year"
+ *  5	"TL (HS Code)"
+ *  6	"TLS (Additional HS Code Sub-classification - if any)"
+ *  7	"Duty Type"
+ *  8	"Duty Code"
+ *  9	"Ad Valorem Duty Rate (%)"
+ *  10	"Specific Duty Rate"
+ *  11	"HS Code Description"
+ *  12	"Duty Type Description"
+ *  13	"Duty Nature"
+ *  14	"Ad Valorem Calculation Code/Description"
+ *  15	"Notes"
+ *  16	"Industry"                     - New column
+ *  17	"DutyType"                     - New column
+ *  18	"StandardizedAVRate"           - New column
+ *  19	"SpecificDutyAmount"           - New column
+ *  20	"Currency"                     - New column
+ *  21	"Unit"                         - New column
+ *  22	"OriginalSpecificDuty"         - New column
  */
+
 public class HSDataCleaner {
 
     private static NLPSpecificDutyParser dutyParser;
@@ -310,7 +339,6 @@ public class HSDataCleaner {
             if (hasFixedComponent && hasPercentageComponent) {
                 // Mixed duty: has both specific amount and percentage
                 info.dutyType = "MIXED";
-                // Keep original amount without USD conversion
                 info.specificDutyAmount = roundToPrecision(parsed.getOriginalFixedAmount(), 6);
                 info.standardizedAVRate = roundToPrecision(parsed.getPercentageRate() * 100, 6); // Convert to percentage
                 info.currency = extractCurrencyType(specificRate);
@@ -521,32 +549,5 @@ public class HSDataCleaner {
         }
         
         return fields.toArray(new String[0]);
-    }
-
-    // Update test method to show preserved quotes
-    private static void testCSVParsing() {
-        String[] testCases = {
-            "a,b,c",                    // Normal case
-            "a,,c",                     // Empty middle field  
-            "a,b,",                     // Empty trailing field
-            ",b,c",                     // Empty leading field
-            ",,",                       // Two empty fields
-            "",                         // Empty line
-            "\"a,b\",c,d",             // Quoted field with comma
-            "a,\"b,c\",d",             // Quoted field in middle
-            "a,\"\",c",                // Quoted empty field
-            "a,,\"\"",                 // Mixed empty fields
-            "\"\",,\"\"",              // All quoted empty
-            "a,\"b\"\"c\",d",          // Escaped quotes
-            "\"Egypt, Arab Emirates\",\"Live swine, other than \"\"purebred\"\" breeding\",123"  // Real example
-        };
-        
-        for (String test : testCases) {
-            String[] result = parseCSVLine(test);
-            System.out.println("Input: " + test);
-            System.out.println("Output: [" + 
-                Arrays.stream(result).map(s -> s).collect(Collectors.joining(", ")) + "]");
-            System.out.println();
-        }
     }
 }
