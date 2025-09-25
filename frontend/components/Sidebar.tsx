@@ -20,6 +20,7 @@ interface SidebarProps {
   onClose: () => void
   calculationResult: number | null
   onCalculationResult: (result: number | null) => void
+  width: number 
 }
 
 export default function Sidebar({ 
@@ -28,7 +29,8 @@ export default function Sidebar({
   onTabChange, 
   onClose, 
   calculationResult, 
-  onCalculationResult 
+  onCalculationResult,
+  width // Add this parameter
 }: SidebarProps) {
   const { isAdmin } = useAuth();
 
@@ -49,43 +51,48 @@ export default function Sidebar({
     ...(isAdmin() ? [{ id: "edit", label: "Edit Tariffs", icon: Edit }] : []),
   ]
 
+  if (!isOpen) return null
+
   return (
     <div
-      className={`${isOpen ? "w-80" : "w-0"} transition-all duration-300 overflow-hidden bg-sidebar border-r border-sidebar-border`}
+      className="h-full bg-sidebar border-r border-sidebar-border flex flex-col shadow-lg dark:bg-gray-800 dark:border-gray-700"
+      style={{ width: `${width}px` }} // Use the dynamic width!
     >
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-6">
+      {/* Header Section */}
+      <div className="p-4 border-b border-sidebar-border dark:border-gray-700">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Image
               src="/TOP light.png"
               alt="Tariff Calculator Logo"
-              width={160}  
+              width={Math.min(160, width - 80)} // Responsive logo size
               height={40}
               priority
+              className="object-contain"
             />
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:text-white dark:hover:bg-gray-700"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Navigation */}
-        <nav className="space-y-2 mb-6">
+        {/* Navigation Tabs */}
+        <nav className="space-y-1">
           {sidebarItems.map((item) => {
             const Icon = item.icon
             return (
               <Button
                 key={item.id}
                 variant={activeTab === item.id ? "default" : "ghost"}
-                className={`w-full justify-start gap-2 ${
+                className={`w-full justify-start gap-2 text-sm ${
                   activeTab === item.id
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground dark:bg-blue-600 dark:text-white"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:text-gray-300 dark:hover:bg-gray-700"
                 }`}
                 onClick={() => {
                   // Extra guard: ignore clicks to "edit" if not admin
@@ -93,17 +100,19 @@ export default function Sidebar({
                   onTabChange(item.id)
                 }}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                <span className={`truncate ${width < 350 ? 'text-xs' : 'text-sm'}`}>
+                  {item.label}
+                </span>
               </Button>
             )
           })}
         </nav>
+      </div>
 
-        <Separator className="mb-6" />
-
-        {/* Tab Content */}
-        <div className="space-y-4">
+      {/* Tab Content Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4">
           {activeTab === "calculate" && (
             <CalculateTab 
               onCalculationResult={onCalculationResult}
@@ -119,6 +128,20 @@ export default function Sidebar({
           {activeTab === "edit" && isAdmin() && <EditTariffTab />}
         </div>
       </div>
+
+      {/* Results Footer - Fixed at bottom */}
+      {calculationResult !== null && (
+        <div className="border-t border-sidebar-border dark:border-gray-700 p-4 bg-sidebar-accent/50 dark:bg-gray-800">
+          <div className="bg-sidebar dark:bg-gray-700 rounded-lg p-3">
+            <h3 className="font-semibold text-sidebar-foreground dark:text-white mb-1 text-sm">
+              Latest Result
+            </h3>
+            <p className="text-lg font-bold text-primary dark:text-blue-400">
+              ${calculationResult.toFixed(2)}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -78,8 +78,4 @@ public class TariffScheduleService {
         // No options found
         return new TariffOptionsResponse(List.of(), true, "No tariff data available");
     }
-
-    public TariffSchedule getTariffScheduleById(Integer tariffId) {
-        return tariffScheduleRepository.findById(tariffId).orElse(null);
-    }
 }

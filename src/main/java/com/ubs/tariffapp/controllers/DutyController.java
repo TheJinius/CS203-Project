@@ -4,21 +4,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.ubs.tariffapp.models.request.TariffCalculationRequest;
-<<<<<<< HEAD
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
-=======
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.services.DutyService;
 import com.ubs.tariffapp.services.TariffScheduleService;
 import com.ubs.tariffapp.exceptions.*;
 import com.ubs.tariffapp.models.dto.TariffOptionsResponse;
 
-<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.HashMap;
-=======
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,44 +31,15 @@ public class DutyController {
 
     // NEW ENDPOINT 1: Search for available tariffs
     @PostMapping("/search")
-public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
-    // System.out.println("🔍 Searching tariffs:");
-    // System.out.println("ReporterCode = " + request.getReporterCode());
-    // System.out.println("PartnerCode = " + request.getPartnerCode());
-    // System.out.println("ProductCode = " + request.getProductCode());
-    // System.out.println("Year = " + request.getYear());
+    public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
+        System.out.println("🔍 Searching tariffs:");
+        System.out.println("ReporterCode = " + request.getReporterCode());
+        System.out.println("PartnerCode = " + request.getPartnerCode());
+        System.out.println("ProductCode = " + request.getProductCode());
+        System.out.println("Year = " + request.getYear());
 
-    try {
-
-        //DO NOT DELETE. REAL STUFF
-        // List<TariffSchedule> tariffs = dutyService.searchAvailableTariffs(
-        //         request.getReporterCode(),
-        //         request.getPartnerCode(),
-        //         request.getProductCode(),
-        //         request.getYear()
-        // );
-        
-        // // Convert to simple format for frontend using HashMap
-        // List<Map<String, Object>> tariffList = tariffs.stream()
-        //         .map(ts -> {
-        //             Map<String, Object> tariffMap = new HashMap<>();
-        //             tariffMap.put("tariffId", ts.getTariffId());
-        //             tariffMap.put("description", buildTariffDescription(ts));
-        //             tariffMap.put("dutyType", ts.getDutyType() != null ? ts.getDutyType().getDutyTypeDescription() : "Unknown");
-        //             tariffMap.put("tlsSuffix", ts.getTlsSuffix() != null ? ts.getTlsSuffix() : "");
-        //             return tariffMap;
-        //         })
-        //         .collect(Collectors.toList());
-        
-        // // Also fix the response map
-        // Map<String, Object> response = new HashMap<>();
-        // response.put("tariffs", tariffList);
-        // response.put("count", tariffs.size());
-        // response.put("status", "success");
-        
-        // return ResponseEntity.ok(response);
-
-        //FAKE tariff data for testing
+        try {
+            //FAKE tariff data for testing
             List<Map<String, Object>> fakeTariffs = new ArrayList<>();
             
             // Tariff 1
@@ -108,22 +73,21 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
             
             return ResponseEntity.ok(response);
             
-        
-    } catch (TariffNotFoundException e) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", e.getMessage());
-        errorResponse.put("status", "not_found");
-        errorResponse.put("tariffs", new ArrayList<>());
-        errorResponse.put("count", 0);
-        return ResponseEntity.status(404).body(errorResponse);
-        
-    } catch (Exception e) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Internal server error: " + e.getMessage());
-        errorResponse.put("status", "error");
-        return ResponseEntity.status(500).body(errorResponse);
+        } catch (TariffNotFoundException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("status", "not_found");
+            errorResponse.put("tariffs", new ArrayList<>());
+            errorResponse.put("count", 0);
+            return ResponseEntity.status(404).body(errorResponse);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error: " + e.getMessage());
+            errorResponse.put("status", "error");
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
-}
 
     // NEW ENDPOINT 2: Calculate tariff using specific tariff ID
     @PostMapping("/calculate")
@@ -133,68 +97,48 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
         System.out.println("AmountofProduct = " + request.getAmountOfProduct());
 
         try {
-            // double tariffAmount = dutyService.calculateTariffById(
-            //         request.getTariffId(),
-            //         request.getAmountOfProduct()
-            // );
+            // For now, using fake calculation
+            double tariffAmount = request.getAmountOfProduct() * 0.1; // 10% duty rate
             
-            Map<String, Object> response = Map.of(
-                "tariffAmount", request.getAmountOfProduct(), //FAKE DATA
-                "currency", request.getCurrency() != null ? request.getCurrency() : "SGD",
-                "tariffId", request.getTariffId(),
-                "status", "success"
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("tariffAmount", tariffAmount);
+            response.put("currency", request.getCurrency() != null ? request.getCurrency() : "SGD");
+            response.put("tariffId", request.getTariffId());
+            response.put("status", "success");
             
             System.out.println("SUCCESS: Calculated tariff = " + tariffAmount);
             return ResponseEntity.ok(response);
             
         } catch (TariffNotFoundException e) {
-<<<<<<< HEAD
-=======
             System.err.println("TariffNotFoundException: " + e.getMessage());
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
-            Map<String, Object> errorResponse = Map.of(
-                "error", e.getMessage(),
-                "status", "tariff_not_found"
-            );
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("status", "tariff_not_found");
             return ResponseEntity.status(404).body(errorResponse);
             
         } catch (DutyNotFoundException e) {
-<<<<<<< HEAD
-=======
             System.err.println("DutyNotFoundException: " + e.getMessage());
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
-            Map<String, Object> errorResponse = Map.of(
-                "error", e.getMessage(),
-                "status", "duty_not_found"
-            );
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("status", "duty_not_found");
             return ResponseEntity.status(404).body(errorResponse);
             
         } catch (InvalidRequestException e) {
-<<<<<<< HEAD
-=======
             System.err.println("InvalidRequestException: " + e.getMessage());
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
-            Map<String, Object> errorResponse = Map.of(
-                "error", e.getMessage(),
-                "status", "bad_request"
-            );
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("status", "bad_request");
             return ResponseEntity.badRequest().body(errorResponse);
             
         } catch (Exception e) {
-<<<<<<< HEAD
-=======
             System.err.println("Unexpected error: " + e.getMessage());
             e.printStackTrace();
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
-            Map<String, Object> errorResponse = Map.of(
-                "error", "Internal server error: " + e.getMessage(),
-                "status", "internal_error"
-            );
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Internal server error: " + e.getMessage());
+            errorResponse.put("status", "internal_error");
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
-<<<<<<< HEAD
 
     // Helper method to build user-friendly tariff description
     private String buildTariffDescription(TariffSchedule ts) {
@@ -214,6 +158,4 @@ public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSear
         
         return desc.toString();
     }
-=======
->>>>>>> 42d9849 (Implemented double query system to return a dropdown of multiple tariffs for same TL code)
 }
