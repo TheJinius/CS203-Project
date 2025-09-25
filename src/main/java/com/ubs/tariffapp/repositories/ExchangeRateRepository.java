@@ -1,6 +1,9 @@
 package com.ubs.tariffapp.repositories;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,16 +22,18 @@ public class ExchangeRateRepository {
         this.objectMapper = objectMapper;
     }
 
-    public ExchangeRates getExchangeRates(String baseCurrency) {
-        String key = "exchange_rates:" + baseCurrency;
+    public ExchangeRates getExchangeRates() {
+        String key = "exchange_rates:USD";
         String json = redisTemplate.opsForValue().get(key);
 
         if (json == null) {
-            throw new RuntimeException("Exchange rates not found in Redis for base " + baseCurrency);
+            throw new RuntimeException("Error fetching exchange rates from redis");
         }
 
         try {
-            return objectMapper.readValue(json, ExchangeRates.class);
+            ExchangeRates er = new ExchangeRates();
+            er.setRates(objectMapper.readValue(json, new TypeReference<Map<String, Double>>() {}));
+            return er;
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse exchange rates JSON", e);
         }

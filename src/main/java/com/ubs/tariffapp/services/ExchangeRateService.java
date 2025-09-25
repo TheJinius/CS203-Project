@@ -13,7 +13,7 @@ public class ExchangeRateService {
         this.repository = repository;
     }
 
-    public ExchangeRates fetchRates(String baseCurrency) {
-        return repository.getExchangeRates(baseCurrency);
+    public ExchangeRates fetchRates() {
+        return repository.getExchangeRates();
     }
 }

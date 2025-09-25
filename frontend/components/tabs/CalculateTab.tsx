@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator } from "lucide-react"
+import { searchTariffs, calculateTariff, getExchangeRate } from "@/lib/api"
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
@@ -22,81 +23,98 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
   const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
   const [selectedTariff, setSelectedTariff] = useState<string>("")
   const [amountOfProduct, setAmountOfProduct] = useState<string>("")
-  const [currency, setCurrency] = useState<string>("SGD")
+  const [currency, setCurrency] = useState<string>("USD")
+  
+  // Exchange rate and tariff result state
+  const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
+  const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
   
   // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
 
+  // Auto-convert tariff amount when currency changes
+  useEffect(() => {
+    if (baseTariffAmountUSD !== null && Object.keys(exchangeRates).length > 0) {
+      const convertedAmount = convertFromUSD(baseTariffAmountUSD, currency, exchangeRates)
+      onCalculationResult(convertedAmount)
+      setError(`✅ Tariff: $${convertedAmount.toFixed(2)} ${currency}`)
+    }
+  }, [currency, baseTariffAmountUSD, exchangeRates, onCalculationResult])
+
+  // Helper function to convert from USD to target currency
+  const convertFromUSD = (amountUSD: number, targetCurrency: string, rates: { [key: string]: number }): number => {
+    if (targetCurrency === "USD") return amountUSD
+    const rate = rates[targetCurrency] || 1
+    return Math.round(amountUSD * rate * 100) / 100
+  }
+
   // Step 1: Search for available tariffs
   const handleSearchTariffs = async () => {
     setLoading(true)
     setError("")
-
     try {
-      const response = await fetch("http://localhost:8080/api/tariffs/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reporter: selectedDestination,    // Backend expects 'reporter'
-          partner: selectedSource,          // Backend expects 'partner'  
-          tlCode: selectedProduct,          // Backend expects 'tlCode'
-          year: 2023                        // Use fixed recent year
-        }),
+      const { ok, data } = await searchTariffs({
+        reporter: selectedDestination,
+        partner: selectedSource,
+        tlCode: selectedProduct,
+        year: 2023,
       })
-
-      if (response.ok) {
-        const data = await response.json()
+      if (ok) {
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
         setError(`✅ Found ${data.tariffs?.length || 0} tariff(s)`)
       } else {
-        const errorData = await response.json()
-        setError(`❌ ${errorData.error || 'Search failed'}`)
+        setError(`❌ ${data.error || 'Search failed'}`)
       }
-
     } catch (e) {
-        const error = e as Error
-        setError(`❌ Connection failed: ${error.message}`)
+      const error = e as Error
+      setError(`❌ Connection failed: ${error.message}`)
     }
-    
     setLoading(false)
   }
 
+  
   // Step 2: Calculate tariff with selected tariff
   const handleCalculate = async () => {
     setLoading(true)
     setError("")
-
     try {
-      const response = await fetch("http://localhost:8080/api/tariffs/calculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reporterCode: selectedDestination,     // Add required reporterCode
-          partnerCode: selectedSource,           // Add required partnerCode  
-          productCode: selectedProduct,          // Add required productCode
-          tariffId: parseInt(selectedTariff),    // Keep tariffId
-          amountOfProduct: parseFloat(amountOfProduct), // Match backend field name
-          currency: currency                     // Add currency selection
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        onCalculationResult(data.tariffAmount)
-        setError(`✅ Tariff: $${data.tariffAmount} ${data.currency}`)
-      } else {
-        const errorData = await response.json()
-        setError(`❌ ${errorData.error || 'Calculation failed'}`)
+      // Get exchange rates (all rates are against USD base)
+      const exchangeRateResponse = await getExchangeRate()
+      let rates: { [key: string]: number } = {}
+      if (exchangeRateResponse.ok && exchangeRateResponse.data.rates) {
+        rates = exchangeRateResponse.data.rates
+        setExchangeRates(rates) // Store exchange rates for currency conversion
       }
 
+      // Calculate tariff (backend now returns amount in USD)
+      const { ok, data } = await calculateTariff({
+        reporterCode: selectedDestination,
+        partnerCode: selectedSource,
+        productCode: selectedProduct,
+        tariffId: parseInt(selectedTariff),
+        amountOfProduct: parseFloat(amountOfProduct),
+        currency: "USD", // Always request in USD from backend
+      })
+      
+      if (ok) {
+        const tariffAmountUSD = data.tariffAmount // Backend returns in USD
+        setBaseTariffAmountUSD(tariffAmountUSD) // Store USD base amount
+        
+        // Convert to selected currency
+        const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
+        
+        onCalculationResult(finalAmount)
+        setError(`✅ Tariff: $${finalAmount.toFixed(2)} ${currency}`)
+      } else {
+        setError(`❌ ${data.error || 'Calculation failed'}`)
+      }
     } catch (e) {
-        const error = e as Error
-        setError(`❌ Connection failed: ${error.message}`)
+      const error = e as Error
+      setError(`❌ Connection failed: ${error.message}`)
     }
-    
     setLoading(false)
   }
 

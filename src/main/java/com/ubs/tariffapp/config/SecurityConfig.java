@@ -21,12 +21,12 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/api/**").authenticated()
+                .requestMatchers("/h2-console/**").permitAll() //TODO: REMOVE THIS IN PROD
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.disable())
-            .oauth2ResourceServer(oauth2 -> oauth2.disable()); // Disable OAuth2 for now
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt());
 
         return http.build();
     }
