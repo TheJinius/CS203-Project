@@ -144,7 +144,12 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.ubs.tariffapp.App</mainClass>
+                </configuration>
             </plugin>
+
+            
             
             <!-- Plugin to run Java class directly -->
             <plugin>
