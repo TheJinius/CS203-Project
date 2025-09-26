@@ -11,9 +11,11 @@ import { searchTariffs, calculateTariff, getExchangeRate } from "@/lib/api"
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
+  currency: string
+  onCurrencyChange: (currency: string) => void
 }
 
-export default function CalculateTab({ onCalculationResult }: CalculateTabProps) {
+export default function CalculateTab({ onCalculationResult, currency, onCurrencyChange }: CalculateTabProps) {
   // Search state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
@@ -23,7 +25,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
   const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
   const [selectedTariff, setSelectedTariff] = useState<string>("")
   const [amountOfProduct, setAmountOfProduct] = useState<string>("")
-  const [currency, setCurrency] = useState<string>("USD")
+  //const [currency, setCurrency] = useState<string>("USD")
   
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
@@ -40,7 +42,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
     if (baseTariffAmountUSD !== null && Object.keys(exchangeRates).length > 0) {
       const convertedAmount = convertFromUSD(baseTariffAmountUSD, currency, exchangeRates)
       onCalculationResult(convertedAmount)
-      setSuccess(`Tariff: $${convertedAmount.toFixed(2)} ${currency}`)
+      setSuccess(`Tariff: ${currency} ${convertedAmount.toFixed(2)}`)
       setError("")
     }
   }, [currency, baseTariffAmountUSD, exchangeRates, onCalculationResult])
@@ -111,7 +113,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
         
         onCalculationResult(finalAmount)
-        setSuccess(`Tariff: $${finalAmount.toFixed(2)} ${currency}`)
+        setSuccess(`Tariff: ${currency} ${finalAmount.toFixed(2)}`)
       } else {
         setError(data.error || 'Calculation failed')
       }
@@ -283,7 +285,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Currency
               </Label>
-              <Select onValueChange={setCurrency} value={currency}>
+              <Select onValueChange={onCurrencyChange} value={currency}>
                 <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>

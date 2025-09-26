@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState,useEffect } from "react"
 import { X, Calculator, Package, MapPin, FileText, TrendingUp, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -33,6 +33,8 @@ export default function Sidebar({
   width
 }: SidebarProps) {
   const { isAdmin } = useAuth();
+
+  const [currency, setCurrency] = useState<string>("USD")
 
   // If a non-admin somehow lands on "edit", send them to a safe tab
   useEffect(() => {
@@ -118,6 +120,8 @@ export default function Sidebar({
             <div className="h-full">
               <CalculateTab 
                 onCalculationResult={onCalculationResult}
+                currency={currency}
+                onCurrencyChange={setCurrency}
               />
             </div>
           )}
@@ -164,7 +168,7 @@ export default function Sidebar({
               Latest Result
             </h3>
             <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-              ${calculationResult.toFixed(2)}
+              {currency} {calculationResult.toFixed(2)} 
             </p>
           </div>
         </div>
