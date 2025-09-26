@@ -30,7 +30,7 @@ export default function Sidebar({
   onClose, 
   calculationResult, 
   onCalculationResult,
-  width // Add this parameter
+  width
 }: SidebarProps) {
   const { isAdmin } = useAuth();
 
@@ -54,12 +54,12 @@ export default function Sidebar({
   if (!isOpen) return null
 
   return (
-    <div
-      className="h-full bg-sidebar border-r border-sidebar-border flex flex-col shadow-lg dark:bg-gray-800 dark:border-gray-700"
-      style={{ width: `${width}px` }} // Use the dynamic width!
+    <div 
+      className="h-full bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shadow-lg"
+      style={{ width: `${width}px` }}
     >
       {/* Header Section */}
-      <div className="p-4 border-b border-sidebar-border dark:border-gray-700">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Image
@@ -75,7 +75,7 @@ export default function Sidebar({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:text-white dark:hover:bg-gray-700"
+            className="text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -89,10 +89,10 @@ export default function Sidebar({
               <Button
                 key={item.id}
                 variant={activeTab === item.id ? "default" : "ghost"}
-                className={`w-full justify-start gap-2 text-sm ${
+                className={`w-full justify-start gap-2 text-sm transition-all duration-200 ${
                   activeTab === item.id
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground dark:bg-blue-600 dark:text-white"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:text-gray-300 dark:hover:bg-gray-700"
+                    ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
                 }`}
                 onClick={() => {
                   // Extra guard: ignore clicks to "edit" if not admin
@@ -110,33 +110,60 @@ export default function Sidebar({
         </nav>
       </div>
 
-      {/* Tab Content Area - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4">
+      {/* Tab Content Container with proper overflow handling */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {/* Calculate Tab - Full height container */}
           {activeTab === "calculate" && (
-            <CalculateTab 
-              onCalculationResult={onCalculationResult}
-            />
+            <div className="h-full">
+              <CalculateTab 
+                onCalculationResult={onCalculationResult}
+              />
+            </div>
           )}
-          {activeTab === "products" && <ProductsTab />}
-          {activeTab === "countries" && <CountriesTab />}
-          {activeTab === "tariffs" && <TariffsTab />}
+          
+          {/* Other Tabs - Standard padding */}
+          {activeTab === "products" && (
+            <div className="p-4">
+              <ProductsTab />
+            </div>
+          )}
+          
+          {activeTab === "countries" && (
+            <div className="p-4">
+              <CountriesTab />
+            </div>
+          )}
+          
+          {activeTab === "tariffs" && (
+            <div className="p-4">
+              <TariffsTab />
+            </div>
+          )}
+          
           {activeTab === "results" && (
-            <ResultsTab calculationResult={calculationResult} />
+            <div className="p-4">
+              <ResultsTab calculationResult={calculationResult} />
+            </div>
           )}
+          
           {/* Access control: only render edit tab for admins */}
-          {activeTab === "edit" && isAdmin() && <EditTariffTab />}
+          {activeTab === "edit" && isAdmin() && (
+            <div className="p-4">
+              <EditTariffTab />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Results Footer - Fixed at bottom */}
       {calculationResult !== null && (
-        <div className="border-t border-sidebar-border dark:border-gray-700 p-4 bg-sidebar-accent/50 dark:bg-gray-800">
-          <div className="bg-sidebar dark:bg-gray-700 rounded-lg p-3">
-            <h3 className="font-semibold text-sidebar-foreground dark:text-white mb-1 text-sm">
+        <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-slate-100 dark:bg-slate-800">
+          <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-slate-200 dark:border-slate-600">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-1 text-sm">
               Latest Result
             </h3>
-            <p className="text-lg font-bold text-primary dark:text-blue-400">
+            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
               ${calculationResult.toFixed(2)}
             </p>
           </div>

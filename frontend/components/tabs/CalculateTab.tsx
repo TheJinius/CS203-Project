@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Calculator } from "lucide-react"
+import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
 import { searchTariffs, calculateTariff, getExchangeRate } from "@/lib/api"
 
 interface CalculateTabProps {
@@ -32,6 +32,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
   // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
 
   // Auto-convert tariff amount when currency changes
@@ -39,7 +40,8 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
     if (baseTariffAmountUSD !== null && Object.keys(exchangeRates).length > 0) {
       const convertedAmount = convertFromUSD(baseTariffAmountUSD, currency, exchangeRates)
       onCalculationResult(convertedAmount)
-      setError(`✅ Tariff: $${convertedAmount.toFixed(2)} ${currency}`)
+      setSuccess(`Tariff: $${convertedAmount.toFixed(2)} ${currency}`)
+      setError("")
     }
   }, [currency, baseTariffAmountUSD, exchangeRates, onCalculationResult])
 
@@ -54,6 +56,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
   const handleSearchTariffs = async () => {
     setLoading(true)
     setError("")
+    setSuccess("")
     try {
       const { ok, data } = await searchTariffs({
         reporter: selectedDestination,
@@ -64,22 +67,22 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
       if (ok) {
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
-        setError(`✅ Found ${data.tariffs?.length || 0} tariff(s)`)
+        setSuccess(`Found ${data.tariffs?.length || 0} tariff(s)`)
       } else {
-        setError(`❌ ${data.error || 'Search failed'}`)
+        setError(data.error || 'Search failed')
       }
     } catch (e) {
       const error = e as Error
-      setError(`❌ Connection failed: ${error.message}`)
+      setError(`Connection failed: ${error.message}`)
     }
     setLoading(false)
   }
 
-  
   // Step 2: Calculate tariff with selected tariff
   const handleCalculate = async () => {
     setLoading(true)
     setError("")
+    setSuccess("")
     try {
       // Get exchange rates (all rates are against USD base)
       const exchangeRateResponse = await getExchangeRate()
@@ -107,69 +110,97 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
         
         onCalculationResult(finalAmount)
-        setError(`✅ Tariff: $${finalAmount.toFixed(2)} ${currency}`)
+        setSuccess(`Tariff: $${finalAmount.toFixed(2)} ${currency}`)
       } else {
-        setError(`❌ ${data.error || 'Calculation failed'}`)
+        setError(data.error || 'Calculation failed')
       }
     } catch (e) {
       const error = e as Error
-      setError(`❌ Connection failed: ${error.message}`)
+      setError(`Connection failed: ${error.message}`)
     }
     setLoading(false)
   }
 
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col space-y-3 p-1">
       {step === 1 ? (
         // Step 1: Search Form
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
-              <Search className="h-5 w-5" />
+        <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+          <CardHeader className="pb-3 px-4 pt-4">
+            <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               Find Tariffs
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="product" className="dark:text-gray-300">Product Code</Label>
+          <CardContent className="space-y-3 px-4 pb-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Product Code
+              </Label>
               <Select onValueChange={setSelectedProduct}>
-                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                  <SelectItem value="76109099" className="dark:text-white dark:hover:bg-gray-700">76109099 - Aluminium Plates</SelectItem>
-                  <SelectItem value="01021000" className="dark:text-white dark:hover:bg-gray-700">01021000 - Pure Bred Breeding Horses</SelectItem>
-                  <SelectItem value="72084000" className="dark:text-white dark:hover:bg-gray-700">72084000 - Steel Products</SelectItem>
-                  <SelectItem value="74130000" className="dark:text-white dark:hover:bg-gray-700">74130000 - Copper Wire</SelectItem>
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                  <SelectItem value="76109099" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    76109099 - Aluminium Plates
+                  </SelectItem>
+                  <SelectItem value="01021000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    01021000 - Pure Bred Breeding Horses
+                  </SelectItem>
+                  <SelectItem value="72084000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    72084000 - Steel Products
+                  </SelectItem>
+                  <SelectItem value="74130000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    74130000 - Copper Wire
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div>
-              <Label htmlFor="source" className="dark:text-gray-300">Source Country (Partner)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="source" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Source Country (Partner)
+              </Label>
               <Select onValueChange={setSelectedSource}>
-                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                  <SelectItem value="702" className="dark:text-white dark:hover:bg-gray-700">702 - Singapore</SelectItem>
-                  <SelectItem value="840" className="dark:text-white dark:hover:bg-gray-700">840 - United States</SelectItem>
-                  <SelectItem value="156" className="dark:text-white dark:hover:bg-gray-700">156 - China</SelectItem>
-                  <SelectItem value="000" className="dark:text-white dark:hover:bg-gray-700">000 - World (Any Country)</SelectItem>
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                  <SelectItem value="702" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    702 - Singapore
+                  </SelectItem>
+                  <SelectItem value="840" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    840 - United States
+                  </SelectItem>
+                  <SelectItem value="156" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    156 - China
+                  </SelectItem>
+                  <SelectItem value="000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    000 - World (Any Country)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div>
-              <Label htmlFor="destination" className="dark:text-gray-300">Destination Country (Reporter)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="destination" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Destination Country (Reporter)
+              </Label>
               <Select onValueChange={setSelectedDestination}>
-                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                  <SelectItem value="840" className="dark:text-white dark:hover:bg-gray-700">840 - United States</SelectItem>
-                  <SelectItem value="918" className="dark:text-white dark:hover:bg-gray-700">918 - European Union</SelectItem>
-                  <SelectItem value="392" className="dark:text-white dark:hover:bg-gray-700">392 - Japan</SelectItem>
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                  <SelectItem value="840" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    840 - United States
+                  </SelectItem>
+                  <SelectItem value="918" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    918 - European Union
+                  </SelectItem>
+                  <SelectItem value="392" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    392 - Japan
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -177,7 +208,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
             <Button 
               onClick={handleSearchTariffs} 
               disabled={loading || !selectedProduct || !selectedSource || !selectedDestination}
-              className="w-full"
+              className="w-full h-9 mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Search className="h-4 w-4 mr-2" />
               {loading ? "Searching..." : "Search Available Tariffs"}
@@ -186,45 +217,56 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
         </Card>
       ) : (
         // Step 2: Calculate Form
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 dark:text-white">
-              <Calculator className="h-5 w-5" />
+        <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
+          <CardHeader className="pb-3 px-4 pt-4">
+            <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <Calculator className="h-4 w-4 text-green-600 dark:text-green-400" />
               Calculate Tariff
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 px-4 pb-4">
             <Button 
               variant="outline" 
               onClick={() => setStep(1)}
-              className="w-full dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Search
             </Button>
             
-            <div>
-              <Label className="dark:text-gray-300">Select Tariff</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Select Tariff
+              </Label>
               <Select onValueChange={setSelectedTariff}>
-                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-48 overflow-y-auto">
                   {availableTariffs.map(tariff => (
                     <SelectItem 
                       key={tariff.tariffId} 
                       value={tariff.tariffId.toString()}
-                      className="dark:text-white dark:hover:bg-gray-700"
+                      className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm"
                     >
-                      {tariff.description || `Tariff ID: ${tariff.tariffId}`}
+                      <div className="flex flex-col gap-0.5 py-1">
+                        <span className="font-medium">Tariff ID: {tariff.tariffId}</span>
+                        {tariff.description && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {tariff.description}
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label className="dark:text-gray-300">Amount of Product</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Amount of Product
+              </Label>
               <Input
                 type="number"
                 value={amountOfProduct}
@@ -232,21 +274,31 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
                 placeholder="Enter quantity/amount (e.g., 1000)"
                 step="0.01"
                 min="0"
-                className="dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
-            <div>
-              <Label className="dark:text-gray-300">Currency</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Currency
+              </Label>
               <Select onValueChange={setCurrency} value={currency}>
-                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                  <SelectItem value="SGD" className="dark:text-white dark:hover:bg-gray-700">SGD - Singapore Dollar</SelectItem>
-                  <SelectItem value="USD" className="dark:text-white dark:hover:bg-gray-700">USD - US Dollar</SelectItem>
-                  <SelectItem value="EUR" className="dark:text-white dark:hover:bg-gray-700">EUR - Euro</SelectItem>
-                  <SelectItem value="JPY" className="dark:text-white dark:hover:bg-gray-700">JPY - Japanese Yen</SelectItem>
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                  <SelectItem value="SGD" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    SGD - Singapore Dollar
+                  </SelectItem>
+                  <SelectItem value="USD" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    USD - US Dollar
+                  </SelectItem>
+                  <SelectItem value="EUR" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    EUR - Euro
+                  </SelectItem>
+                  <SelectItem value="JPY" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    JPY - Japanese Yen
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -254,7 +306,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
             <Button 
               onClick={handleCalculate} 
               disabled={loading || !selectedTariff || !amountOfProduct}
-              className="w-full"
+              className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Calculator className="h-4 w-4 mr-2" />
               {loading ? "Calculating..." : "Calculate Tariff"}
@@ -263,14 +315,19 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
         </Card>
       )}
 
-      {/* Status/Error Display */}
-      {error && (
-        <div className={`p-3 rounded-lg text-sm ${
-          error.includes('✅') 
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      {/* Status Messages */}
+      {(error || success) && (
+        <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
+          success 
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' 
+            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
         }`}>
-          {error}
+          {success ? (
+            <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+          ) : (
+            <XCircle className="h-4 w-4 mt-0.5 text-red-600 dark:text-red-400 flex-shrink-0" />
+          )}
+          <span className="flex-1 break-words">{success || error}</span>
         </div>
       )}
     </div>
