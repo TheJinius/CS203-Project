@@ -27,8 +27,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "target/*.jar"
-          target: "/home/ec2-user/app.jar"
+          source: "target/myapp-*.jar"   # your jar’s real pattern
+          target: "/home/ec2-user/app.jar" # file path, not directory
 
       - name: Restart Spring Boot service
         uses: appleboy/ssh-action@v0.1.10
