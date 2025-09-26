@@ -1,36 +1,37 @@
 name: Deploy Backend
-
 on:
   push:
     branches: [ "main" ]   # adjust to your branch
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '21'
-
       - name: Build with Maven
         run: mvn clean package -DskipTests
-
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "target/cs203-project-*.jar"   # your jar’s real pattern
-          target: "/home/ec2-user/app.jar" # file path, not directory
-          overwrite: true
-
+          source: "target/cs203-project-*.jar"
+          target: "/home/ec2-user/"
+          strip_components: 1
+      - name: Rename JAR file
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mv /home/ec2-user/cs203-project-*.jar /home/ec2-user/app.jar
       - name: Restart Spring Boot service
         uses: appleboy/ssh-action@v0.1.10
         with:
