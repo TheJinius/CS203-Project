@@ -57,6 +57,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
     setLoading(true)
     setError("")
     setSuccess("")
+    setSelectedTariff("") // Add this line to reset the tariff selection
     try {
       const { ok, data } = await searchTariffs({
         reporter: selectedDestination,
@@ -238,7 +239,7 @@ export default function CalculateTab({ onCalculationResult }: CalculateTabProps)
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Select Tariff
               </Label>
-              <Select onValueChange={setSelectedTariff}>
+              <Select onValueChange={setSelectedTariff} value={selectedTariff}>
                 <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
