@@ -128,10 +128,10 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
     <div className="h-full flex flex-col space-y-3 p-1">
       {step === 1 ? (
         // Step 1: Search Form
-        <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-3 px-4 pt-4">
-            <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-slate-100">
-              <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm rounded-none">
+          <CardHeader className="pb-0 px-4 pt-0">
+            <CardTitle className="text-xl flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <Search className="h-5.5 w-5.5 text-blue-600 dark:text-blue-400" />
               Find Tariffs
             </CardTitle>
           </CardHeader>
@@ -213,17 +213,17 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
               disabled={loading || !selectedProduct || !selectedSource || !selectedDestination}
               className="w-full h-9 mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Search className="h-4 w-4 mr-2" />
+              <Search className="h-4 w-4" />
               {loading ? "Searching..." : "Search Available Tariffs"}
             </Button>
           </CardContent>
         </Card>
       ) : (
         // Step 2: Calculate Form
-        <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-3 px-4 pt-4">
-            <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-slate-100">
-              <Calculator className="h-4 w-4 text-green-600 dark:text-green-400" />
+        <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm rounded-none">
+          <CardHeader className="pb-0 px-4 pt-0">
+            <CardTitle className="text-xl flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <Calculator className="h-5.5 w-5.5 text-green-600 dark:text-green-400" />
               Calculate Tariff
             </CardTitle>
           </CardHeader>
@@ -231,9 +231,9 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <Button 
               variant="outline" 
               onClick={() => setStep(1)}
-              className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
+              className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 max-w-[410px]"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="h-4 w-4" />
               Back to Search
             </Button>
             
@@ -277,7 +277,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 placeholder="Enter quantity/amount (e.g., 1000)"
                 step="0.01"
                 min="0"
-                className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium max-w-[295px]"
               />
             </div>
 
@@ -309,9 +309,9 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <Button 
               onClick={handleCalculate} 
               disabled={loading || !selectedTariff || !amountOfProduct}
-              className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed max-w-[410px]"
             >
-              <Calculator className="h-4 w-4 mr-2" />
+              <Calculator className="h-4 w-4" />
               {loading ? "Calculating..." : "Calculate Tariff"}
             </Button>
           </CardContent>
