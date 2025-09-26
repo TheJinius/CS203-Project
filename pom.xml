@@ -146,7 +146,11 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.ubs.tariffapp.App</mainClass>
+                    <properties>
+                        <spring-boot.run.main-class>com.ubs.tariffapp.App</spring-boot.run.main-class>
+                    </properties>
                 </configuration>
+                
             </plugin>
 
             
