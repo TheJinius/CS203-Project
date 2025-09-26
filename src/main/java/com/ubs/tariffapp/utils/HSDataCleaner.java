@@ -312,7 +312,7 @@ public class HSDataCleaner {
                 double parsedRate = Double.parseDouble(avRate.trim());
                 // Round to 6 decimal places to avoid floating point errors
                 info.standardizedAVRate = roundToPrecision(parsedRate, 6);
-                hasExistingAV = true;
+                hasExistingAV = parsedRate > 0; // Only consider non-zero as existing AV
             } catch (NumberFormatException e) {
                 // Invalid AV rate, ignore and continue processing
             }
@@ -323,7 +323,9 @@ public class HSDataCleaner {
             if (hasExistingAV) {
                 info.dutyType = "AD_VALOREM";
             } else {
-                info.dutyType = "CONDITIONAL"; // No duty information available
+                // Default to AD_VALOREM with 0% rate instead of CONDITIONAL
+                info.dutyType = "AD_VALOREM";
+                info.standardizedAVRate = 0.0;
             }
             return info;
         }
@@ -339,14 +341,25 @@ public class HSDataCleaner {
             if (hasFixedComponent && hasPercentageComponent) {
                 // Mixed duty: has both specific amount and percentage
                 info.dutyType = "MIXED";
-                info.specificDutyAmount = roundToPrecision(parsed.getOriginalFixedAmount(), 6);
+                // Only store the specific amount, not combined with AV
+                double specificAmount = parsed.getOriginalFixedAmount();
+                // Convert cents to dollars if currency is cents/USD
+                if (isCentsBasedCurrency(specificRate)) {
+                    specificAmount = specificAmount / 100.0;
+                }
+                info.specificDutyAmount = roundToPrecision(specificAmount, 6);
                 info.standardizedAVRate = roundToPrecision(parsed.getPercentageRate() * 100, 6); // Convert to percentage
                 info.currency = extractCurrencyType(specificRate);
                 info.unit = parsed.getUnit();
             } else if (hasFixedComponent) {
                 // Specific duty only (or mixed with existing AV rate)
                 info.dutyType = hasExistingAV ? "MIXED" : "SPECIFIC";
-                info.specificDutyAmount = roundToPrecision(parsed.getOriginalFixedAmount(), 6);
+                double specificAmount = parsed.getOriginalFixedAmount();
+                // Convert cents to dollars if currency is cents/USD
+                if (isCentsBasedCurrency(specificRate)) {
+                    specificAmount = specificAmount / 100.0;
+                }
+                info.specificDutyAmount = roundToPrecision(specificAmount, 6);
                 info.currency = extractCurrencyType(specificRate);
                 info.unit = parsed.getUnit();
             } else if (hasPercentageComponent) {
@@ -357,16 +370,40 @@ public class HSDataCleaner {
                 // Complex conditional duty with conditions like "whichever is higher"
                 info.dutyType = "CONDITIONAL";
             } else {
-                // Could not parse meaningful components
-                info.dutyType = "CONDITIONAL";
+                // Could not parse meaningful components - check if it's just empty/zero
+                String trimmedRate = specificRate.trim().toLowerCase();
+                if (trimmedRate.isEmpty() || trimmedRate.equals("0") || trimmedRate.equals("0%") || trimmedRate.equals("free")) {
+                    info.dutyType = "AD_VALOREM";
+                    info.standardizedAVRate = 0.0;
+                } else {
+                    info.dutyType = "CONDITIONAL";
+                }
             }
             
         } catch (Exception e) {
             System.err.println("Error parsing duty rate: " + specificRate + " - " + e.getMessage());
-            info.dutyType = "CONDITIONAL";
+            // Only mark as conditional if it's truly unparseable
+            String trimmedRate = specificRate.trim().toLowerCase();
+            if (trimmedRate.isEmpty() || trimmedRate.equals("0") || trimmedRate.equals("0%") || trimmedRate.equals("free")) {
+                info.dutyType = "AD_VALOREM";
+                info.standardizedAVRate = 0.0;
+            } else {
+                info.dutyType = "CONDITIONAL";
+            }
         }
         
         return info;
+    }
+
+    /**
+     * Check if the duty text indicates a cents-based currency that should be converted to dollars
+     */
+    private static boolean isCentsBasedCurrency(String dutyText) {
+        if (dutyText == null) return false;
+        
+        String lower = dutyText.toLowerCase();
+        // Check for cents explicitly mentioned
+        return lower.contains("cent") && !lower.contains("percent");
     }
 
     /**
