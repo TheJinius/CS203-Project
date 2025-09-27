@@ -17,7 +17,13 @@ import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.Product;
 import com.ubs.tariffapp.models.duty.*;
+import com.ubs.tariffapp.exceptions.DutyNotFoundException;
+import com.ubs.tariffapp.exceptions.InvalidRequestException;
+import com.ubs.tariffapp.exceptions.TariffNotFoundException;
+
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Arrays;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -30,169 +36,98 @@ public class DutyServiceTest {
     @MockBean
     private TariffScheduleService tariffScheduleService;
 
+    // =================== NEW METHOD TESTS ===================
+
     @Test
-    void testCalculateTariff_AdValoremDuty() {
-        // Creating test entities using setters
-        Country reporter = new Country();
-        reporter.setCountryId("USA");
-        reporter.setCountryName("United States");
-        reporter.setIsoCode("US");
+    void testSearchAvailableTariffs_Success() {
+        // Arrange
+        TariffSchedule tariff1 = createBasicTariffSchedule("USA", "CHN", "010121");
+        TariffSchedule tariff2 = createBasicTariffSchedule("USA", "CHN", "010122");
         
-        Country partner = new Country();
-        partner.setCountryId("CHN");
-        partner.setCountryName("China");
-        partner.setIsoCode("CN");
-        
-        Product product = new Product();
-        product.setTlCode("010121");
-        product.setDescription("Live horses");
-        product.setDigits(6);
-        
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
-        
-        // Create AdValoremDuty with 10% rate
-        AdValoremDuty adValoremDuty = new AdValoremDuty();
-        adValoremDuty.setRatePercent(BigDecimal.valueOf(10.0));
-        adValoremDuty.setTariffSchedule(tariffSchedule);
-        
-        tariffSchedule.setDuty(adValoremDuty);
-        
-        // Mock the service call
-        when(tariffScheduleService.getTariffSchedule("USA", "CHN", "010121"))
+        when(tariffScheduleService.searchTariffSchedules("USA", "CHN", "010121", 2023))
+            .thenReturn(Arrays.asList(tariff1, tariff2));
+
+        // Act
+        List<TariffSchedule> result = dutyService.searchAvailableTariffs("USA", "CHN", "010121", 2023);
+
+        // Assert
+        assertThat(result).hasSize(2);
+        assertThat(result).contains(tariff1, tariff2);
+    }
+
+    @Test
+    void testSearchAvailableTariffs_NotFound() {
+        // Arrange
+        when(tariffScheduleService.searchTariffSchedules("XXX", "YYY", "NOTFOUND", 2023))
+            .thenReturn(List.of()); // Empty list
+
+        // Act & Assert
+        TariffNotFoundException exception = assertThrows(TariffNotFoundException.class, () -> {
+            dutyService.searchAvailableTariffs("XXX", "YYY", "NOTFOUND", 2023);
+        });
+
+        assertThat(exception.getMessage()).contains("No tariff schedules found");
+    }
+
+    @Test
+    void testCalculateTariffById_AdValoremDuty() {
+        // Arrange
+        TariffSchedule tariffSchedule = createTariffWithAdValoremDuty(10.0); // 10%
+        tariffSchedule.setTariffId(12345);
+
+        when(tariffScheduleService.getTariffScheduleById(12345))
             .thenReturn(tariffSchedule);
 
-        // Act - Calculate tariff for $1000 worth of goods
-        double result = dutyService.calculateTariff("USA", "CHN", "010121", 1000.0);
+        // Act
+        double result = dutyService.calculateTariffById(12345, 1000.0);
 
         // Assert - 10% of $1000 = $100
         assertThat(result).isEqualTo(100.0);
     }
 
     @Test
-    void testCalculateTariff_SpecificDuty() {
+    void testCalculateTariffById_SpecificDuty() {
         // Arrange
-        Country reporter = new Country();
-        reporter.setCountryId("USA");
-        reporter.setCountryName("United States");
-        reporter.setIsoCode("US");
-        
-        Country partner = new Country();
-        partner.setCountryId("DEU");
-        partner.setCountryName("Germany");
-        partner.setIsoCode("DE");
-        
-        Product product = new Product();
-        product.setTlCode("010129");
-        product.setDescription("Live horses, other");
-        product.setDigits(6);
-        
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
-        
-        // Create SpecificDuty: $5 per unit, multiplier 1
-        SpecificDuty specificDuty = new SpecificDuty();
-        specificDuty.setAmount(BigDecimal.valueOf(5.0));
-        specificDuty.setMultiplier(1);
-        specificDuty.setTariffSchedule(tariffSchedule);
-        
-        tariffSchedule.setDuty(specificDuty);
-        
-        when(tariffScheduleService.getTariffSchedule("USA", "DEU", "010129"))
+        TariffSchedule tariffSchedule = createTariffWithSpecificDuty(5.0, 1); // $5 per unit
+        tariffSchedule.setTariffId(12346);
+
+        when(tariffScheduleService.getTariffScheduleById(12346))
             .thenReturn(tariffSchedule);
 
-        // Act - Calculate for 100 units
-        double result = dutyService.calculateTariff("USA", "DEU", "010129", 100.0);
+        // Act
+        double result = dutyService.calculateTariffById(12346, 100.0);
 
         // Assert - (100 / 1) * $5 = $500
         assertThat(result).isEqualTo(500.0);
     }
 
     @Test
-    void testCalculateTariff_CombinedDuty_Mixed() {
+    void testCalculateTariffById_CombinedDuty_Mixed() {
         // Arrange
-        Country reporter = new Country();
-        reporter.setCountryId("USA");
-        reporter.setCountryName("United States");
-        reporter.setIsoCode("US");
-        
-        Country partner = new Country();
-        partner.setCountryId("FRA");
-        partner.setCountryName("France");
-        partner.setIsoCode("FR");
-        
-        Product product = new Product();
-        product.setTlCode("010130");
-        product.setDescription("Live asses");
-        product.setDigits(6);
-        
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
-        
-        // Create CombinedDuty: 5% + $2 per unit (Mixed)
-        CombinedDuty combinedDuty = new CombinedDuty();
-        combinedDuty.setRatePercent(BigDecimal.valueOf(5.0));
-        combinedDuty.setAmount(BigDecimal.valueOf(2.0));
-        combinedDuty.setMultiplier(1);
-        combinedDuty.setMixedOrConditional("M"); // Fixed: Use String instead of char
-        combinedDuty.setTariffSchedule(tariffSchedule);
-        
-        tariffSchedule.setDuty(combinedDuty);
-        
-        when(tariffScheduleService.getTariffSchedule("USA", "FRA", "010130"))
+        TariffSchedule tariffSchedule = createTariffWithCombinedDuty(5.0, 2.0, 1, "M");
+        tariffSchedule.setTariffId(12347);
+
+        when(tariffScheduleService.getTariffScheduleById(12347))
             .thenReturn(tariffSchedule);
 
-        // Act - Calculate for $1000 worth, 50 units
-        double result = dutyService.calculateTariff("USA", "FRA", "010130", 50.0);
+        // Act
+        double result = dutyService.calculateTariffById(12347, 50.0);
 
         // Assert - AdValorem: (50 * 5%) + Specific: (50/1 * $2) = $2.5 + $100 = $102.5
         assertThat(result).isEqualTo(102.5);
     }
 
     @Test
-    void testCalculateTariff_CombinedDuty_Conditional() {
+    void testCalculateTariffById_CombinedDuty_Conditional() {
         // Arrange
-        Country reporter = new Country();
-        reporter.setCountryId("USA");
-        reporter.setCountryName("United States");
-        reporter.setIsoCode("US");
-        
-        Country partner = new Country();
-        partner.setCountryId("GBR");
-        partner.setCountryName("United Kingdom");
-        partner.setIsoCode("GB");
-        
-        Product product = new Product();
-        product.setTlCode("010190");
-        product.setDescription("Live horses, other");
-        product.setDigits(6);
-        
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
-        
-        // Create CombinedDuty: 2% or $10 per unit, whichever is higher (Conditional)
-        CombinedDuty combinedDuty = new CombinedDuty();
-        combinedDuty.setRatePercent(BigDecimal.valueOf(2.0));
-        combinedDuty.setAmount(BigDecimal.valueOf(10.0));
-        combinedDuty.setMultiplier(1);
-        combinedDuty.setMixedOrConditional("C"); // Fixed: Use String instead of char
-        combinedDuty.setTariffSchedule(tariffSchedule);
-        
-        tariffSchedule.setDuty(combinedDuty);
-        
-        when(tariffScheduleService.getTariffSchedule("USA", "GBR", "010190"))
+        TariffSchedule tariffSchedule = createTariffWithCombinedDuty(2.0, 10.0, 1, "C");
+        tariffSchedule.setTariffId(12348);
+
+        when(tariffScheduleService.getTariffScheduleById(12348))
             .thenReturn(tariffSchedule);
 
-        // Act - Calculate for 20 units
-        double result = dutyService.calculateTariff("USA", "GBR", "010190", 20.0);
+        // Act
+        double result = dutyService.calculateTariffById(12348, 20.0);
 
         // Assert - AdValorem: (20 * 2% = $0.4), Specific: (20/1 * $10 = $200)
         // Max($0.4, $200) = $200
@@ -200,54 +135,114 @@ public class DutyServiceTest {
     }
 
     @Test
+    void testCalculateTariffById_TariffNotFound() {
+        // Arrange
+        when(tariffScheduleService.getTariffScheduleById(99999))
+            .thenReturn(null);
+
+        // Act & Assert
+        TariffNotFoundException exception = assertThrows(TariffNotFoundException.class, () -> {
+            dutyService.calculateTariffById(99999, 1000.0);
+        });
+
+        assertThat(exception.getMessage()).contains("No tariff schedule found for ID: 99999");
+    }
+
+    @Test
+    void testCalculateTariffById_NoDuty() {
+        // Arrange
+        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "CHN", "010121");
+        tariffSchedule.setTariffId(12349);
+        tariffSchedule.setDuty(null); // No duty attached
+
+        when(tariffScheduleService.getTariffScheduleById(12349))
+            .thenReturn(tariffSchedule);
+
+        // Act & Assert
+        DutyNotFoundException exception = assertThrows(DutyNotFoundException.class, () -> {
+            dutyService.calculateTariffById(12349, 1000.0);
+        });
+
+        assertThat(exception.getMessage()).contains("No duty information found for TariffSchedule ID: 12349");
+    }
+
+    @Test
+    void testCalculateTariffById_InvalidAmount() {
+        // Act & Assert
+        InvalidRequestException exception = assertThrows(InvalidRequestException.class, () -> {
+            dutyService.calculateTariffById(12345, -100.0);
+        });
+
+        assertThat(exception.getMessage()).contains("Amount of product must be greater than 0");
+    }
+
+    @Test
+    void testCalculateTariffById_NullTariffId() {
+        // Act & Assert
+        InvalidRequestException exception = assertThrows(InvalidRequestException.class, () -> {
+            dutyService.calculateTariffById(null, 1000.0);
+        });
+
+        assertThat(exception.getMessage()).contains("Tariff ID is required");
+    }
+
+    // =================== EXISTING METHOD TESTS (Updated) ===================
+
+    @Test
+    void testCalculateTariff_AdValoremDuty() {
+        // Arrange
+        TariffSchedule tariffSchedule = createTariffWithAdValoremDuty(10.0);
+        
+        // Mock the method WITH year parameter (since calculateTariff() defaults to 2023)
+        when(tariffScheduleService.getTariffSchedule("USA", "CHN", "010121", 2023))
+            .thenReturn(tariffSchedule);
+
+        // Act
+        double result = dutyService.calculateTariff("USA", "CHN", "010121", 1000.0);
+
+        // Assert
+        assertThat(result).isEqualTo(100.0);
+    }
+
+    @Test
+    void testCalculateTariff_WithYear() {
+        // Arrange
+        TariffSchedule tariffSchedule = createTariffWithAdValoremDuty(5.0);
+        
+        when(tariffScheduleService.getTariffSchedule("USA", "CHN", "010121", 2023))
+            .thenReturn(tariffSchedule);
+
+        // Act
+        double result = dutyService.calculateTariff("USA", "CHN", "010121", 1000.0, 2023);
+
+        // Assert
+        assertThat(result).isEqualTo(50.0);
+    }
+
+    @Test
     void testCalculateTariff_RoundingBehavior() {
         // Arrange
-        Country reporter = new Country();
-        reporter.setCountryId("USA");
-        reporter.setCountryName("United States");
-        reporter.setIsoCode("US");
+        TariffSchedule tariffSchedule = createTariffWithAdValoremDuty(7.333);
         
-        Country partner = new Country();
-        partner.setCountryId("JPN");
-        partner.setCountryName("Japan");
-        partner.setIsoCode("JP");
-        
-        Product product = new Product();
-        product.setTlCode("010200");
-        product.setDescription("Live bovine");
-        product.setDigits(6);
-        
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
-        
-        // Create AdValoremDuty with rate that creates rounding scenario
-        AdValoremDuty adValoremDuty = new AdValoremDuty();
-        adValoremDuty.setRatePercent(BigDecimal.valueOf(7.333)); // Creates decimal result
-        adValoremDuty.setTariffSchedule(tariffSchedule);
-        
-        tariffSchedule.setDuty(adValoremDuty);
-        
-        when(tariffScheduleService.getTariffSchedule("USA", "JPN", "010200"))
+        // Mock the method WITH year parameter (since calculateTariff() defaults to 2023)
+        when(tariffScheduleService.getTariffSchedule("USA", "JPN", "010200", 2023))
             .thenReturn(tariffSchedule);
 
         // Act
         double result = dutyService.calculateTariff("USA", "JPN", "010200", 133.33);
 
-        // Assert - Result should be rounded to 2 decimal places
-        // 133.33 * 7.333% = 9.777... should round to 9.78
+        // Assert - Should be rounded to 2 decimal places
         assertThat(result).isEqualTo(9.78);
     }
 
     @Test
     void testCalculateTariff_NoDutyFound() {
-        // Mock service to return null
-        when(tariffScheduleService.getTariffSchedule("XXX", "YYY", "NOTFOUND"))
+        // Arrange - Mock the method WITH year parameter
+        when(tariffScheduleService.getTariffSchedule("XXX", "YYY", "NOTFOUND", 2023))
             .thenReturn(null);
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        TariffNotFoundException exception = assertThrows(TariffNotFoundException.class, () -> {
             dutyService.calculateTariff("XXX", "YYY", "NOTFOUND", 1000.0);
         });
 
@@ -257,5 +252,68 @@ public class DutyServiceTest {
     @Test
     void testCalculateTariff_ServiceNotNull() {
         assertThat(dutyService).isNotNull();
+    }
+
+    // =================== HELPER METHODS ===================
+
+    private TariffSchedule createBasicTariffSchedule(String reporterCode, String partnerCode, String productCode) {
+        Country reporter = new Country();
+        reporter.setCountryId(reporterCode);
+        reporter.setCountryName("Test Reporter");
+        reporter.setIsoCode(reporterCode.substring(0, 2));
+        
+        Country partner = new Country();
+        partner.setCountryId(partnerCode);
+        partner.setCountryName("Test Partner");
+        partner.setIsoCode(partnerCode.substring(0, 2));
+        
+        Product product = new Product();
+        product.setTlCode(productCode);
+        product.setDescription("Test Product");
+        product.setDigits(6);
+        
+        TariffSchedule tariffSchedule = new TariffSchedule();
+        tariffSchedule.setReporter(reporter);
+        tariffSchedule.setPartner(partner);
+        tariffSchedule.setProduct(product);
+        
+        return tariffSchedule;
+    }
+
+    private TariffSchedule createTariffWithAdValoremDuty(double ratePercent) {
+        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "CHN", "010121");
+        
+        AdValoremDuty adValoremDuty = new AdValoremDuty();
+        adValoremDuty.setRatePercent(BigDecimal.valueOf(ratePercent));
+        adValoremDuty.setTariffSchedule(tariffSchedule);
+        
+        tariffSchedule.setDuty(adValoremDuty);
+        return tariffSchedule;
+    }
+
+    private TariffSchedule createTariffWithSpecificDuty(double amount, int multiplier) {
+        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "DEU", "010129");
+        
+        SpecificDuty specificDuty = new SpecificDuty();
+        specificDuty.setAmount(BigDecimal.valueOf(amount));
+        specificDuty.setMultiplier(multiplier);
+        specificDuty.setTariffSchedule(tariffSchedule);
+        
+        tariffSchedule.setDuty(specificDuty);
+        return tariffSchedule;
+    }
+
+    private TariffSchedule createTariffWithCombinedDuty(double ratePercent, double amount, int multiplier, String mixedOrConditional) {
+        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "FRA", "010130");
+        
+        CombinedDuty combinedDuty = new CombinedDuty();
+        combinedDuty.setRatePercent(BigDecimal.valueOf(ratePercent));
+        combinedDuty.setAmount(BigDecimal.valueOf(amount));
+        combinedDuty.setMultiplier(multiplier);
+        combinedDuty.setMixedOrConditional(mixedOrConditional);
+        combinedDuty.setTariffSchedule(tariffSchedule);
+        
+        tariffSchedule.setDuty(combinedDuty);
+        return tariffSchedule;
     }
 }

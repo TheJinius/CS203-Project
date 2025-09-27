@@ -20,6 +20,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
+  const [selectedYear, setSelectedYear] = useState<string>("2023") // Add year state
   
   // Calculate state  
   const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
@@ -59,18 +60,18 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
     setLoading(true)
     setError("")
     setSuccess("")
-    setSelectedTariff("") // Add this line to reset the tariff selection
+    setSelectedTariff("")
     try {
       const { ok, data } = await searchTariffs({
         reporter: selectedDestination,
         partner: selectedSource,
         tlCode: selectedProduct,
-        year: 2023,
+        year: parseInt(selectedYear), // Use dynamic year instead of hardcoded 2023
       })
       if (ok) {
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
-        setSuccess(`Found ${data.tariffs?.length || 0} tariff(s)`)
+        setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
       } else {
         setError(data.error || 'Search failed')
       }
@@ -145,14 +146,14 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
-                  <SelectItem value="76109099" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    76109099 - Aluminium Plates
+                  <SelectItem value="27079940" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    27079940 - Carbazole, Energy
                   </SelectItem>
-                  <SelectItem value="01021000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    01021000 - Pure Bred Breeding Horses
+                  <SelectItem value="1012100" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    1012100 - Pure Bred Breeding Horses
                   </SelectItem>
-                  <SelectItem value="72084000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    72084000 - Steel Products
+                  <SelectItem value="29092000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    29092000 - Cyclanic, Pharmaceutical
                   </SelectItem>
                   <SelectItem value="74130000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
                     74130000 - Copper Wire
@@ -208,13 +209,39 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
               </Select>
             </div>
             
+            {/* Add Year Selection Dropdown */}
+            <div className="space-y-1.5">
+              <Label htmlFor="year" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Year
+              </Label>
+              <Select onValueChange={setSelectedYear} value={selectedYear}>
+                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                  <SelectItem value="2024" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    2024
+                  </SelectItem>
+                  <SelectItem value="2023" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    2023
+                  </SelectItem>
+                  <SelectItem value="2022" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    2022
+                  </SelectItem>
+                  <SelectItem value="2021" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    2021
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
             <Button 
               onClick={handleSearchTariffs} 
               disabled={loading || !selectedProduct || !selectedSource || !selectedDestination}
               className="w-full h-9 mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Search className="h-4 w-4" />
-              {loading ? "Searching..." : "Search Available Tariffs"}
+              {loading ? "Searching..." : `Search Available Tariffs for ${selectedYear}`}
             </Button>
           </CardContent>
         </Card>
