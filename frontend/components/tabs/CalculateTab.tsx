@@ -24,7 +24,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   
   // Product search state
   const [productSearchQuery, setProductSearchQuery] = useState<string>("")
-  const [productSearchResults, setProductSearchResults] = useState<Array<{code: string, description: string}>>([])
+  const [productSearchResults, setProductSearchResults] = useState<Array<{code: string, description: string, matchType?: string}>>([])
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Calculate state  
@@ -58,29 +58,43 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       const { ok, data } = await apiSearchProducts(query, 5)
       
       if (ok && data.products && Array.isArray(data.products)) {
+        console.log(`🔍 Backend search found ${data.products.length} results using ${data.searchType} search`)
         return data.products.map((p: any) => ({
           code: p.code || p.tlCode,
-          description: p.description || p.name
+          description: p.description || p.name || "No description available",
+          matchType: p.matchType
         }))
       }
       
       // Fallback to predefined products if API fails or returns no results
+      console.log('🔄 Falling back to predefined products')
+      const isNumericQuery = /^\d+$/.test(query)
+      
       const filtered = predefinedProducts.filter(product => 
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5) // Limit to top 5 results
       
-      return filtered
+      // Add match type for predefined products
+      return filtered.map(product => ({
+        ...product,
+        matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
+      }))
+      
     } catch (error) {
       console.error('Product search error:', error)
       
       // Fallback to predefined products on error
+      const isNumericQuery = /^\d+$/.test(query)
       const filtered = predefinedProducts.filter(product => 
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5)
       
-      return filtered
+      return filtered.map(product => ({
+        ...product,
+        matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
+      }))
     }
   }
 
@@ -108,8 +122,19 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
     }
   }, [productSearchQuery])
 
+  // Helper function to get human-readable match type labels
+  const getMatchTypeLabel = (matchType?: string) => {
+    switch (matchType) {
+      case 'exact_code': return '🎯 Exact';
+      case 'starts_with_code': return '▶️ Prefix';
+      case 'contains_code': return '🔍 Partial';
+      case 'description_match': return '📝 Description';
+      default: return '🔎 Match';
+    }
+  }
+
   // Handle product selection from dropdown
-  const handleProductSelect = (product: {code: string, description: string}) => {
+  const handleProductSelect = (product: {code: string, description: string, matchType?: string}) => {
     setSelectedProduct(product.code)
     setProductSearchQuery(`${product.code} - ${product.description}`)
     setProductSearchResults([])
@@ -264,29 +289,61 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             
             <div className="space-y-1.5">
               <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Product Code (HS Code)
+                Product Search
               </Label>
               <div className="relative">
                 <Input
                   type="text"
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
-                  placeholder="Search for product code (e.g., 27079940)"
-                  className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  placeholder="Search by HS Code (e.g., 27079940) or description (e.g., carbazole)"
+                  className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-16"
                 />
+                {productSearchQuery && (
+                  <>
+                    {selectedProduct && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductSearchQuery("")
+                          setSelectedProduct("")
+                          setProductSearchResults([])
+                        }}
+                        className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                        title="Clear selection"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </>
+                )}
                 {productSearchResults.length > 0 && productSearchQuery && (
                   <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {productSearchResults.map((product) => (
+                    {productSearchResults.map((product, index) => (
                       <button
-                        key={product.code}
+                        key={`${product.code}-${index}`}
                         type="button"
                         onClick={() => handleProductSelect(product)}
                         className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-600 last:border-b-0"
                       >
-                        <div className="font-medium">{product.code}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">{product.description}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-blue-600 dark:text-blue-400">{product.code}</div>
+                          {product.matchType && (
+                            <div className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                              {getMatchTypeLabel(product.matchType)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                          {product.description || "No description available"}
+                        </div>
                       </button>
                     ))}
+                  </div>
+                )}
+                {productSearchQuery && productSearchResults.length === 0 && searchTimeout === null && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg p-3 text-center text-sm text-slate-500 dark:text-slate-400">
+                    No products found matching "{productSearchQuery}"
                   </div>
                 )}
               </div>
