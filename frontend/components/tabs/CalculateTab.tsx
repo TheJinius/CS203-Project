@@ -409,16 +409,15 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Select Tariff
               </Label>
               <Select onValueChange={setSelectedTariff} value={selectedTariff}>
-                <SelectTrigger className="min-h-25 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="min-h-25 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[270] max-w-[410px]">
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto">
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto [width:var(--radix-select-trigger-width)]">
                   {availableTariffs.map(tariff => (
                     <SelectItem 
                       key={tariff.tariffId} 
                       value={tariff.tariffId.toString()}
-                      className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm"
-                    >
+                      className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm">
                       <div className="flex flex-col gap-0.5 py-1">
                         <span className="font-medium">Tariff ID: {tariff.tariffId}</span>
                         {tariff.description && (
