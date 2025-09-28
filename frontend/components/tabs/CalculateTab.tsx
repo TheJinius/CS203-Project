@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
-import { searchTariffs, calculateTariff, getExchangeRate } from "@/lib/api"
+import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts } from "@/lib/api"
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
@@ -21,6 +21,11 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
   const [selectedYear, setSelectedYear] = useState<string>("2023") // Add year state
+  
+  // Product search state
+  const [productSearchQuery, setProductSearchQuery] = useState<string>("")
+  const [productSearchResults, setProductSearchResults] = useState<Array<{code: string, description: string}>>([])
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Calculate state  
   const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
@@ -37,6 +42,78 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
+
+  // Product search functionality
+  const predefinedProducts = [
+    { code: "27079940", description: "Carbazole, Energy" },
+    { code: "1012100", description: "Pure Bred Breeding Horses" },
+    { code: "29092000", description: "Cyclanic, Pharmaceutical" },
+    { code: "74130000", description: "Copper Wire" }
+  ]
+
+  // Product search API call with fallback to predefined products
+  const searchProducts = async (query: string) => {
+    try {
+      // Try backend API first
+      const { ok, data } = await apiSearchProducts(query, 5)
+      
+      if (ok && data.products && Array.isArray(data.products)) {
+        return data.products.map((p: any) => ({
+          code: p.code || p.tlCode,
+          description: p.description || p.name
+        }))
+      }
+      
+      // Fallback to predefined products if API fails or returns no results
+      const filtered = predefinedProducts.filter(product => 
+        product.code.toLowerCase().includes(query.toLowerCase()) ||
+        product.description.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5) // Limit to top 5 results
+      
+      return filtered
+    } catch (error) {
+      console.error('Product search error:', error)
+      
+      // Fallback to predefined products on error
+      const filtered = predefinedProducts.filter(product => 
+        product.code.toLowerCase().includes(query.toLowerCase()) ||
+        product.description.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5)
+      
+      return filtered
+    }
+  }
+
+  // Handle product search with debouncing
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
+    }
+
+    if (productSearchQuery.length > 0) {
+      const timeout = setTimeout(async () => {
+        const results = await searchProducts(productSearchQuery)
+        setProductSearchResults(results)
+      }, 300) // 300ms debounce
+
+      setSearchTimeout(timeout)
+    } else {
+      setProductSearchResults([])
+    }
+
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout)
+      }
+    }
+  }, [productSearchQuery])
+
+  // Handle product selection from dropdown
+  const handleProductSelect = (product: {code: string, description: string}) => {
+    setSelectedProduct(product.code)
+    setProductSearchQuery(`${product.code} - ${product.description}`)
+    setProductSearchResults([])
+  }
 
   // Auto-convert tariff amount when currency changes
   useEffect(() => {
@@ -139,31 +216,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4">
             <div className="space-y-1.5">
-              <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Product Code
-              </Label>
-              <Select onValueChange={setSelectedProduct}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
-                  <SelectItem value="27079940" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    27079940 - Carbazole, Energy
-                  </SelectItem>
-                  <SelectItem value="1012100" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    1012100 - Pure Bred Breeding Horses
-                  </SelectItem>
-                  <SelectItem value="29092000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    29092000 - Cyclanic, Pharmaceutical
-                  </SelectItem>
-                  <SelectItem value="74130000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    74130000 - Copper Wire
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-1.5">
               <Label htmlFor="source" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Source Country (Partner)
               </Label>
@@ -208,6 +260,36 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Product Code (HS Code)
+              </Label>
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={productSearchQuery}
+                  onChange={(e) => setProductSearchQuery(e.target.value)}
+                  placeholder="Search for product code (e.g., 27079940)"
+                  className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                />
+                {productSearchResults.length > 0 && productSearchQuery && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {productSearchResults.map((product) => (
+                      <button
+                        key={product.code}
+                        type="button"
+                        onClick={() => handleProductSelect(product)}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-600 last:border-b-0"
+                      >
+                        <div className="font-medium">{product.code}</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">{product.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Add Year Selection Dropdown */}

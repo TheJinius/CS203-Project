@@ -49,7 +49,7 @@ export async function searchTariffs(params: {
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Search tariffs error:', error);
-    return { ok: false, data: { error: error.message } };
+    return { ok: false, data: { error: (error as Error).message } };
   }
 }
 
@@ -75,7 +75,7 @@ export async function calculateTariff(params: {
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Calculate tariff error:', error);
-    return { ok: false, data: { error: error.message } };
+    return { ok: false, data: { error: (error as Error).message } };
   }
 }
 
@@ -92,6 +92,24 @@ export async function getExchangeRate() {
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Get exchange rate error:', error);
-    return { ok: false, data: { error: error.message } };
+    return { ok: false, data: { error: (error as Error).message } };
+  }
+}
+
+export async function searchProducts(query: string, limit: number = 5) {
+  console.log('🔍 Searching products with query:', query);
+  
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/products/search?q=${encodeURIComponent(query)}&limit=${limit}`, {
+      method: "GET",
+      headers,
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Search products error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
   }
 }
