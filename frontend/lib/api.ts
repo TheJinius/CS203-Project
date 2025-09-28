@@ -1,8 +1,17 @@
 import { getSession } from "next-auth/react";
 
 const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
-const session = await getSession();
-const token = session?.accessToken;
+
+// Helper function to get current auth headers
+async function getAuthHeaders() {
+  const session = await getSession();
+  const token = session?.accessToken;
+  
+  return {
+    "Content-Type": "application/json",
+    "Authorization": token ? `Bearer ${token}` : ""
+  };
+}
 
 export async function searchTariffs(params: {
   reporter: string;
@@ -10,13 +19,22 @@ export async function searchTariffs(params: {
   tlCode: string;
   year: number;
 }) {
+  console.log('🔍 Searching tariffs with data:', params);
+  
+  // Map frontend field names to backend expected names  
+  const backendRequest = {
+    reporterCode: params.reporter,
+    partnerCode: params.partner,
+    productCode: params.tlCode, // Map tlCode -> productCode
+    year: params.year,
+  };
+
+  const headers = await getAuthHeaders();
+  
   const response = await fetch(`${API_BASE_ROUTE}/tariffs/search`, {
     method: "POST",
-    headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-     },
-    body: JSON.stringify(params),
+    headers,
+    body: JSON.stringify(backendRequest), // Send mapped data
   })
   const data = await response.json()
   return { ok: response.ok, data }
@@ -30,12 +48,13 @@ export async function calculateTariff(params: {
   amountOfProduct: number;
   currency: string;
 }) {
+  console.log('🧮 Calculating tariff with data:', params);
+  
+  const headers = await getAuthHeaders();
+  
   const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate`, {
     method: "POST",
-    headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-     },
+    headers,
     body: JSON.stringify(params),
   })
   const data = await response.json()
@@ -43,14 +62,13 @@ export async function calculateTariff(params: {
 }
 
 export async function getExchangeRate() {
-    const response = await fetch(`${API_BASE_ROUTE}/exchange-rates`, {
+  const headers = await getAuthHeaders();
+  
+  const response = await fetch(`${API_BASE_ROUTE}/exchange-rates`, {
     method: "GET",
-    headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-     },
+    headers,
   })
   const data = await response.json()
-  console.log(data)
+  console.log('📊 Exchange rate data:', data)
   return { ok: response.ok, data }
 }
