@@ -30,6 +30,8 @@ public class DutyService {
                                             ", Partner: " + partnerCode + ", Product: " + productCode + ", Year: " + year);
         }
         
+        System.out.println("Tariff found!");
+        System.out.println(tariffs.toString());
         return tariffs;
     }
 

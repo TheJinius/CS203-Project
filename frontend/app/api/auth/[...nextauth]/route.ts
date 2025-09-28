@@ -12,10 +12,12 @@ const handler = NextAuth({
   session: { strategy: "jwt" },
   callbacks: {
     async jwt({ token, account, profile }: any) {
-      // Persist the OAuth access_token and or the user id to the token right after signin
+      // Initial sign in
       if (account) {
         token.accessToken = account.access_token
+        token.refreshToken = account.refresh_token
         token.idToken = account.id_token
+        token.accessTokenExpires = account.expires_at * 1000 // Convert to milliseconds
       }
       
       // Extract user groups from the token
@@ -30,7 +32,13 @@ const handler = NextAuth({
         }
       }
       
-      return token
+      // Return previous token if the access token has not expired yet
+      if (Date.now() < token.accessTokenExpires) {
+        return token
+      }
+
+      // Access token has expired, try to update it
+      return refreshAccessToken(token)
     },
     async session({ session, token }: any) {
       // Send properties to the client
@@ -40,6 +48,7 @@ const handler = NextAuth({
         session.user.email = token.email || session.user.email
       }
       session.accessToken = token.accessToken
+      session.error = token.error
       return session
     },
   },
@@ -47,5 +56,50 @@ const handler = NextAuth({
     signIn: '/login',
   },
 })
+
+/**
+ * Takes a token, and returns a new token with updated
+ * `accessToken` and `accessTokenExpires`. If an error occurs,
+ * returns the old token and an error property
+ */
+async function refreshAccessToken(token: any) {
+  try {
+    const url = `https://${process.env.COGNITO_DOMAIN}.auth.${process.env.AWS_REGION}.amazoncognito.com/oauth2/token`
+    
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      method: "POST",
+      body: new URLSearchParams({
+        client_id: process.env.COGNITO_CLIENT_ID!,
+        client_secret: process.env.COGNITO_CLIENT_SECRET!,
+        grant_type: "refresh_token",
+        refresh_token: token.refreshToken,
+      }),
+    })
+
+    const refreshedTokens = await response.json()
+
+    if (!response.ok) {
+      throw refreshedTokens
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      idToken: refreshedTokens.id_token,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fall back to old refresh token
+    }
+  } catch (error) {
+    console.log(error)
+
+    return {
+      ...token,
+      error: "RefreshAccessTokenError",
+    }
+  }
+}
 
 export { handler as GET, handler as POST }

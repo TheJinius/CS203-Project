@@ -69,6 +69,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         year: parseInt(selectedYear), // Use dynamic year instead of hardcoded 2023
       })
       if (ok) {
+        console.log(data);
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
         setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
