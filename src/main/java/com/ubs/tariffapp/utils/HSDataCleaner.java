@@ -34,9 +34,9 @@ import java.math.RoundingMode;
  * 2. Industry Classification:
  *    - Classifies products into 4 major industry categories based on HS chapter:
  *      * Agriculture (Chapters 1-24)
- *      * Energy (Chapters 25-27) 
+ *      * Energy (Chapters 27) PREVIOUSLY 25-27 BUT 25-26 WERE NOT ENERGY 
  *      * Metals (Chapters 72-83)
- *      * Other (all remaining chapters)
+ *      * Other (all remaining chapters), columns with this are filtered out
  * 
  * 3. Duty Rate Deconstruction using NLP:
  *    - Parses specific duty rate text using Natural Language Processing
@@ -106,8 +106,13 @@ public class HSDataCleaner {
             return;
         }
 
+        String[] inputFileNames = {
+            "HS2017USDYear2023.csv",
+            "HS2017CNYear2023.csv",
+            "HS2017SGYear2023.csv",
+        };
         // Read input from resources
-        String inputFileName = "HS2017USAYear2023.csv"; // Original file name
+        String inputFileName = "HS2017CNYear2023.csv"; // Original file name
         InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
         if (inputStream == null) {
             System.err.println("Input CSV file not found in resources folder.");
@@ -170,7 +175,16 @@ public class HSDataCleaner {
                     skippedRows++;
                     continue;
                 }
-
+                // Remove unnecessary quotes from key columns
+                int[] colsToClean = {0,2,4,5};
+                columns = removeQuotesFromColumns(columns, colsToClean);
+                // Skip rows not in Agriculture, Energy, or Metals
+                String industry = classifyIndustry(hsCode);
+                if (industry.equals("Other")) {
+                    skippedRows++;
+                    continue;
+                }
+                
                 // Normalize HS code to 8 digits
                 try {
                     hsCode = hsCode.length() < 8
@@ -183,15 +197,18 @@ public class HSDataCleaner {
                 }
 
                 // Deduplication key
-                String hsDesc = (columns.length > 11) ? columns[11].trim() : "";
-                String key = hsCode + "|" + hsDesc;
+                String reporter = columns[0].trim();
+                String partner = columns[2].trim();
+                String year = columns[4].trim();
+                String tl = columns[5].trim();
+                String tls = columns[6].trim();
+                String dutyType = columns[7].trim();
+                String key = reporter + "|" + partner + "|" + year + "|" + tl + "|" + tls + "|" + dutyType;
                 if (seen.contains(key)) {
                     skippedRows++;
                     continue;
                 }
                 seen.add(key);
-
-                String industry = classifyIndustry(hsCode);
 
                 // Safely update reporter and partner names
                 if (columns.length > 1) columns[1] = toTitleCase(columns[1].trim());
@@ -614,6 +631,8 @@ public class HSDataCleaner {
 
     /**
      * Check if the duty text indicates a cents-based currency that should be converted to dollars
+     * @param dutyText The duty rate text
+     * @return true if the text indicates cents-based currency
      */
     private static boolean isCentsBasedCurrency(String dutyText) {
         if (dutyText == null) return false;
@@ -650,6 +669,8 @@ public class HSDataCleaner {
 
     /**
      * Extract currency type from duty text using pattern matching
+     * @param dutyText The duty rate text
+     * @return Currency type (USD, EUR, GBP, etc.) or empty string if unknown
      */
     private static String extractCurrencyType(String dutyText) {
         if (dutyText == null) return "";
@@ -672,28 +693,73 @@ public class HSDataCleaner {
         return ""; // Unknown currency
     }
 
-    // Define industry ranges using a TreeMap
-    private static final NavigableMap<Integer, String> INDUSTRY_MAP = new TreeMap<>();
-
-    static {
-        INDUSTRY_MAP.put(1, "Agriculture"); // Covers 1 to 24
-        INDUSTRY_MAP.put(25, "Energy");     // Covers 25 to 27
-        INDUSTRY_MAP.put(72, "Metals");     // Covers 72 to 83
-        INDUSTRY_MAP.put(84, "Other");      // Covers everything else
-    }
-    
-    private static String classifyIndustry(String hsCode) {
-        int chapter = Integer.parseInt(hsCode.substring(0, 2));
-        Map.Entry<Integer, String> entry = INDUSTRY_MAP.floorEntry(chapter);
-        if (entry != null) {
-            String industry = entry.getValue();
-            if ((entry.getKey() == 1 && chapter <= 24) || // Agriculture: 1-24
-                (entry.getKey() == 25 && chapter <= 27) || // Energy: 25-27
-                (entry.getKey() == 72 && chapter <= 83)) { // Metals: 72-83
-                return industry;
-            }
+    /**
+     * Remove unnecessary quotation marks from specified columns
+     * @param columns The original columns array
+     * @param startCol The starting column index (inclusive)
+     * @param endCol The ending column index (inclusive)
+     * @return A new array with quotes removed from specified columns
+     */
+    private static String[] removeQuotesFromColumns(String[] columns, int[] cols) {
+        String[] cleanedColumns = columns.clone();
+        
+        for (int i = 0; i < cols.length; i++) {
+            cleanedColumns[i] = removeQuotes(cleanedColumns[i]);
         }
-        return "Other"; // Default if no range matches
+        
+        return cleanedColumns;
+    }
+
+    /**
+     * Remove surrounding quotes and clean up the value
+     * @param value The original string value
+     * @return Cleaned string without surrounding quotes
+     */
+    private static String removeQuotes(String value) {
+        if (value == null) return "";
+        
+        // Remove surrounding quotes if present
+        String cleaned = value.trim();
+        if (cleaned.startsWith("\"") && cleaned.endsWith("\"") && cleaned.length() > 1) {
+            cleaned = cleaned.substring(1, cleaned.length() - 1);
+        }
+        
+        // Handle escaped quotes inside
+        cleaned = cleaned.replace("\"\"", "\"");
+        
+        return cleaned.trim();
+    }
+
+    /**
+     * Classify industry based on HS code chapter
+     * @param hsCode The HS code (should be at least 2 digits)
+     * @return Industry classification: Agriculture, Energy, Metals, or Other
+     */
+    private static String classifyIndustry(String hsCode) {
+        try {
+            int chapter = Integer.parseInt(hsCode.substring(0, 2));
+            
+            // Agriculture: Chapters 1-24
+            if (chapter >= 1 && chapter <= 24) {
+                return "Agriculture";
+            }
+            // Energy: Chapters 27
+            else if (chapter == 27) {
+                return "Energy";
+            }
+            // Metals: Chapters 72-83
+            else if (chapter >= 72 && chapter <= 83) {
+                return "Metals";
+            }
+            // Other: All remaining chapters (25-26, 28-71, 84-99)
+            else {
+                return "Other";
+            }
+        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+            // Handle invalid HS codes
+            System.err.println("Warning: Invalid HS code format for industry classification: " + hsCode);
+            return "Other";
+        }
     }
 
     private static String toTitleCase(String input) {
