@@ -16,6 +16,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isAdmin: () => boolean;
   isAuthenticated: () => boolean;
+  sessionError?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +28,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   const isLoading = status === 'loading';
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user && !session.error) {
       setUser({
         username: session.user.username || session.user.email || '',
         groups: session.user.groups || [],
@@ -37,6 +38,14 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       setUser(null);
     }
   }, [session]);
+
+  // Handle session errors (like token refresh failures)
+  useEffect(() => {
+    if (session?.error === "RefreshAccessTokenError") {
+      // Automatically sign out if refresh token is invalid
+      nextAuthSignOut();
+    }
+  }, [session?.error]);
 
   const signIn = async (username: string, password: string) => {
     // For NextAuth with Cognito, we need to redirect to the Cognito hosted UI
@@ -51,7 +60,8 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = () => user?.groups.includes('Admins') ?? false;
-  const isAuthenticated = () => user !== null;
+
+  const isAuthenticated = () => user !== null && !session?.error;
 
   return (
     <AuthContext.Provider value={{
@@ -61,6 +71,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       signOut,
       isAdmin,
       isAuthenticated,
+      sessionError: session?.error,
     }}>
       {children}
     </AuthContext.Provider>

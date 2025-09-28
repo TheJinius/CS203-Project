@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
-import { searchTariffs, calculateTariff, getExchangeRate } from "@/lib/api"
+import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts } from "@/lib/api"
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
@@ -21,6 +21,11 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
   const [selectedYear, setSelectedYear] = useState<string>("2023") // Add year state
+  
+  // Product search state
+  const [productSearchQuery, setProductSearchQuery] = useState<string>("")
+  const [productSearchResults, setProductSearchResults] = useState<Array<{code: string, description: string, matchType?: string}>>([])
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Calculate state  
   const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
@@ -37,6 +42,103 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
+
+  // Product search functionality
+  const predefinedProducts = [
+    { code: "27079940", description: "Carbazole, Energy" },
+    { code: "1012100", description: "Pure Bred Breeding Horses" },
+    { code: "29092000", description: "Cyclanic, Pharmaceutical" },
+    { code: "74130000", description: "Copper Wire" }
+  ]
+
+  // Product search API call with fallback to predefined products
+  const searchProducts = async (query: string) => {
+    try {
+      // Try backend API first
+      const { ok, data } = await apiSearchProducts(query, 5)
+      
+      if (ok && data.products && Array.isArray(data.products)) {
+        console.log(`🔍 Backend search found ${data.products.length} results using ${data.searchType} search`)
+        return data.products.map((p: any) => ({
+          code: p.code || p.tlCode,
+          description: p.description || p.name || "No description available",
+          matchType: p.matchType
+        }))
+      }
+      
+      // Fallback to predefined products if API fails or returns no results
+      console.log('🔄 Falling back to predefined products')
+      const isNumericQuery = /^\d+$/.test(query)
+      
+      const filtered = predefinedProducts.filter(product => 
+        product.code.toLowerCase().includes(query.toLowerCase()) ||
+        product.description.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5) // Limit to top 5 results
+      
+      // Add match type for predefined products
+      return filtered.map(product => ({
+        ...product,
+        matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
+      }))
+      
+    } catch (error) {
+      console.error('Product search error:', error)
+      
+      // Fallback to predefined products on error
+      const isNumericQuery = /^\d+$/.test(query)
+      const filtered = predefinedProducts.filter(product => 
+        product.code.toLowerCase().includes(query.toLowerCase()) ||
+        product.description.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5)
+      
+      return filtered.map(product => ({
+        ...product,
+        matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
+      }))
+    }
+  }
+
+  // Handle product search with debouncing
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
+    }
+
+    if (productSearchQuery.length > 0) {
+      const timeout = setTimeout(async () => {
+        const results = await searchProducts(productSearchQuery)
+        setProductSearchResults(results)
+      }, 300) // 300ms debounce
+
+      setSearchTimeout(timeout)
+    } else {
+      setProductSearchResults([])
+    }
+
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout)
+      }
+    }
+  }, [productSearchQuery])
+
+  // Helper function to get human-readable match type labels
+  const getMatchTypeLabel = (matchType?: string) => {
+    switch (matchType) {
+      case 'exact_code': return '🎯 Exact';
+      case 'starts_with_code': return '▶️ Prefix';
+      case 'contains_code': return '🔍 Partial';
+      case 'description_match': return '📝 Description';
+      default: return '🔎 Match';
+    }
+  }
+
+  // Handle product selection from dropdown
+  const handleProductSelect = (product: {code: string, description: string, matchType?: string}) => {
+    setSelectedProduct(product.code)
+    setProductSearchQuery(`${product.code} - ${product.description}`)
+    setProductSearchResults([])
+  }
 
   // Auto-convert tariff amount when currency changes
   useEffect(() => {
@@ -69,6 +171,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         year: parseInt(selectedYear), // Use dynamic year instead of hardcoded 2023
       })
       if (ok) {
+        console.log(data);
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
         setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
@@ -138,31 +241,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4">
             <div className="space-y-1.5">
-              <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Product Code
-              </Label>
-              <Select onValueChange={setSelectedProduct}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
-                  <SelectItem value="27079940" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    27079940 - Carbazole, Energy
-                  </SelectItem>
-                  <SelectItem value="1012100" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    1012100 - Pure Bred Breeding Horses
-                  </SelectItem>
-                  <SelectItem value="29092000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    29092000 - Cyclanic, Pharmaceutical
-                  </SelectItem>
-                  <SelectItem value="74130000" className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    74130000 - Copper Wire
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-1.5">
               <Label htmlFor="source" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Source Country (Partner)
               </Label>
@@ -207,6 +285,68 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Product Search
+              </Label>
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={productSearchQuery}
+                  onChange={(e) => setProductSearchQuery(e.target.value)}
+                  placeholder="Search by HS Code (e.g., 27079940) or description (e.g., carbazole)"
+                  className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-16"
+                />
+                {productSearchQuery && (
+                  <>
+                    {selectedProduct && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductSearchQuery("")
+                          setSelectedProduct("")
+                          setProductSearchResults([])
+                        }}
+                        className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                        title="Clear selection"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </>
+                )}
+                {productSearchResults.length > 0 && productSearchQuery && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {productSearchResults.map((product, index) => (
+                      <button
+                        key={`${product.code}-${index}`}
+                        type="button"
+                        onClick={() => handleProductSelect(product)}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-600 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-blue-600 dark:text-blue-400">{product.code}</div>
+                          {product.matchType && (
+                            <div className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                              {getMatchTypeLabel(product.matchType)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                          {product.description || "No description available"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {productSearchQuery && productSearchResults.length === 0 && searchTimeout === null && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg p-3 text-center text-sm text-slate-500 dark:text-slate-400">
+                    No products found matching "{productSearchQuery}"
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Add Year Selection Dropdown */}
@@ -269,20 +409,19 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Select Tariff
               </Label>
               <Select onValueChange={setSelectedTariff} value={selectedTariff}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="min-h-25 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[270] max-w-[410px]">
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-48 overflow-y-auto">
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto [width:var(--radix-select-trigger-width)]">
                   {availableTariffs.map(tariff => (
                     <SelectItem 
                       key={tariff.tariffId} 
                       value={tariff.tariffId.toString()}
-                      className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm"
-                    >
+                      className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm">
                       <div className="flex flex-col gap-0.5 py-1">
                         <span className="font-medium">Tariff ID: {tariff.tariffId}</span>
                         {tariff.description && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-normal">
                             {tariff.description}
                           </span>
                         )}

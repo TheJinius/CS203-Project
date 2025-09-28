@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from 'react'
-import { Menu, User, ChevronDown, LogOut, Moon, Sun } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Menu, User, ChevronDown, LogOut, Moon, Sun, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -14,13 +15,21 @@ interface TopBarProps {
 
 export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const { user, signOut } = useAuth()
+  const { user, signOut, sessionError } = useAuth()
   const { theme, toggleTheme } = useTheme()
 
   const handleSignOut = async () => {
     await signOut()
     setShowUserMenu(false)
   }
+
+  // Show session error alert
+  useEffect(() => {
+    if (sessionError === "RefreshAccessTokenError") {
+      // Could show a toast notification here instead
+      console.error("Session expired, please sign in again");
+    }
+  }, [sessionError]);
 
   return (
     <>
@@ -35,6 +44,16 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Session Error Indicator */}
+          {sessionError && (
+            <Alert variant="destructive" className="w-auto p-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Session expired
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Theme Toggle Button */}
           <Button
             variant="ghost"
@@ -82,12 +101,10 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
                         <strong>Groups:</strong> {user?.groups?.join(', ') || 'None'}
                       </div>
                       
-                      {/* Debug: Raw User Object */}
-                      <div className="mt-3 p-2 bg-gray-50 rounded">
-                        <strong>Debug - Raw User Object:</strong>
-                        <pre className="text-xs mt-1 whitespace-pre-wrap overflow-auto max-h-32">
-                          {JSON.stringify(user, null, 2)}
-                        </pre>
+                      {/* Session Status */}
+                      <div>
+                        <strong>Session Status:</strong> 
+                        {sessionError ? ` Error: ${sessionError}` : ' Active'}
                       </div>
                     </div>
                     
@@ -96,9 +113,9 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
                       onClick={handleSignOut}
                       variant="destructive"
                       size="sm"
-                      className="w-full flex items-center gap-2"
+                      className="w-full"
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut className="h-4 w-4 mr-2" />
                       Sign Out
                     </Button>
                   </CardContent>
@@ -109,11 +126,11 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
         </div>
       </header>
 
-      {/* Click outside to close dropdown */}
+      {/* Click outside to close menu */}
       {showUserMenu && (
         <div 
           className="fixed inset-0 z-40" 
-          onClick={() => setShowUserMenu(false)}
+          onClick={() => setShowUserMenu(false)} 
         />
       )}
     </>

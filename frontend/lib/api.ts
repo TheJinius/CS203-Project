@@ -1,10 +1,18 @@
-import { getSession } from "next-auth/react";
+import { getSession, signOut } from "next-auth/react";
 
 const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
 
 // Helper function to get current auth headers
 async function getAuthHeaders() {
   const session = await getSession();
+  
+  // Check if there's a token refresh error
+  if (session?.error === "RefreshAccessTokenError") {
+    // Force sign out if refresh failed
+    await signOut({ callbackUrl: '/login' });
+    throw new Error("Session expired. Please sign in again.");
+  }
+  
   const token = session?.accessToken;
   
   return {
@@ -29,15 +37,20 @@ export async function searchTariffs(params: {
     year: params.year,
   };
 
-  const headers = await getAuthHeaders();
-  
-  const response = await fetch(`${API_BASE_ROUTE}/tariffs/search`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(backendRequest), // Send mapped data
-  })
-  const data = await response.json()
-  return { ok: response.ok, data }
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/tariffs/search`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(backendRequest), // Send mapped data
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Search tariffs error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
 }
 
 export async function calculateTariff(params: {
@@ -50,25 +63,53 @@ export async function calculateTariff(params: {
 }) {
   console.log('🧮 Calculating tariff with data:', params);
   
-  const headers = await getAuthHeaders();
-  
-  const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(params),
-  })
-  const data = await response.json()
-  return { ok: response.ok, data }
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(params),
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Calculate tariff error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
 }
 
 export async function getExchangeRate() {
-  const headers = await getAuthHeaders();
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/exchange-rates`, {
+      method: "GET",
+      headers,
+    })
+    const data = await response.json()
+    console.log('📊 Exchange rate data:', data)
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Get exchange rate error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
+}
+
+export async function searchProducts(query: string, limit: number = 5) {
+  console.log('🔍 Searching products with query:', query);
   
-  const response = await fetch(`${API_BASE_ROUTE}/exchange-rates`, {
-    method: "GET",
-    headers,
-  })
-  const data = await response.json()
-  console.log('📊 Exchange rate data:', data)
-  return { ok: response.ok, data }
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/products/search?q=${encodeURIComponent(query)}&limit=${limit}`, {
+      method: "GET",
+      headers,
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Search products error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
 }
