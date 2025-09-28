@@ -245,7 +245,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Source Country (Partner)
               </Label>
               <Select onValueChange={setSelectedSource}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
@@ -270,7 +270,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Destination Country (Reporter)
               </Label>
               <Select onValueChange={setSelectedDestination}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
@@ -297,7 +297,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
                   placeholder="Search by HS Code (e.g., 27079940) or description (e.g., carbazole)"
-                  className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-16"
+                  className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-16"
                 />
                 {productSearchQuery && (
                   <>
@@ -355,7 +355,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Year
               </Label>
               <Select onValueChange={setSelectedYear} value={selectedYear}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
@@ -398,7 +398,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <Button 
               variant="outline" 
               onClick={() => setStep(1)}
-              className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 max-w-[410px]"
+              className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Search
@@ -409,7 +409,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Select Tariff
               </Label>
               <Select onValueChange={setSelectedTariff} value={selectedTariff}>
-                <SelectTrigger className="min-h-25 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[270] max-w-[410px]">
+                <SelectTrigger className="w-full min-h-25 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto [width:var(--radix-select-trigger-width)]">
@@ -443,7 +443,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 placeholder="Enter quantity/amount (e.g., 1000)"
                 step="0.01"
                 min="0"
-                className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium max-w-[295px]"
+                className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium"
               />
             </div>
 
@@ -452,7 +452,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Currency
               </Label>
               <Select onValueChange={onCurrencyChange} value={currency}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
@@ -475,7 +475,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <Button 
               onClick={handleCalculate} 
               disabled={loading || !selectedTariff || !amountOfProduct}
-              className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed max-w-[410px]"
+              className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Calculator className="h-4 w-4" />
               {loading ? "Calculating..." : "Calculate Tariff"}

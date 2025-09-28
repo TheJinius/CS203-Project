@@ -12,6 +12,7 @@ import TariffsTab from "./tabs/TariffsTab"
 import ResultsTab from "./tabs/ResultsTab"
 import EditTariffTab from "./tabs/EditTariffTab"
 import { useAuth } from "../contexts/AuthContext"
+import { useTheme } from "../contexts/ThemeContext"
 
 interface SidebarProps {
   isOpen: boolean
@@ -33,6 +34,7 @@ export default function Sidebar({
   width
 }: SidebarProps) {
   const { isAdmin } = useAuth();
+  const { theme } = useTheme();
 
   const [currency, setCurrency] = useState<string>("USD")
 
@@ -65,7 +67,7 @@ export default function Sidebar({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Image
-              src="/TOP light.png"
+              src={theme === 'dark' ? '/TOP dark.png' : '/TOP light.png'}
               alt="Tariff Calculator Logo"
               width={Math.min(160, width - 80)} // Responsive logo size
               height={40}
