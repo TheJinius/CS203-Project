@@ -270,10 +270,10 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 Select Tariff
               </Label>
               <Select onValueChange={setSelectedTariff} value={selectedTariff}>
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                <SelectTrigger className="min-h-25 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-48 overflow-y-auto">
+                <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto">
                   {availableTariffs.map(tariff => (
                     <SelectItem 
                       key={tariff.tariffId} 
@@ -283,7 +283,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                       <div className="flex flex-col gap-0.5 py-1">
                         <span className="font-medium">Tariff ID: {tariff.tariffId}</span>
                         {tariff.description && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-normal">
                             {tariff.description}
                           </span>
                         )}
