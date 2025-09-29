@@ -100,6 +100,8 @@ nb-configuration.xml
 
 #env files
 .env
+*.pem
 
 #application-local file
 application-local.properties
+application-test-local.properties

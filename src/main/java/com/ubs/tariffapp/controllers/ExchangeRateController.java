@@ -1,6 +1,7 @@
 package com.ubs.tariffapp.controllers;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -8,6 +9,7 @@ import com.ubs.tariffapp.models.ExchangeRates;
 import com.ubs.tariffapp.services.ExchangeRateService;
 
 @RestController
+@RequestMapping("/api")
 public class ExchangeRateController {
 
     private final ExchangeRateService service;
@@ -18,6 +20,6 @@ public class ExchangeRateController {
 
     @GetMapping("/exchange-rates")
     public ExchangeRates getExchangeRates(@RequestParam(defaultValue = "USD") String base) {
-        return service.fetchRates(base);
+        return service.fetchRates();
     }
 }
