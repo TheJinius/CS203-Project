@@ -21,22 +21,22 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
   const [selectedYear, setSelectedYear] = useState<string>("2023") // Add year state
-  
+
   // Product search state
   const [productSearchQuery, setProductSearchQuery] = useState<string>("")
-  const [productSearchResults, setProductSearchResults] = useState<Array<{code: string, description: string, matchType?: string}>>([])
+  const [productSearchResults, setProductSearchResults] = useState<Array<{ code: string, description: string, matchType?: string }>>([])
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
-  
+
   // Calculate state  
   const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
   const [selectedTariff, setSelectedTariff] = useState<string>("")
   const [amountOfProduct, setAmountOfProduct] = useState<string>("")
   //const [currency, setCurrency] = useState<string>("USD")
-  
+
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
   const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
-  
+
   // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -56,7 +56,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
     try {
       // Try backend API first
       const { ok, data } = await apiSearchProducts(query, 5)
-      
+
       if (ok && data.products && Array.isArray(data.products)) {
         console.log(`🔍 Backend search found ${data.products.length} results using ${data.searchType} search`)
         return data.products.map((p: any) => ({
@@ -65,32 +65,32 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
           matchType: p.matchType
         }))
       }
-      
+
       // Fallback to predefined products if API fails or returns no results
       console.log('🔄 Falling back to predefined products')
       const isNumericQuery = /^\d+$/.test(query)
-      
-      const filtered = predefinedProducts.filter(product => 
+
+      const filtered = predefinedProducts.filter(product =>
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5) // Limit to top 5 results
-      
+
       // Add match type for predefined products
       return filtered.map(product => ({
         ...product,
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
-      
+
     } catch (error) {
       console.error('Product search error:', error)
-      
+
       // Fallback to predefined products on error
       const isNumericQuery = /^\d+$/.test(query)
-      const filtered = predefinedProducts.filter(product => 
+      const filtered = predefinedProducts.filter(product =>
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5)
-      
+
       return filtered.map(product => ({
         ...product,
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
@@ -125,16 +125,16 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   // Helper function to get human-readable match type labels
   const getMatchTypeLabel = (matchType?: string) => {
     switch (matchType) {
-      case 'exact_code': return '🎯 Exact';
-      case 'starts_with_code': return '▶️ Prefix';
-      case 'contains_code': return '🔍 Partial';
-      case 'description_match': return '📝 Description';
-      default: return '🔎 Match';
+      case 'exact_code': return '';
+      case 'starts_with_code': return '';
+      case 'contains_code': return '';
+      case 'description_match': return '';
+      default: return '';
     }
   }
 
   // Handle product selection from dropdown
-  const handleProductSelect = (product: {code: string, description: string, matchType?: string}) => {
+  const handleProductSelect = (product: { code: string, description: string, matchType?: string }) => {
     setSelectedProduct(product.code)
     setProductSearchQuery(`${product.code} - ${product.description}`)
     setProductSearchResults([])
@@ -208,14 +208,14 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         amountOfProduct: parseFloat(amountOfProduct),
         currency: "USD", // Always request in USD from backend
       })
-      
+
       if (ok) {
         const tariffAmountUSD = data.tariffAmount // Backend returns in USD
         setBaseTariffAmountUSD(tariffAmountUSD) // Store USD base amount
-        
+
         // Convert to selected currency
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
-        
+
         onCalculationResult(finalAmount)
         setSuccess(`Tariff: ${currency} ${finalAmount.toFixed(2)}`)
       } else {
@@ -264,7 +264,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-1.5">
               <Label htmlFor="destination" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Destination Country (Reporter)
@@ -274,19 +274,19 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+                  <SelectItem value="702" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    702 - Singapore
+                  </SelectItem>
                   <SelectItem value="840" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
                     840 - United States
                   </SelectItem>
-                  <SelectItem value="918" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    918 - European Union
-                  </SelectItem>
-                  <SelectItem value="392" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    392 - Japan
+                  <SelectItem value="156" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                    156 - China
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-1.5">
               <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Product Search
@@ -348,7 +348,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 )}
               </div>
             </div>
-            
+
             {/* Add Year Selection Dropdown */}
             <div className="space-y-1.5">
               <Label htmlFor="year" className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -374,9 +374,9 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 </SelectContent>
               </Select>
             </div>
-            
-            <Button 
-              onClick={handleSearchTariffs} 
+
+            <Button
+              onClick={handleSearchTariffs}
               disabled={loading || !selectedProduct || !selectedSource || !selectedDestination}
               className="w-full h-9 mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -395,15 +395,15 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setStep(1)}
               className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Search
             </Button>
-            
+
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Select Tariff
@@ -414,8 +414,8 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto [width:var(--radix-select-trigger-width)]">
                   {availableTariffs.map(tariff => (
-                    <SelectItem 
-                      key={tariff.tariffId} 
+                    <SelectItem
+                      key={tariff.tariffId}
                       value={tariff.tariffId.toString()}
                       className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm">
                       <div className="flex flex-col gap-0.5 py-1">
@@ -472,8 +472,8 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
               </Select>
             </div>
 
-            <Button 
-              onClick={handleCalculate} 
+            <Button
+              onClick={handleCalculate}
               disabled={loading || !selectedTariff || !amountOfProduct}
               className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -486,11 +486,10 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
 
       {/* Status Messages */}
       {(error || success) && (
-        <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
-          success 
-            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' 
+        <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${success
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
             : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-        }`}>
+          }`}>
           {success ? (
             <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
           ) : (
