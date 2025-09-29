@@ -1,25 +1,38 @@
 package com.ubs.tariffapp.services;
 
-import com.ubs.tariffapp.models.*;
-import com.ubs.tariffapp.models.duty.*;
-import com.ubs.tariffapp.repositories.*;
-import com.ubs.tariffapp.repositories.duty.*;
 import static com.ubs.tariffapp.utils.HSDataCleaner.parseCSVLine;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-
-import java.util.Optional;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.DutyType;
+import com.ubs.tariffapp.models.DutyTypeId;
+import com.ubs.tariffapp.models.Product;
+import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.OtherDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.DutyTypeRepository;
+import com.ubs.tariffapp.repositories.ProductRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
+import com.ubs.tariffapp.repositories.duty.AdValoremDutyRepository;
+import com.ubs.tariffapp.repositories.duty.CombinedDutyRepository;
+import com.ubs.tariffapp.repositories.duty.OtherDutyRepository;
+import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
 
 @Service
 public class DataLoaderService {
@@ -47,88 +60,6 @@ public class DataLoaderService {
     
     @Autowired
     private OtherDutyRepository otherDutyRepository;
-
-    // Static map loaded once when class is first loaded
-    private static final Map<String, String> COUNTRY_CODE_MAP = new HashMap<>();
-    
-    static {
-        loadCountryCodeMap();
-    }
-
-    private static void loadCountryCodeMap() {
-        try {
-            InputStream inputStream = DataLoaderService.class.getResourceAsStream("/data/country_iso_and_wits_code_data.csv");
-            if (inputStream == null) {
-                System.err.println("Country code mapping file not found");
-                return;
-            }
-            
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                String line = reader.readLine(); // Skip header
-                
-                while ((line = reader.readLine()) != null) {
-                    String[] columns = parseCSVLine(line);
-                    if (columns.length >= 2) {
-                        String countryName = columns[0].trim().toLowerCase();
-                        String isoCode = columns[1].trim();
-                        
-                        COUNTRY_CODE_MAP.put(countryName, isoCode);
-                        addCountryVariationsStatic(countryName, isoCode);
-                    }
-                }
-                
-                System.out.println("Loaded " + COUNTRY_CODE_MAP.size() + " country code mappings");
-                
-            }
-        } catch (Exception e) {
-            System.err.println("Error loading country code mappings: " + e.getMessage());
-        }
-    }
-
-    private String deriveIsoCode(String countryName) {
-        String isoCode = COUNTRY_CODE_MAP.get(countryName.toLowerCase());
-        if (isoCode != null) {
-            return isoCode;
-        }
-        
-        // Fuzzy matching for variations
-        String normalizedName = countryName.toLowerCase().trim();
-        for (Map.Entry<String, String> entry : COUNTRY_CODE_MAP.entrySet()) {
-            String countryKey = entry.getKey();
-            if (countryKey.contains(normalizedName) || normalizedName.contains(countryKey)) {
-                return entry.getValue();
-            }
-        }
-        
-        System.out.println("Warning: No ISO code found for country: " + countryName);
-        return countryName.length() >= 3 ? countryName.substring(0, 3).toUpperCase() : countryName.toUpperCase();
-    }
-
-    private static void addCountryVariationsStatic(String countryName, String isoCode) {
-        // Same logic as before but using static context
-        String baseName = countryName
-                .replace(", the", "")
-                .replace("the ", "")
-                .replace(" rep.", "")
-                .replace(" republic", "");
-        
-        if (!baseName.equals(countryName)) {
-            COUNTRY_CODE_MAP.put(baseName.trim(), isoCode);
-        }
-        
-        // Add specific variations
-        switch (isoCode) {
-            case "USA":
-                COUNTRY_CODE_MAP.put("united states", isoCode);
-                COUNTRY_CODE_MAP.put("us", isoCode);
-                break;
-            case "GBR":
-                COUNTRY_CODE_MAP.put("united kingdom", isoCode);
-                COUNTRY_CODE_MAP.put("uk", isoCode);
-                break;
-            // Add more as needed
-        }
-    }
     
 // ====================================================================================================================
     // Main method to load cleaned data
@@ -154,9 +85,7 @@ public class DataLoaderService {
 
             while ((line = reader.readLine()) != null) {
                 try {
-                    processDataRow(line);
-                    processedCount++;
-                    
+                    processDataRow(line, processedCount++);                
                 } catch (Exception e) {
                     String error = "Error processing row " + (processedCount + 1) + ": " + e.getMessage();
                     errors.add(error);
@@ -172,17 +101,18 @@ public class DataLoaderService {
 
             // Print database summary after loading
             printDatabaseSummary();
+            System.out.println("Data loading finished successfully.");
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to load data from file: " + fileName, e);
         }
     }
 
-    private void processDataRow(String line) {
+    private void processDataRow(String line, int rowNumber) {
         String[] columns = parseCSVLine(line); // Use the same CSV parser as HSDataCleaner
 
         if (columns.length < 23) { // Now expecting 16 original + 7 new columns = 23
-            System.err.println("Skipping row due to insufficient columns. Expected 23, got " + columns.length);
+            System.err.println("Skipping row " + rowNumber + " due to insufficient columns. Expected 23, got " + columns.length);
             return;
         }
 
@@ -204,19 +134,21 @@ public class DataLoaderService {
         String avMethod = columns[14].trim();
         String note = removeQuotes(columns[15].trim());
         
-        // Extract data from new columns (16-22)
-        String industry = columns[16].trim();
-        String cleanedDutyType = columns[17].trim(); // AD_VALOREM, SPECIFIC, MIXED, CONDITIONAL
-        String standardizedAVRate = columns[18].trim();
-        String specificDutyAmount = columns[19].trim();
-        String currency = columns[20].trim();
-        String unit = columns[21].trim();
-        String originalSpecificDuty = removeQuotes(columns[22].trim());
+        // Extract data from new columns (16-24)
+        String reporterISOCode = columns[16].trim();
+        String partnerISOCode = columns[17].trim();
+        String industry = columns[18].trim();
+        String cleanedDutyType = columns[19].trim(); // AD_VALOREM, SPECIFIC, MIXED, CONDITIONAL
+        String standardizedAVRate = columns[20].trim();
+        String specificDutyAmount = columns[21].trim();
+        String currency = columns[22].trim();
+        String unit = columns[23].trim();
+        String originalSpecificDuty = removeQuotes(columns[24].trim());
 
         // Create or get entities
-        Country reporter = createOrGetCountry(reporterCode, reporterName);
-        Country partner = createOrGetCountry(partnerCode, partnerName);
-        Product product = createOrGetProduct(tlCode, description, industry);
+        Country reporter = createOrGetCountry(reporterCode, reporterName, reporterISOCode);
+        Country partner = createOrGetCountry(partnerCode, partnerName, partnerISOCode);
+        Product product = createOrGetProduct(tlCode, description);
         DutyType dutyType = createOrGetDutyType(dutyTypeCode, dutyCode, dutyTypeDescription);
 
         // Create tariff schedule entry
@@ -422,7 +354,7 @@ public class DataLoaderService {
         otherDutyRepository.save(duty);
     }
 
-    private Country createOrGetCountry(String countryId, String countryName) {
+    private Country createOrGetCountry(String countryId, String countryName, String isoCode) {
         Optional<Country> existing = countryRepository.findById(countryId);
         if (existing.isPresent()) {
             return existing.get();
@@ -431,12 +363,12 @@ public class DataLoaderService {
         Country country = new Country();
         country.setCountryId(countryId);
         country.setCountryName(countryName);
-        // You might want to derive ISO code from country name or have a lookup
-        country.setIsoCode(deriveIsoCode(countryName));
+        // Use countryId (which should be WITS code) to derive ISO code
+        country.setIsoCode(isoCode);
         return countryRepository.save(country);
     }
 
-    private Product createOrGetProduct(String tlCode, String description, String industry) {
+    private Product createOrGetProduct(String tlCode, String description) {
         Optional<Product> existing = productRepository.findById(tlCode);
         if (existing.isPresent()) {
             return existing.get();

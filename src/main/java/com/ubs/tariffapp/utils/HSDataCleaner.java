@@ -6,16 +6,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 import java.util.Map;
-import java.util.NavigableMap;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.ubs.tariffapp.services.DataLoaderService;
 
 /**
  * HSDataCleaner - A comprehensive data cleaning utility for HS Tariff data
@@ -83,21 +83,37 @@ import java.math.RoundingMode;
  *  13	"Duty Nature"
  *  14	"Ad Valorem Calculation Code/Description"
  *  15	"Notes"
- *  16	"Industry"                     - New column
- *  17	"DutyType"                     - New column
- *  18	"StandardizedAVRate"           - New column
- *  19	"SpecificDutyAmount"           - New column
- *  20	"Currency"                     - New column
- *  21	"Unit"                         - New column
- *  22	"OriginalSpecificDuty"         - New column
+ *  16  "Reporter ISO Code"            - New column
+ *  17  "Partner ISO Code"             - New column
+ *  18	"Industry"                     - New column
+ *  19	"DutyType"                     - New column
+ *  20	"StandardizedAVRate"           - New column
+ *  21	"SpecificDutyAmount"           - New column
+ *  22	"Currency"                     - New column
+ *  23	"Unit"                         - New column
+ *  24	"OriginalSpecificDuty"         - New column
  */
 
 public class HSDataCleaner {
 
+    // Static map that maps WITS code to ISO code
+    private static final Map<String, String[]> WITS_TO_ISO_MAP = new HashMap<>();
+    private static final String COUNTRY_CODE_FILEPATH = "/data/country_iso_and_wits_code_data.csv";
+    
     private static NLPSpecificDutyParser dutyParser;
-    private static final int EXPECTED_ORIGINAL_COLUMNS = 16; // Expected number of columns in original data
-
     public static void main(String[] args) {
+        // Columns used for deduplication key
+        // Key components: Reporter, Partner, Year, HS Code (TL), HS Subheading (TLS), Duty Type, Duty Code
+        final int[] KEY_COLS = {0, 2, 4, 5, 6, 7, 8};
+
+        // Load country code mappings
+        loadCountryCodeMap(COUNTRY_CODE_FILEPATH);
+        if (WITS_TO_ISO_MAP.isEmpty()) {
+            System.err.println("Country code mapping is empty. Please check the country code CSV file.");
+            return;
+        }
+        System.out.println("Loaded " + WITS_TO_ISO_MAP.size() + " country code mappings.");
+
         // Initialize NLP parser
         try {
             dutyParser = new NLPSpecificDutyParser();
@@ -111,8 +127,9 @@ public class HSDataCleaner {
             "HS2017CNYear2023.csv",
             "HS2017SGYear2023.csv",
         };
+
         // Read input from resources
-        String inputFileName = "HS2017CNYear2023.csv"; // Original file name
+        String inputFileName = "HS2017USAYear2023.csv"; // Original file name
         InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
         if (inputStream == null) {
             System.err.println("Input CSV file not found in resources folder.");
@@ -122,9 +139,14 @@ public class HSDataCleaner {
         String outputFileName = "clean_" + inputFileName;
         String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+        // Initialize readers and writers
+        BufferedReader reader = null;
+        BufferedWriter writer = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(inputStream));
+            writer = new BufferedWriter(new FileWriter(outputFile));
 
+            // Check if file is empty
             String line = reader.readLine();
             if (line == null) {
                 System.err.println("Input file is empty.");
@@ -136,91 +158,93 @@ public class HSDataCleaner {
             int expectedColumns = headerColumns.length;
             System.out.println("Expected number of original columns: " + expectedColumns);
 
-            // Write new header with additional columns for duty analysis
-            writer.write(line + ",Industry,DutyType,StandardizedAVRate,SpecificDutyAmount,Currency,Unit,OriginalSpecificDuty");
+            // Append new columns to header
+            StringBuilder header = new StringBuilder(line);
+            header.append(",ReporterISOCode")
+                  .append(",PartnerISOCode")
+                  .append(",Industry")
+                  .append(",DutyType")
+                  .append(",StandardizedAVRate")
+                  .append(",SpecificDutyAmount")
+                  .append(",Currency")
+                  .append(",Unit")
+                  .append(",OriginalSpecificDuty");
+
+            writer.write(header.toString());
             writer.newLine();
-        
-            Set<String> seen = new HashSet<>();
-            int lineNumber = 1; // Track line numbers for debugging
+            // DEBUG: Track line numbers and rows processed/skipped
+            int lineNumber = 1;
             int skippedRows = 0;
             int processedRows = 0;
 
+            // Indices of columns to unquote
+            final int[] COLS_TO_UNQUOTE = {0, 2, 4, 5};
+
+            // Initialise deduplication set
+            Set<String> seen = new HashSet<>();
+
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                String[] columns = parseCSVLine(line); // Use proper CSV parsing
+                String[] columns = parseCSVLine(line); 
 
-                // Check if row has correct number of columns
+                // Check if row has correct number of columns, if not pad or truncate
+                // DEBUG: Print warning & row info
                 if (columns.length != expectedColumns) {
-                    System.err.println("Warning: Row " + lineNumber + " has " + columns.length + 
-                                     " columns, expected " + expectedColumns + ". Padding/truncating row.");
-                    
-                    // Print formatted row values for debugging
-                    System.err.println("Row " + lineNumber + " values:");
-                    for (int i = 0; i < columns.length; i++) {
-                        String value = columns[i];
-                        // Truncate long values for readability
-                        if (value.length() > 50) {
-                            value = value.substring(0, 47) + "...";
-                        }
-                        System.err.printf("  [%2d]: %-50s%n", i, "\"" + value + "\"");
-                    }
-                    System.err.println("  " + "-".repeat(60));
-                    
-                    columns = normalizeColumnCount(columns, expectedColumns);
+                    columns = normalizeColumnCount(columns, expectedColumns, lineNumber);
                 }
 
                 // Skip rows with empty HS codes
-                String hsCode = (columns.length > 5) ? columns[5].trim() : "";
+                String hsCode = columns[5].trim();
                 if (hsCode.isEmpty()) {
                     skippedRows++;
                     continue;
                 }
-                // Remove unnecessary quotes from key columns
-                int[] colsToClean = {0,2,4,5};
-                columns = removeQuotesFromColumns(columns, colsToClean);
-                // Skip rows not in Agriculture, Energy, or Metals
-                String industry = classifyIndustry(hsCode);
-                if (industry.equals("Other")) {
-                    skippedRows++;
-                    continue;
-                }
-                
-                // Normalize HS code to 8 digits
+
+                // Normalize HS code to 8 digits, padding with trailing zeros if necessary
                 try {
                     hsCode = hsCode.length() < 8
-                           ? String.format("%-8d", Integer.parseInt(hsCode)).replace(' ', '0')
-                           : hsCode;
+                            ? String.format("%-8d", Integer.parseInt(hsCode)).replace(' ', '0')
+                            : hsCode;
+                    columns[5] = hsCode;
                 } catch (NumberFormatException e) {
                     System.err.println("Warning: Invalid HS code at line " + lineNumber + ": " + hsCode);
                     skippedRows++;
                     continue;
                 }
 
+                // Skip rows with data not in Agriculture, Energy, or Metals
+                String industry = classifyIndustry(hsCode);
+                if (industry.equals("Other")) {
+                    skippedRows++;
+                    continue;
+                }
+
+                // Remove unnecessary quotes from key columns
+                columns = removeQuotesFromColumns(columns, COLS_TO_UNQUOTE);
+
+                // Get Reporter and Partner Standardised Names & ISO codes
+                String[] reporterInfo = WITS_TO_ISO_MAP.getOrDefault(columns[0].trim(), null);
+                columns[1] = reporterInfo[0];
+                String reporterISOCode = reporterInfo[1];
+                String[] partnerInfo = WITS_TO_ISO_MAP.getOrDefault(columns[2].trim(), null);
+                columns[3] = partnerInfo[0];
+                String partnerISOCode = partnerInfo[1];
+
                 // Deduplication key
-                String reporter = columns[0].trim();
-                String partner = columns[2].trim();
-                String year = columns[4].trim();
-                String tl = columns[5].trim();
-                String tls = columns[6].trim();
-                String dutyType = columns[7].trim();
-                String key = reporter + "|" + partner + "|" + year + "|" + tl + "|" + tls + "|" + dutyType;
+                String key = getDeduplicateKey(columns, KEY_COLS);
                 if (seen.contains(key)) {
                     skippedRows++;
                     continue;
                 }
                 seen.add(key);
 
-                // Safely update reporter and partner names
-                if (columns.length > 1) columns[1] = toTitleCase(columns[1].trim());
-                if (columns.length > 3) columns[3] = toTitleCase(columns[3].trim());
-
-                // Parse duty rates using NLP - safely extract AV rate and Specific rate
-                String avRate = (columns.length > 9) ? columns[9] : "";
-                String specificRate = (columns.length > 10) ? columns[10] : "";
+                // Parse duty rates using NLP
+                String avRate = columns[9];
+                String specificRate = columns[10];
                 DutyInfo dutyInfo = parseDutyRates(avRate, specificRate);
 
                 // Ensure the row has the right number of columns before adding new ones
-                String[] updatedColumns = Arrays.copyOf(columns, expectedColumns + 7); // Original + 7 new columns
+                String[] updatedColumns = Arrays.copyOf(columns, expectedColumns + 9); 
                 for (int i = columns.length; i < updatedColumns.length; i++) {
                     updatedColumns[i] = "";
                 }
@@ -230,24 +254,35 @@ public class HSDataCleaner {
                     updatedColumns[9] = String.valueOf(dutyInfo.standardizedAVRate);
                 }
 
-                // Add new columns for duty analysis
                 int baseIndex = expectedColumns;
-                updatedColumns[baseIndex] = industry;                                    // Industry classification
-                updatedColumns[baseIndex + 1] = dutyInfo.dutyType;                     // Type of duty
-                updatedColumns[baseIndex + 2] = formatNumber(dutyInfo.standardizedAVRate);  // Standardized AV rate - formatted
-                updatedColumns[baseIndex + 3] = formatNumber(dutyInfo.specificDutyAmount);  // Specific duty amount in USD - formatted
-                updatedColumns[baseIndex + 4] = dutyInfo.currency;                     // Currency type
-                updatedColumns[baseIndex + 5] = dutyInfo.unit;                         // Unit type
-                updatedColumns[baseIndex + 6] = dutyInfo.originalSpecificDuty;         // Original text for reference
+                // Add ISO codes columns for reporter and partner
+                updatedColumns[baseIndex] = reporterISOCode; // Reporter ISO code
+                updatedColumns[baseIndex + 1] = partnerISOCode;   // Partner ISO code
+                // Add new columns for duty analysis
+                updatedColumns[baseIndex + 2] = industry;                                    // Industry classification
+                updatedColumns[baseIndex + 3] = dutyInfo.dutyType;                           // Type of duty
+                updatedColumns[baseIndex + 4] = formatNumber(dutyInfo.standardizedAVRate);   // Standardized AV rate - formatted
+                updatedColumns[baseIndex + 5] = formatNumber(dutyInfo.specificDutyAmount);   // Specific duty amount in USD - formatted
+                updatedColumns[baseIndex + 6] = dutyInfo.currency;                           // Currency type
+                updatedColumns[baseIndex + 7] = dutyInfo.unit;                               // Unit type
+                updatedColumns[baseIndex + 8] = dutyInfo.originalSpecificDuty;               // Original text for reference
 
+                // Write updated row to output CSV
                 String updatedLine = Arrays.stream(updatedColumns)
                     .map(value -> value == null ? "" : value)
                     .collect(Collectors.joining(","));
 
                 writer.write(updatedLine);
                 writer.newLine();
+
                 processedRows++;
+                if (processedRows % 1000 == 0) {
+                    writer.flush();
+                    System.out.println("Processed rows: " + processedRows);
+                }
             }
+
+            writer.flush();
 
             System.out.println("Processing complete:");
             System.out.println("- Processed rows: " + processedRows);
@@ -258,16 +293,48 @@ public class HSDataCleaner {
 
         } catch (IOException e) {
             e.printStackTrace();
+            return;
+        } finally {
+            try {
+                if (reader != null) reader.close();
+                if (writer != null) writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
     }
+
+/**************************************************************
+ * HELPER METHODS
+ **************************************************************/ 
 
     /**
      * Normalize the number of columns in a row to match expected count
      * @param columns The original columns array
      * @param expectedCount The expected number of columns
+     * @param lineNumber The line number for debugging purposes
      * @return A normalized array with the correct number of columns
      */
-    private static String[] normalizeColumnCount(String[] columns, int expectedCount) {
+    private static String[] normalizeColumnCount(String[] columns, int expectedCount, int lineNumber) {
+        // Print debug information when column count doesn't match
+        if (columns.length != expectedCount) {
+            System.err.println("Warning: Row " + lineNumber + " has " + columns.length + 
+                             " columns, expected " + expectedCount + ". Padding/truncating row.");
+            
+            // DEBUG: Print the row values for inspection
+            System.err.println("Row " + lineNumber + " values:");
+            for (int i = 0; i < columns.length; i++) {
+                String value = columns[i];
+                // Truncate long values for readability
+                if (value.length() > 50) {
+                    value = value.substring(0, 47) + "...";
+                }
+                System.err.printf("  [%2d]: %-50s%n", i, "\"" + value + "\"");
+            }
+            System.err.println("  " + "-".repeat(60));
+        }
+        
         String[] normalized = new String[expectedCount];
         
         // Copy existing columns
@@ -286,7 +353,7 @@ public class HSDataCleaner {
      * Data structure to hold parsed duty information
      */
     private static class DutyInfo {
-        String dutyType = "CONDITIONAL";        // Default to conditional
+        String dutyType = "AD_VALOREM";         // Default to ad valorem
         double standardizedAVRate = 0.0;        // Standardized ad valorem rate
         double specificDutyAmount = 0.0;        // Specific duty amount in USD
         String currency = "";                   // Currency type (USD, EUR, etc.)
@@ -316,7 +383,213 @@ public class HSDataCleaner {
     }
 
     /**
+     * Remove surrounding quotes and clean up the value
+     * @param value The original string value
+     * @return Cleaned string without surrounding quotes
+     */
+    private static String removeQuotes(String value) {
+        if (value == null) return "";
+        
+        // Remove surrounding quotes if present
+        String cleaned = value.trim();
+        if (cleaned.startsWith("\"") && cleaned.endsWith("\"") && cleaned.length() > 1) {
+            cleaned = cleaned.substring(1, cleaned.length() - 1);
+        }
+        
+        // Handle escaped quotes inside
+        cleaned = cleaned.replace("\"\"", "\"");
+        
+        return cleaned.trim();
+    }
+
+    /**
+     * Remove unnecessary quotation marks from specified columns
+     * @param columns The original columns array
+     * @param startCol The starting column index (inclusive)
+     * @param endCol The ending column index (inclusive)
+     * @return A new array with quotes removed from specified columns
+     */
+    private static String[] removeQuotesFromColumns(String[] columns, int[] cols) {
+        String[] cleanedColumns = columns.clone();
+        
+        for (int i = 0; i < cols.length; i++) {
+            cleanedColumns[i] = removeQuotes(cleanedColumns[i]);
+        }
+        
+        return cleanedColumns;
+    }
+
+    /**
+     * Classify industry based on HS code chapter
+     * @param hsCode The HS code (should be at least 2 digits)
+     * @return Industry classification: Agriculture, Energy, Metals, or Other
+     */
+    private static String classifyIndustry(String hsCode) {
+        try {
+            int chapter = Integer.parseInt(hsCode.substring(0, 2));
+            
+            // Agriculture: Chapters 1-24
+            if (chapter >= 1 && chapter <= 24) {
+                return "Agriculture";
+            }
+            // Energy: Chapters 27
+            else if (chapter == 27) {
+                return "Energy";
+            }
+            // Metals: Chapters 72-83
+            else if (chapter >= 72 && chapter <= 83) {
+                return "Metals";
+            }
+            // Other: All remaining chapters (25-26, 28-71, 84-99)
+            else {
+                return "Other";
+            }
+        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+            // Handle invalid HS codes
+            System.err.println("Warning: Invalid HS code format for industry classification: " + hsCode);
+            return "Other";
+        }
+    }
+
+    /**
+     * Helper function to load WITS code to ISO code mapping
+     * @param: COUNTRY_MAP_FILEPATH Path to the country code mapping CSV file
+     */
+    private static void loadCountryCodeMap(String COUNTRY_MAP_FILEPATH) {
+        try {
+            InputStream inputStream = DataLoaderService.class.getResourceAsStream(COUNTRY_MAP_FILEPATH);
+            if (inputStream == null) {
+                System.err.println("Country code mapping file not found");
+                return;
+            }
+            
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                String line = reader.readLine(); // Skip header
+                
+                while ((line = reader.readLine()) != null) {
+                    String[] columns = parseCSVLine(line);
+                    if (columns.length >= 3) {
+                        // Create array with columns: [0] Country Name, [1] ISO Code
+                        String[] arr = {toTitleCase(columns[0].trim()), columns[1].trim()};
+                        String witsCode = columns[2].trim();
+                        
+                        // Map WITS code to Country Name & ISO code
+                        if (!witsCode.isEmpty() && !arr[0].isEmpty()) {
+                            WITS_TO_ISO_MAP.put(witsCode, arr);
+                        }
+                    }
+                }
+                
+                System.out.println("Loaded " + WITS_TO_ISO_MAP.size() + " WITS to ISO code mappings");
+                
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading country code mappings: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generate a deduplication key based on specified columns
+     * @param columns The array of column values
+     * @param keyCols The indices of columns to use for the key
+     * @return A concatenated string key for deduplication
+     */
+    private static String getDeduplicateKey(String[] columns, int[] keyCols) {
+        StringBuilder keyBuilder = new StringBuilder();
+        for (int col : keyCols) {
+            if (col < columns.length) {
+                keyBuilder.append(columns[col].trim().toLowerCase()).append("|");
+            } else {
+                keyBuilder.append("|"); // Append empty for missing columns
+            }
+        }
+        return keyBuilder.toString();
+    }
+
+    /**
+     * Parse a CSV line respecting quoted fields that may contain commas
+     * Preserves original quotation marks in the output
+     * @param line The CSV line to parse
+     * @return Array of field values with original quotes preserved
+     */
+    public static String[] parseCSVLine(String line) {
+        java.util.List<String> fields = new java.util.ArrayList<>();
+        
+        if (line == null || line.isEmpty()) {
+            return new String[0];
+        }
+        
+        int i = 0;
+        while (i < line.length()) {
+            StringBuilder field = new StringBuilder();
+            
+            // Skip leading whitespace (optional - depends on CSV format requirements)
+            while (i < line.length() && line.charAt(i) == ' ') {
+                i++;
+            }
+            
+            if (i >= line.length()) {
+                // End of line reached, add empty field if we're expecting one
+                if (line.endsWith(",") || fields.isEmpty()) {
+                    fields.add("");
+                }
+                break;
+            }
+            
+            if (line.charAt(i) == '"') {
+                // Quoted field - preserve the quotes
+                field.append('"'); // Add opening quote to output
+                i++; // Skip opening quote for parsing
+                
+                while (i < line.length()) {
+                    if (line.charAt(i) == '"') {
+                        if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                            // Escaped quote ("") - preserve both quotes
+                            field.append("\"\"");
+                            i += 2;
+                        } else {
+                            // End of quoted field - add closing quote
+                            field.append('"');
+                            i++; // Skip closing quote
+                            break;
+                        }
+                    } else {
+                        field.append(line.charAt(i));
+                        i++;
+                    }
+                }
+                // Skip to comma or end
+                while (i < line.length() && line.charAt(i) != ',') {
+                    i++;
+                }
+            } else {
+                // Unquoted field - preserve as is
+                while (i < line.length() && line.charAt(i) != ',') {
+                    field.append(line.charAt(i));
+                    i++;
+                }
+            }
+            
+            fields.add(field.toString());
+            
+            // Skip comma
+            if (i < line.length() && line.charAt(i) == ',') {
+                i++;
+                // If comma is at the end, there's an empty trailing field
+                if (i >= line.length()) {
+                    fields.add("");
+                }
+            }
+        }
+        
+        return fields.toArray(new String[0]);
+    }
+
+    /**
      * Parse duty rates using NLP to identify duty types and extract components
+     * @param avRate The ad valorem rate as a string (may be empty)
+     * @param specificRate The specific duty rate text
+     * @return DutyInfo object with parsed components
      */
     private static DutyInfo parseDutyRates(String avRate, String specificRate) {
         DutyInfo info = new DutyInfo();
@@ -339,10 +612,6 @@ public class HSDataCleaner {
         if (specificRate == null || specificRate.trim().isEmpty()) {
             if (hasExistingAV) {
                 info.dutyType = "AD_VALOREM";
-            } else {
-                // Default to AD_VALOREM with 0% rate instead of CONDITIONAL
-                info.dutyType = "AD_VALOREM";
-                info.standardizedAVRate = 0.0;
             }
             return info;
         }
@@ -693,75 +962,7 @@ public class HSDataCleaner {
         return ""; // Unknown currency
     }
 
-    /**
-     * Remove unnecessary quotation marks from specified columns
-     * @param columns The original columns array
-     * @param startCol The starting column index (inclusive)
-     * @param endCol The ending column index (inclusive)
-     * @return A new array with quotes removed from specified columns
-     */
-    private static String[] removeQuotesFromColumns(String[] columns, int[] cols) {
-        String[] cleanedColumns = columns.clone();
-        
-        for (int i = 0; i < cols.length; i++) {
-            cleanedColumns[i] = removeQuotes(cleanedColumns[i]);
-        }
-        
-        return cleanedColumns;
-    }
-
-    /**
-     * Remove surrounding quotes and clean up the value
-     * @param value The original string value
-     * @return Cleaned string without surrounding quotes
-     */
-    private static String removeQuotes(String value) {
-        if (value == null) return "";
-        
-        // Remove surrounding quotes if present
-        String cleaned = value.trim();
-        if (cleaned.startsWith("\"") && cleaned.endsWith("\"") && cleaned.length() > 1) {
-            cleaned = cleaned.substring(1, cleaned.length() - 1);
-        }
-        
-        // Handle escaped quotes inside
-        cleaned = cleaned.replace("\"\"", "\"");
-        
-        return cleaned.trim();
-    }
-
-    /**
-     * Classify industry based on HS code chapter
-     * @param hsCode The HS code (should be at least 2 digits)
-     * @return Industry classification: Agriculture, Energy, Metals, or Other
-     */
-    private static String classifyIndustry(String hsCode) {
-        try {
-            int chapter = Integer.parseInt(hsCode.substring(0, 2));
-            
-            // Agriculture: Chapters 1-24
-            if (chapter >= 1 && chapter <= 24) {
-                return "Agriculture";
-            }
-            // Energy: Chapters 27
-            else if (chapter == 27) {
-                return "Energy";
-            }
-            // Metals: Chapters 72-83
-            else if (chapter >= 72 && chapter <= 83) {
-                return "Metals";
-            }
-            // Other: All remaining chapters (25-26, 28-71, 84-99)
-            else {
-                return "Other";
-            }
-        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
-            // Handle invalid HS codes
-            System.err.println("Warning: Invalid HS code format for industry classification: " + hsCode);
-            return "Other";
-        }
-    }
-
+    
     private static String toTitleCase(String input) {
     if (input == null || input.isEmpty()) return input;
 
@@ -771,9 +972,8 @@ public class HSDataCleaner {
     }
 
 
-    // Static lookup map
+    // Static lookup map for ad valorem method descriptions
     private static final Map<String, String> avMethodMap = new HashMap<>();
-
     static {
         avMethodMap.put("A", "Ad valorem (percentage of value, e.g. 5% of import value)");
         avMethodMap.put("S", "Specific duty (fixed per unit, e.g. $10 per kg)");
@@ -782,92 +982,5 @@ public class HSDataCleaner {
         avMethodMap.put("M", "Mixed (either/or, whichever is higher/lower)");
         avMethodMap.put("P", "Formula-based or price-band system");
         avMethodMap.put("X", "Not elsewhere classified");
-    }
-    
-    // Method to get AV description from AVMethod column
-    public static String getDescription(String code) {
-        if (code == null || code.isEmpty()) {
-            return "Invalid code";
-        }
-        return avMethodMap.getOrDefault(code.toUpperCase(), "Unknown method");
-    }
-
-    /**
-     * Parse a CSV line respecting quoted fields that may contain commas
-     * Preserves original quotation marks in the output
-     * @param line The CSV line to parse
-     * @return Array of field values with original quotes preserved
-     */
-    public static String[] parseCSVLine(String line) {
-        java.util.List<String> fields = new java.util.ArrayList<>();
-        
-        if (line == null || line.isEmpty()) {
-            return new String[0];
-        }
-        
-        int i = 0;
-        while (i < line.length()) {
-            StringBuilder field = new StringBuilder();
-            
-            // Skip leading whitespace (optional - depends on CSV format requirements)
-            while (i < line.length() && line.charAt(i) == ' ') {
-                i++;
-            }
-            
-            if (i >= line.length()) {
-                // End of line reached, add empty field if we're expecting one
-                if (line.endsWith(",") || fields.isEmpty()) {
-                    fields.add("");
-                }
-                break;
-            }
-            
-            if (line.charAt(i) == '"') {
-                // Quoted field - preserve the quotes
-                field.append('"'); // Add opening quote to output
-                i++; // Skip opening quote for parsing
-                
-                while (i < line.length()) {
-                    if (line.charAt(i) == '"') {
-                        if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                            // Escaped quote ("") - preserve both quotes
-                            field.append("\"\"");
-                            i += 2;
-                        } else {
-                            // End of quoted field - add closing quote
-                            field.append('"');
-                            i++; // Skip closing quote
-                            break;
-                        }
-                    } else {
-                        field.append(line.charAt(i));
-                        i++;
-                    }
-                }
-                // Skip to comma or end
-                while (i < line.length() && line.charAt(i) != ',') {
-                    i++;
-                }
-            } else {
-                // Unquoted field - preserve as is
-                while (i < line.length() && line.charAt(i) != ',') {
-                    field.append(line.charAt(i));
-                    i++;
-                }
-            }
-            
-            fields.add(field.toString());
-            
-            // Skip comma
-            if (i < line.length() && line.charAt(i) == ',') {
-                i++;
-                // If comma is at the end, there's an empty trailing field
-                if (i >= line.length()) {
-                    fields.add("");
-                }
-            }
-        }
-        
-        return fields.toArray(new String[0]);
     }
 }
