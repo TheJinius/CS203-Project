@@ -54,7 +54,7 @@ public class OpenApiConfig {
                             .implicit(new OAuthFlow()
                                 .authorizationUrl(authorizationUrl)
                                 .scopes(new Scopes()
-                                    .addString("openid", "")
+                                    .addString("openid", "OpenID Connect Scope")
                                 )
                             )
                         )
