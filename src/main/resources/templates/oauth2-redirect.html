@@ -2,14 +2,14 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>OAuth2 Redirect - Implicit Flow</title>
+    <title>OAuth2 Redirect (Implicit Flow)</title>
 </head>
 <body>
     <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
         <h1>OAuth2 Authentication - Implicit Flow</h1>
         <div id="status">
             <div style="color: blue;">
-                <h3>🔄 Processing Authentication...</h3>
+                <h3>Processing Authentication...</h3>
                 <p>Please wait while we process your authentication response.</p>
             </div>
         </div>
@@ -60,7 +60,7 @@
                 console.log("Token data from fragment:", tokenData);
                 
                 if (tokenData.access_token) {
-                    console.log("✅ SUCCESS: Access token received!");
+                    console.log("Success: Access token received!");
                     console.log("Access Token:", tokenData.access_token);
                     console.log("ID Token:", tokenData.id_token);
                     console.log("Token Type:", tokenData.token_type || "Bearer");
@@ -90,19 +90,19 @@
                                 },
                                 redirectUrl: window.location.href
                             });
-                            console.log("✅ Successfully called swaggerUIRedirectOauth2");
+                            console.log("Successfully called swaggerUIRedirectOauth2");
                             setTimeout(() => window.close(), 1000); // Close after 1 second
                         } catch (error) {
-                            console.error("❌ Error calling swaggerUIRedirectOauth2:", error);
+                            console.error("Error calling swaggerUIRedirectOauth2:", error);
                             displayManualInstructions(tokenData.access_token);
                         }
                     } else {
-                        console.log("⚠️ Swagger UI callback not available, showing manual instructions");
+                        console.log("Swagger UI callback not available, showing manual instructions");
                         displayManualInstructions(tokenData.access_token);
                     }
                     
                 } else if (tokenData.error) {
-                    console.error("❌ OAuth2 Error:", tokenData.error);
+                    console.error("OAuth2 Error:", tokenData.error);
                     console.error("Error Description:", tokenData.error_description);
                     document.getElementById('status').innerHTML = `
                         <div style="color: red;">
@@ -134,14 +134,14 @@
             function displayManualInstructions(accessToken) {
                 document.getElementById('status').innerHTML = `
                     <div style="color: green;">
-                        <h3>✅ Authentication Successful!</h3>
+                        <h3>Authentication Successful!</h3>
                         <p>Your access token has been generated. Here's how to use it in Swagger UI:</p>
                         
                         <div style="background: #f0f8ff; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #007bff;">
-                            <h4>🎯 Bearer Token Authentication</h4>
+                            <h4>Bearer Token Authentication</h4>
                             <ol>
                                 <li>Go back to <a href="/swagger-ui.html" target="_blank">Swagger UI</a></li>
-                                <li>Click the "Authorize" button (🔒)</li>
+                                <li>Click the "Authorize" button</li>
                                 <li>Look for the <strong>"bearerAuth (http, Bearer)"</strong> section</li>
                                 <li>In the text field, paste your token (without "Bearer " prefix)</li>
                                 <li>Click "Authorize" then "Close"</li>
@@ -149,7 +149,7 @@
                         </div>
                         
                         <div style="background: #fff3cd; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #ffc107;">
-                            <h4>ℹ️ About OAuth2 Section</h4>
+                            <h4>About OAuth2 Section</h4>
                             <p>The "oauth2" section has an "Authorize" button that redirects to AWS Cognito for authentication. Since you already completed the OAuth2 flow and got your token, you should use the <strong>Bearer Auth</strong> method above instead.</p>
                         </div>
                         
@@ -160,15 +160,15 @@
                         
                         <div style="margin-top: 15px;">
                             <button onclick="copyToClipboard('${accessToken}')" style="padding: 8px 16px; margin-right: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                📋 Copy Token
+                                Copy Token
                             </button>
                             <button onclick="openSwaggerUI()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                🚀 Open Swagger UI
+                                Open Swagger UI
                             </button>
                         </div>
                         
                         <div style="margin-top: 20px; padding: 10px; background: #d1ecf1; border-radius: 4px; border-left: 4px solid #17a2b8;">
-                            <small><strong>💡 Pro Tip:</strong> Your token is valid for 1 hour. After it expires, you'll need to authenticate again through the OAuth2 flow.</small>
+                            <small><strong>Note:</strong> Your token is valid for 1 hour. After it expires, you'll need to authenticate again through the OAuth2 flow.</small>
                         </div>
                     </div>
                 `;
