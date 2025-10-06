@@ -1,11 +1,7 @@
-
 package com.ubs.tariffapp.config;
-
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.OAuthFlows;
@@ -15,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
 @Configuration
 @OpenAPIDefinition(
     info = @Info(
@@ -23,12 +18,6 @@ import org.springframework.context.annotation.Configuration;
         version = "1.0",
         description = "API documentation for the CS203 Tariff Application"
     )
-)
-@SecurityScheme(
-    name = "bearerAuth",
-    type = SecuritySchemeType.HTTP,
-    scheme = "bearer",
-    bearerFormat = "JWT"
 )
 public class OpenApiConfig {
 
@@ -44,36 +33,31 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         // OAuth2 Authorization Code Flow for Cognito
-        String authorizationUrl = String.format("https://%s.auth.%s.amazoncognito.com/oauth2/authorize", 
+        String authorizationUrl = String.format("https://%s.auth.%s.amazoncognito.com/oauth2/authorize",
             cognitoDomain, awsRegion);
-        String tokenUrl = String.format("https://%s.auth.%s.amazoncognito.com/oauth2/token", 
+        String tokenUrl = String.format("https://%s.auth.%s.amazoncognito.com/oauth2/token",
             cognitoDomain, awsRegion);
 
         return new OpenAPI()
             .info(new io.swagger.v3.oas.models.info.Info()
                 .title("CS203 Tariff Application API")
                 .version("1.0")
-                .description("Comprehensive API documentation for the tariff application system"))
+                .description("Comprehensive API documentation for the tariff application system. Uses OAuth2 authentication via AWS Cognito."))
             .addSecurityItem(new SecurityRequirement()
-                .addList("bearerAuth"))
+                .addList("oauth2"))
             .components(new io.swagger.v3.oas.models.Components()
-                .addSecuritySchemes("bearerAuth",
-                    new io.swagger.v3.oas.models.security.SecurityScheme()
-                        .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
-                        .scheme("bearer")
-                        .bearerFormat("JWT")
-                        .description("Enter your JWT token from Cognito. Use the manual Bearer Auth instead of OAuth2 for easier testing.")
-                )
                 .addSecuritySchemes("oauth2",
                     new io.swagger.v3.oas.models.security.SecurityScheme()
                         .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2)
-                        .description("OAuth2 authentication via AWS Cognito (Authorization Code Flow).")
+                        .description("OAuth2 authentication via AWS Cognito (Authorization Code Flow with PKCE).")
                         .flows(new OAuthFlows()
                             .authorizationCode(new OAuthFlow()
                                 .authorizationUrl(authorizationUrl)
                                 .tokenUrl(tokenUrl)
                                 .scopes(new Scopes()
                                     .addString("openid", "OpenID Connect scope")
+                                    .addString("profile", "User profile information")
+                                    .addString("email", "User email address")
                                 )
                             )
                         )
