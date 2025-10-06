@@ -30,10 +30,12 @@ public class AuditLogService {
 
         if (entity instanceof TariffSchedule ts) {
             log.setTariffId(ts.getTariffId());
+            log.setTargetEntity(ts.getClass().getSimpleName());
             log.setChangeDetails("TariffSchedule " + changeType + ": " + ts.getTariffId());
         } else if (entity instanceof Duty duty) {
             TariffSchedule ts = duty.getTariffSchedule();
             log.setTariffId(ts.getTariffId());
+            log.setTargetEntity(duty.getClass().getSimpleName());
             log.setChangeDetails(duty.getClass().getSimpleName() + " " + changeType +
                                  " (tariffId=" + ts.getTariffId() + ")");
         }
