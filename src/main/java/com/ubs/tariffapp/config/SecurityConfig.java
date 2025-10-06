@@ -23,7 +23,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/**").authenticated()
                 .requestMatchers("/h2-console/**").permitAll() //TODO: REMOVE THIS IN PROD
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() // Allow Swagger UI
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api/swagger-resources/**").permitAll() // Allow Swagger UI
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.disable())
