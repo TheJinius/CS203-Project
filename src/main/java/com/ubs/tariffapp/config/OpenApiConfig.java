@@ -32,10 +32,8 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
-        // OAuth2 Authorization Code Flow for Cognito
+        // OAuth2 Implicit Flow for Cognito
         String authorizationUrl = String.format("https://%s.auth.%s.amazoncognito.com/oauth2/authorize",
-            cognitoDomain, awsRegion);
-        String tokenUrl = String.format("https://%s.auth.%s.amazoncognito.com/oauth2/token",
             cognitoDomain, awsRegion);
 
         return new OpenAPI()
@@ -45,15 +43,16 @@ public class OpenApiConfig {
                 .description("Comprehensive API documentation for the tariff application system. Uses OAuth2 authentication via AWS Cognito."))
             .addSecurityItem(new SecurityRequirement()
                 .addList("oauth2"))
+            .addSecurityItem(new SecurityRequirement()
+                .addList("bearerAuth"))
             .components(new io.swagger.v3.oas.models.Components()
                 .addSecuritySchemes("oauth2",
                     new io.swagger.v3.oas.models.security.SecurityScheme()
                         .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2)
-                        .description("OAuth2 authentication via AWS Cognito (Authorization Code Flow with PKCE).")
+                        .description("OAuth2 authentication via AWS Cognito (Implicit Flow).")
                         .flows(new OAuthFlows()
-                            .authorizationCode(new OAuthFlow()
+                            .implicit(new OAuthFlow()
                                 .authorizationUrl(authorizationUrl)
-                                .tokenUrl(tokenUrl)
                                 .scopes(new Scopes()
                                     .addString("openid", "OpenID Connect scope")
                                     .addString("profile", "User profile information")
@@ -61,6 +60,13 @@ public class OpenApiConfig {
                                 )
                             )
                         )
+                )
+                .addSecuritySchemes("bearerAuth",
+                    new io.swagger.v3.oas.models.security.SecurityScheme()
+                        .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")
+                        .description("Bearer token authentication. Paste your access token from OAuth2 flow here.")
                 )
             );
     }

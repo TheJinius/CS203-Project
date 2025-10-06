@@ -135,6 +135,12 @@
             <version>2.7.0</version>
         </dependency>
 
+        <!-- Thymeleaf for custom OAuth2 redirect page -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
     </dependencies>
 
     
