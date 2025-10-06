@@ -38,10 +38,7 @@ From the `frontend` directory, start the frontend development server:
 npm run dev
 ```
 
----
 The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000).
-
----
 
 ### 4. Running Backend Tests
 
