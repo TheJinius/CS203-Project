@@ -22,6 +22,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/api/health").permitAll() //allow healthcheck!
                 .requestMatchers("/api/oauth2/exchange-token").permitAll() // Allow token exchange (must be before /api/**)
                 .requestMatchers("/api/**").authenticated()
                 .requestMatchers("/h2-console/**").permitAll() //TODO: REMOVE THIS IN PROD

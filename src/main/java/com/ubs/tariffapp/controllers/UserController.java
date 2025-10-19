@@ -40,6 +40,11 @@ public class UserController {
         return ResponseEntity.ok("User endpoint healthcheck: OK");
     }
 
+    @GetMapping ("/api/health")
+    public ResponseEntity<String> publicHealthCheck() {
+        return ResponseEntity.ok("public endpoint healthcheck: OK");
+    }
+
     private List<String> extractGroups(OidcUser oidcUser) {
         Object groups = oidcUser.getIdToken().getClaim("cognito:groups");
         return groups instanceof List ? (List<String>) groups : Collections.emptyList();
