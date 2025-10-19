@@ -5,7 +5,6 @@
 
 Welcome to our CS203 tariff project! Follow these steps to set up and run the application:
 
-
 ### 1. Backend Setup
 
 1. Open a terminal in the root project directory (`CS203-Project`).
@@ -13,7 +12,6 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	```
 	mvn install
 	```
-
 
 ### 2. Frontend Setup
 
@@ -25,7 +23,6 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	```
 	npm install
 	```
-
 
 ### 3. Running the Application
 
@@ -42,7 +39,6 @@ npm run dev
 ```
 
 The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000).
-
 
 ### 4. Running Backend Tests
 
