@@ -38,7 +38,12 @@ import com.ubs.tariffapp.services.DataLoaderService;
  *      * Metals (Chapters 72-83)
  *      * Other (all remaining chapters), columns with this are filtered out
  * 
- * 3. Duty Rate Deconstruction using NLP:
+ * 3. Country Code Mapping:
+ *   - Maps WITS country codes to ISO codes using an external CSV file
+ *   - Adds new columns for ReporterISOCode and PartnerISOCode
+ *   - Standardises country names to Title Case
+ * 
+ * 4. Duty Rate Deconstruction using NLP:
  *    - Parses specific duty rate text using Natural Language Processing
  *    - Identifies 4 types of duty structures:
  *      * AD_VALOREM: Only percentage-based (e.g., "5%")
@@ -46,14 +51,15 @@ import com.ubs.tariffapp.services.DataLoaderService;
  *      * MIXED: Both specific and ad valorem (e.g., "$1.03 per litre + 12%")
  *      * CONDITIONAL: Complex conditions or unparseable text
  * 
- * 4. Currency and Unit Standardization:
+ * 5. Currency and Unit Standardization:
  *    - Converts all currencies to USD (cents → dollars, other currencies using conversion rates)
  *    - Standardizes units (grams → kg, pounds → kg, litres → liters, etc.)
  *    - Extracts currency type and unit type into separate columns
  * 
- * 5. Mixed Duty Handling:
+ * 6. Mixed Duty Handling:
  *    - For mixed duties, retroactively fills the AV Duty Rate column (column 9)
- *    - Preserves original specific duty text for reference
+ *    - Preserves oriERROR: duplicate key value violates unique constraint "unique_tariff_business_key"
+  Detail: Key (reporter_id, partner_id, tl_code, duty_type, duty_code, tariff_year, tls_suffix)=(840, 000, 27079940, 0, 2, 2023, 0) already exists.ginal specific duty text for reference
  * 
  * Output Structure:
  * The cleaned CSV includes additional columns:
@@ -100,7 +106,6 @@ public class HSDataCleaner {
     private static final Map<String, String[]> WITS_TO_ISO_MAP = new HashMap<>();
     private static final String COUNTRY_CODE_FILEPATH = "/data/country_iso_and_wits_code_data.csv";
     
-    private static NLPSpecificDutyParser dutyParser;
     public static void main(String[] args) {
         // Columns used for deduplication key
         // Key components: Reporter, Partner, Year, HS Code (TL), HS Subheading (TLS), Duty Type, Duty Code
@@ -113,14 +118,6 @@ public class HSDataCleaner {
             return;
         }
         System.out.println("Loaded " + WITS_TO_ISO_MAP.size() + " country code mappings.");
-
-        // Initialize NLP parser
-        try {
-            dutyParser = new NLPSpecificDutyParser();
-        } catch (Exception e) {
-            System.err.println("Failed to initialize NLP parser: " + e.getMessage());
-            return;
-        }
 
         String[] inputFileNames = {
             "HS2017USDYear2023.csv",
@@ -136,7 +133,7 @@ public class HSDataCleaner {
             return;
         }
 
-        String outputFileName = "clean_" + inputFileName;
+        String outputFileName = "testclean_" + inputFileName;
         String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
         // Initialize readers and writers
@@ -238,10 +235,13 @@ public class HSDataCleaner {
                 }
                 seen.add(key);
 
-                // Parse duty rates using NLP
+                // Truncate long description fields to reasonable lengths
+                columns = truncateDescriptionColumns(columns, 250);
+
+                // Parse duty rates using DutyParser
                 String avRate = columns[9];
                 String specificRate = columns[10];
-                DutyInfo dutyInfo = parseDutyRates(avRate, specificRate);
+                DutyParser.DutyInfo dutyInfo = DutyParser.parseDutyRates(avRate, specificRate);
 
                 // Ensure the row has the right number of columns before adding new ones
                 String[] updatedColumns = Arrays.copyOf(columns, expectedColumns + 9); 
@@ -261,8 +261,8 @@ public class HSDataCleaner {
                 // Add new columns for duty analysis
                 updatedColumns[baseIndex + 2] = industry;                                    // Industry classification
                 updatedColumns[baseIndex + 3] = dutyInfo.dutyType;                           // Type of duty
-                updatedColumns[baseIndex + 4] = formatNumber(dutyInfo.standardizedAVRate);   // Standardized AV rate - formatted
-                updatedColumns[baseIndex + 5] = formatNumber(dutyInfo.specificDutyAmount);   // Specific duty amount in USD - formatted
+                updatedColumns[baseIndex + 4] = DutyParser.formatNumber(dutyInfo.standardizedAVRate);   // Standardized AV rate - formatted
+                updatedColumns[baseIndex + 5] = DutyParser.formatNumber(dutyInfo.specificDutyAmount);   // Specific duty amount in USD - formatted
                 updatedColumns[baseIndex + 6] = dutyInfo.currency;                           // Currency type
                 updatedColumns[baseIndex + 7] = dutyInfo.unit;                               // Unit type
                 updatedColumns[baseIndex + 8] = dutyInfo.originalSpecificDuty;               // Original text for reference
@@ -347,39 +347,6 @@ public class HSDataCleaner {
         }
         
         return normalized;
-    }
-
-    /**
-     * Data structure to hold parsed duty information
-     */
-    private static class DutyInfo {
-        String dutyType = "AD_VALOREM";         // Default to ad valorem
-        double standardizedAVRate = 0.0;        // Standardized ad valorem rate
-        double specificDutyAmount = 0.0;        // Specific duty amount in USD
-        String currency = "";                   // Currency type (USD, EUR, etc.)
-        String unit = "";                       // Unit type (kg, liter, each, etc.)
-        String originalSpecificDuty = "";       // Original specific duty text
-    }
-
-    /**
-     * Round a double value to avoid floating point precision errors
-     * @param value The value to round
-     * @param decimalPlaces Number of decimal places to round to
-     * @return Rounded value
-     */
-    private static double roundToPrecision(double value, int decimalPlaces) {
-        if (Double.isNaN(value) || Double.isInfinite(value)) {
-            return 0.0;
-        }
-        
-        try {
-            BigDecimal bd = BigDecimal.valueOf(value);
-            bd = bd.setScale(decimalPlaces, RoundingMode.HALF_UP);
-            return bd.doubleValue();
-        } catch (Exception e) {
-            // Fallback for extreme values
-            return Math.round(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces);
-        }
     }
 
     /**
@@ -507,6 +474,46 @@ public class HSDataCleaner {
     }
 
     /**
+     * tr
+     */
+    private static String[] truncateDescriptionColumns(String[] columns, int defaultLimit) {
+        // Columns that typically contain long descriptions
+        int[] descriptionColumns = {11,12};
+        
+        for (int columnIndex : descriptionColumns) {
+            if (columnIndex < columns.length && columns[columnIndex] != null) {
+                columns[columnIndex] = truncateString(columns[columnIndex], defaultLimit);
+            }
+        }
+        
+        return columns;
+    }
+
+    /**
+     * Utility method to truncate a single string with proper handling
+     */
+    private static String truncateString(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        
+        // For very short limits, just truncate
+        if (maxLength <= 10) {
+            return value.substring(0, maxLength);
+        }
+        
+        // Try to truncate at a word boundary near the limit
+        String truncated = value.substring(0, maxLength - 3);
+        int lastSpace = truncated.lastIndexOf(' ');
+        
+        // If there's a space within reasonable distance, truncate there
+        if (lastSpace > maxLength - 50 && lastSpace > 0) {
+            truncated = truncated.substring(0, lastSpace);
+        }
+        
+        return truncated + "...";
+    }
+    /**
      * Parse a CSV line respecting quoted fields that may contain commas
      * Preserves original quotation marks in the output
      * @param line The CSV line to parse
@@ -583,383 +590,6 @@ public class HSDataCleaner {
         }
         
         return fields.toArray(new String[0]);
-    }
-
-    /**
-     * Parse duty rates using NLP to identify duty types and extract components
-     * @param avRate The ad valorem rate as a string (may be empty)
-     * @param specificRate The specific duty rate text
-     * @return DutyInfo object with parsed components
-     */
-    private static DutyInfo parseDutyRates(String avRate, String specificRate) {
-        DutyInfo info = new DutyInfo();
-        info.originalSpecificDuty = specificRate != null ? specificRate.trim() : "";
-        
-        // Check if there's already an AV rate
-        boolean hasExistingAV = false;
-        if (avRate != null && !avRate.trim().isEmpty()) {
-            try {
-                double parsedRate = Double.parseDouble(avRate.trim());
-                // Round to 6 decimal places to avoid floating point errors
-                info.standardizedAVRate = roundToPrecision(parsedRate, 6);
-                hasExistingAV = parsedRate > 0; // Only consider non-zero as existing AV
-            } catch (NumberFormatException e) {
-                // Invalid AV rate, ignore and continue processing
-            }
-        }
-
-        // If no specific duty rate, determine type based on existing AV rate
-        if (specificRate == null || specificRate.trim().isEmpty()) {
-            if (hasExistingAV) {
-                info.dutyType = "AD_VALOREM";
-            }
-            return info;
-        }
-
-        try {
-            // First try manual parsing to separate components properly
-            DutyInfo manualParsed = manualParseDutyRate(specificRate);
-            if (manualParsed != null) {
-                // Use manual parsing results
-                info.dutyType = manualParsed.dutyType;
-                info.specificDutyAmount = manualParsed.specificDutyAmount;
-                info.standardizedAVRate = hasExistingAV ? info.standardizedAVRate : manualParsed.standardizedAVRate;
-                info.currency = manualParsed.currency;
-                info.unit = manualParsed.unit;
-                
-                // Adjust duty type if there's existing AV rate
-                if (hasExistingAV && info.specificDutyAmount > 0) {
-                    info.dutyType = "MIXED";
-                }
-                
-                return info;
-            }
-            
-            // Fallback to NLP parser
-            NLPSpecificDutyParser.ParsedDutyRate parsed = dutyParser.parseSpecificDutyRate(specificRate);
-            
-            // Determine duty type based on parsed components
-            boolean hasFixedComponent = parsed.getFixedAmount() > 0;
-            boolean hasPercentageComponent = parsed.getPercentageRate() > 0;
-            
-            if (hasFixedComponent && hasPercentageComponent) {
-                // Mixed duty: has both specific amount and percentage
-                info.dutyType = "MIXED";
-                // Use getOriginalFixedAmount() to get just the specific portion
-                double specificAmount = parsed.getOriginalFixedAmount();
-                // Convert cents to dollars if currency is cents/USD
-                if (isCentsBasedCurrency(specificRate)) {
-                    specificAmount = specificAmount / 100.0;
-                }
-                info.specificDutyAmount = roundToPrecision(specificAmount, 6);
-                info.standardizedAVRate = roundToPrecision(parsed.getPercentageRate() * 100, 6); // Convert to percentage
-                info.currency = extractCurrencyType(specificRate);
-                info.unit = parsed.getUnit();
-            } else if (hasFixedComponent) {
-                // Specific duty only (or mixed with existing AV rate)
-                info.dutyType = hasExistingAV ? "MIXED" : "SPECIFIC";
-                double specificAmount = parsed.getOriginalFixedAmount();
-                // Convert cents to dollars if currency is cents/USD
-                if (isCentsBasedCurrency(specificRate)) {
-                    specificAmount = specificAmount / 100.0;
-                }
-                info.specificDutyAmount = roundToPrecision(specificAmount, 6);
-                info.currency = extractCurrencyType(specificRate);
-                info.unit = parsed.getUnit();
-            } else if (hasPercentageComponent) {
-                // Only percentage found in specific rate (unusual but possible)
-                info.dutyType = "AD_VALOREM";
-                info.standardizedAVRate = roundToPrecision(parsed.getPercentageRate() * 100, 6);
-            } else if (parsed.hasCondition()) {
-                // Complex conditional duty with conditions like "whichever is higher"
-                info.dutyType = "CONDITIONAL";
-            } else {
-                // Could not parse meaningful components - check if it's just empty/zero
-                String trimmedRate = specificRate.trim().toLowerCase();
-                if (trimmedRate.isEmpty() || trimmedRate.equals("0") || trimmedRate.equals("0%") || trimmedRate.equals("free")) {
-                    info.dutyType = "AD_VALOREM";
-                    info.standardizedAVRate = 0.0;
-                } else {
-                    info.dutyType = "CONDITIONAL";
-                }
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Error parsing duty rate: " + specificRate + " - " + e.getMessage());
-            // Only mark as conditional if it's truly unparseable
-            String trimmedRate = specificRate.trim().toLowerCase();
-            if (trimmedRate.isEmpty() || trimmedRate.equals("0") || trimmedRate.equals("0%") || trimmedRate.equals("free")) {
-                info.dutyType = "AD_VALOREM";
-                info.standardizedAVRate = 0.0;
-            } else {
-                info.dutyType = "CONDITIONAL";
-            }
-        }
-        
-        return info;
-    }
-
-    /**
-     * Manual parsing for common duty rate patterns to ensure proper separation
-     * @param dutyText The duty rate text to parse
-     * @return DutyInfo with separated components, or null if cannot parse manually
-     */
-    private static DutyInfo manualParseDutyRate(String dutyText) {
-        if (dutyText == null || dutyText.trim().isEmpty()) {
-            return null;
-        }
-        
-        String text = dutyText.trim().toLowerCase();
-        DutyInfo info = new DutyInfo();
-        
-        // Check for complex conditional patterns first
-        if (isConditionalDutyPattern(text)) {
-            info.dutyType = "CONDITIONAL";
-            return info;
-        }
-        
-        // Pattern: "40 cents/kg + 10.4%"
-        if (text.matches(".*\\d+(?:\\.\\d+)?\\s*cent.*\\+.*\\d+(?:\\.\\d+)?\\s*%.*")) {
-            try {
-                // Extract cents amount
-                java.util.regex.Pattern centsPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*cent");
-                java.util.regex.Matcher centsMatcher = centsPattern.matcher(text);
-                
-                // Extract percentage
-                java.util.regex.Pattern percentPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%");
-                java.util.regex.Matcher percentMatcher = percentPattern.matcher(text);
-                
-                // Extract unit - handle both alphabetic and numeric units
-                java.util.regex.Pattern unitPattern = java.util.regex.Pattern.compile("cent[s]?/([a-zA-Z0-9]+)");
-                java.util.regex.Matcher unitMatcher = unitPattern.matcher(text);
-                
-                if (centsMatcher.find() && percentMatcher.find()) {
-                    double centsAmount = Double.parseDouble(centsMatcher.group(1));
-                    double percentRate = Double.parseDouble(percentMatcher.group(1));
-                    
-                    info.dutyType = "MIXED";
-                    info.specificDutyAmount = roundToPrecision(centsAmount / 100.0, 6); // Convert cents to dollars
-                    info.standardizedAVRate = roundToPrecision(percentRate, 6);
-                    info.currency = "USD";
-                    info.unit = unitMatcher.find() ? unitMatcher.group(1) : "kg";
-                    
-                    return info;
-                }
-            } catch (Exception e) {
-                // Fall through to return null
-            }
-        }
-        
-        // Pattern: "$1.50 per kg + 5.5%"
-        if (text.matches(".*\\$\\d+(?:\\.\\d+)?.*\\+.*\\d+(?:\\.\\d+)?\\s*%.*")) {
-            try {
-                // Extract dollar amount
-                java.util.regex.Pattern dollarPattern = java.util.regex.Pattern.compile("\\$(\\d+(?:\\.\\d+)?)");
-                java.util.regex.Matcher dollarMatcher = dollarPattern.matcher(text);
-                
-                // Extract percentage
-                java.util.regex.Pattern percentPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%");
-                java.util.regex.Matcher percentMatcher = percentPattern.matcher(text);
-                
-                // Extract unit - handle both alphabetic and numeric units
-                java.util.regex.Pattern unitPattern = java.util.regex.Pattern.compile("per\\s+([a-zA-Z0-9]+)");
-                java.util.regex.Matcher unitMatcher = unitPattern.matcher(text);
-                
-                if (dollarMatcher.find() && percentMatcher.find()) {
-                    double dollarAmount = Double.parseDouble(dollarMatcher.group(1));
-                    double percentRate = Double.parseDouble(percentMatcher.group(1));
-                    
-                    info.dutyType = "MIXED";
-                    info.specificDutyAmount = roundToPrecision(dollarAmount, 6);
-                    info.standardizedAVRate = roundToPrecision(percentRate, 6);
-                    info.currency = "USD";
-                    info.unit = unitMatcher.find() ? unitMatcher.group(1) : "kg";
-                    
-                    return info;
-                }
-            } catch (Exception e) {
-                // Fall through to return null
-            }
-        }
-        
-        // Pattern: just cents - "25 cents per kg" or "55.7 cents/1000"
-        if (text.matches(".*\\d+(?:\\.\\d+)?\\s*cent.*") && !text.contains("+") && !text.contains("%")) {
-            try {
-                java.util.regex.Pattern centsPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*cent");
-                java.util.regex.Matcher centsMatcher = centsPattern.matcher(text);
-                
-                // Extract unit - handle both alphabetic and numeric units, with or without "per"
-                java.util.regex.Pattern unitPattern = java.util.regex.Pattern.compile("cent[s]?\\s*(?:per\\s+)?(?:/\\s*)?([a-zA-Z0-9]+)");
-                java.util.regex.Matcher unitMatcher = unitPattern.matcher(text);
-                
-                if (centsMatcher.find()) {
-                    double centsAmount = Double.parseDouble(centsMatcher.group(1));
-                    
-                    info.dutyType = "SPECIFIC";
-                    info.specificDutyAmount = roundToPrecision(centsAmount / 100.0, 6);
-                    info.standardizedAVRate = 0.0;
-                    info.currency = "USD";
-                    info.unit = unitMatcher.find() ? unitMatcher.group(1) : "each";
-                    
-                    return info;
-                }
-            } catch (Exception e) {
-                // Fall through to return null
-            }
-        }
-        
-        // Pattern: just dollars - "$1.50 per 1000" or "$0.25/kg"
-        if (text.matches(".*\\$\\d+(?:\\.\\d+)?.*") && !text.contains("+") && !text.contains("%")) {
-            try {
-                java.util.regex.Pattern dollarPattern = java.util.regex.Pattern.compile("\\$(\\d+(?:\\.\\d+)?)");
-                java.util.regex.Matcher dollarMatcher = dollarPattern.matcher(text);
-                
-                // Extract unit - handle both alphabetic and numeric units, with or without "per"
-                java.util.regex.Pattern unitPattern = java.util.regex.Pattern.compile("\\$\\d+(?:\\.\\d+)?\\s*(?:per\\s+)?(?:/\\s*)?([a-zA-Z0-9]+)");
-                java.util.regex.Matcher unitMatcher = unitPattern.matcher(text);
-                
-                if (dollarMatcher.find()) {
-                    double dollarAmount = Double.parseDouble(dollarMatcher.group(1));
-                    
-                    info.dutyType = "SPECIFIC";
-                    info.specificDutyAmount = roundToPrecision(dollarAmount, 6);
-                    info.standardizedAVRate = 0.0;
-                    info.currency = "USD";
-                    info.unit = unitMatcher.find() ? unitMatcher.group(1) : "each";
-                    
-                    return info;
-                }
-            } catch (Exception e) {
-                // Fall through to return null
-            }
-        }
-        
-        return null; // Could not parse manually
-    }
-
-    /**
-     * Check if the duty text contains complex conditional patterns that should be classified as CONDITIONAL
-     * @param text The duty text in lowercase
-     * @return true if the text contains conditional patterns
-     */
-    private static boolean isConditionalDutyPattern(String text) {
-        // References to other headings/tariff classifications
-        if (text.contains("heading") || text.contains("subheading") || text.contains("tariff")) {
-            return true;
-        }
-        
-        // Complex mathematical formulas with conditions
-        if (text.contains("less") && text.contains("for each") && text.contains("degree")) {
-            return true;
-        }
-        
-        // "But not less than" or "but not more than" conditions
-        if (text.contains("but not less than") || text.contains("but not more than")) {
-            return true;
-        }
-        
-        // "Whichever is" conditions
-        if (text.contains("whichever is higher") || text.contains("whichever is lower") || 
-            text.contains("whichever is greater") || text.contains("whichever is less")) {
-            return true;
-        }
-        
-        // Temperature or other measurement-based conditions
-        if (text.contains("degrees") && (text.contains("under") || text.contains("over") || text.contains("above") || text.contains("below"))) {
-            return true;
-        }
-        
-        // Fraction or proportion-based calculations
-        if (text.contains("fractions") && text.contains("proportion")) {
-            return true;
-        }
-        
-        // Multiple rates with conditions
-        if (text.contains("applicable to") && text.contains("in heading")) {
-            return true;
-        }
-        
-        // Complex formulas with multiple operations
-        if ((text.contains("less") || text.contains("minus")) && 
-            (text.contains("for each") || text.contains("per degree") || text.contains("per unit"))) {
-            return true;
-        }
-        
-        // Rate references to other classifications
-        if (text.matches(".*rate.*applicable.*to.*")) {
-            return true;
-        }
-        
-        // Sliding scale duties
-        if (text.contains("sliding scale") || (text.contains("scale") && text.contains("rate"))) {
-            return true;
-        }
-        
-        return false;
-    }
-
-    /**
-     * Check if the duty text indicates a cents-based currency that should be converted to dollars
-     * @param dutyText The duty rate text
-     * @return true if the text indicates cents-based currency
-     */
-    private static boolean isCentsBasedCurrency(String dutyText) {
-        if (dutyText == null) return false;
-        
-        String lower = dutyText.toLowerCase();
-        // Check for cents explicitly mentioned
-        return lower.contains("cent") && !lower.contains("percent");
-    }
-
-    /**
-     * Format a number for output, removing unnecessary decimal places
-     * @param value The number to format
-     * @return Formatted string representation
-     */
-    private static String formatNumber(double value) {
-        if (value == 0.0) {
-            return "0";
-        }
-        
-        // Round to 6 decimal places first
-        double rounded = roundToPrecision(value, 6);
-        
-        // If it's effectively an integer, format as integer
-        if (Math.abs(rounded - Math.round(rounded)) < 1e-9) {
-            return String.valueOf(Math.round(rounded));
-        }
-        
-        // Otherwise format with appropriate precision, removing trailing zeros
-        String formatted = String.format("%.6f", rounded);
-        // Remove trailing zeros and decimal point if not needed
-        formatted = formatted.replaceAll("0*$", "").replaceAll("\\.$", "");
-        return formatted;
-    }
-
-    /**
-     * Extract currency type from duty text using pattern matching
-     * @param dutyText The duty rate text
-     * @return Currency type (USD, EUR, GBP, etc.) or empty string if unknown
-     */
-    private static String extractCurrencyType(String dutyText) {
-        if (dutyText == null) return "";
-        
-        String lower = dutyText.toLowerCase();
-        
-        // Common currency patterns - return original currency codes
-        if (lower.contains("$") || lower.contains("dollar") || lower.contains("usd")) {
-            return "USD";
-        } else if (lower.contains("cent")) {
-            return "USD"; // Cents are USD denomination
-        } else if (lower.contains("€") || lower.contains("euro") || lower.contains("eur")) {
-            return "EUR";
-        } else if (lower.contains("£") || lower.contains("pound") || lower.contains("gbp")) {
-            return "GBP";
-        } else if (lower.contains("¥") || lower.contains("yen") || lower.contains("jpy")) {
-            return "JPY";
-        }
-        
-        return ""; // Unknown currency
     }
 
     

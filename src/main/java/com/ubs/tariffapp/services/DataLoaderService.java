@@ -13,8 +13,13 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
@@ -34,8 +39,16 @@ import com.ubs.tariffapp.repositories.duty.CombinedDutyRepository;
 import com.ubs.tariffapp.repositories.duty.OtherDutyRepository;
 import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 @Service
 public class DataLoaderService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private static final int BATCH_SIZE = 100; // Process in batches
 
     @Autowired
     private CountryRepository countryRepository;
@@ -60,6 +73,9 @@ public class DataLoaderService {
     
     @Autowired
     private OtherDutyRepository otherDutyRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
     
 // ====================================================================================================================
     // Main method to load cleaned data
@@ -81,19 +97,41 @@ public class DataLoaderService {
 
             String line;
             int processedCount = 0;
+            int insertedCount = 0;
+            int skippedCount = 0;
             List<String> errors = new ArrayList<>();
+            List<String> batch = new ArrayList<>();
 
             while ((line = reader.readLine()) != null) {
-                try {
-                    processDataRow(line, processedCount++);                
-                } catch (Exception e) {
-                    String error = "Error processing row " + (processedCount + 1) + ": " + e.getMessage();
-                    errors.add(error);
-                    System.err.println(error);
+                batch.add(line);
+                
+                // Process in batches for better performance
+                if (batch.size() >= BATCH_SIZE) {
+                    var results = processBatchSafely(batch, processedCount);
+                    processedCount += batch.size();
+                    insertedCount += results[0];
+                    skippedCount += results[1];
+                    
+                    batch.clear();
+                    
+                    // Progress reporting every 1000 records
+                    if (processedCount % 1000 == 0) {
+                        System.out.println("Processed: " + processedCount + " rows (Inserted: " + insertedCount + ", Skipped: " + skippedCount + ")");
+                    }
                 }
             }
 
-            System.out.println("Data loading completed. Processed: " + processedCount + " rows");
+            // Process remaining batch
+            if (!batch.isEmpty()) {
+                var results = processBatchSafely(batch, processedCount);
+                processedCount += batch.size();
+                insertedCount += results[0];
+                skippedCount += results[1];
+            }
+
+            System.out.println("Data loading completed. Total rows processed: " + processedCount);
+            System.out.println("Records inserted: " + insertedCount);
+            System.out.println("Records skipped (duplicates): " + skippedCount);
             if (!errors.isEmpty()) {
                 System.err.println("Errors encountered: " + errors.size());
                 errors.forEach(System.err::println);
@@ -108,12 +146,97 @@ public class DataLoaderService {
         }
     }
 
-    private void processDataRow(String line, int rowNumber) {
-        String[] columns = parseCSVLine(line); // Use the same CSV parser as HSDataCleaner
+    public int[] processBatchSafely(List<String> batch, int startRowNumber) {
+        final int[] results = new int[2]; // [inserted, skipped]
+        
+        try {
+            transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+                @Override
+                protected void doInTransactionWithoutResult(TransactionStatus status) {
+                    for (int i = 0; i < batch.size(); i++) {
+                        try {
+                            boolean wasInserted = processDataRowFast(batch.get(i), startRowNumber + i);
+                            if (wasInserted) {
+                                results[0]++; // inserted
+                            } else {
+                                results[1]++; // skipped
+                            }
+                            
+                            // Force flush every 10 records to catch constraint violations early
+                            if (i > 0 && i % 10 == 0) {
+                                entityManager.flush();
+                            }
+                            
+                        } catch (DataIntegrityViolationException e) {
+                            if (e.getMessage() != null && 
+                                (e.getMessage().contains("unique_tariff_business_key") || 
+                                 e.getMessage().contains("duplicate key"))) {
+                                results[1]++; // skipped due to duplicate
+                            } else {
+                                throw e; // Re-throw other integrity violations
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Error processing row " + (startRowNumber + i + 1) + ": " + e.getMessage());
+                            results[1]++; // Count errors as skipped
+                        }
+                    }
+                    // Final flush
+                    entityManager.flush();
+                }
+            });
+        } catch (Exception e) {
+            // If the entire batch fails due to constraint violations, process individually
+            System.out.println("Batch failed, processing individually...");
+            return processIndividually(batch, startRowNumber);
+        }
+        
+        return results;
+    }
 
-        if (columns.length < 23) { // Now expecting 16 original + 7 new columns = 23
-            System.err.println("Skipping row " + rowNumber + " due to insufficient columns. Expected 23, got " + columns.length);
-            return;
+    private int[] processIndividually(List<String> batch, int startRowNumber) {
+        int insertedCount = 0;
+        int skippedCount = 0;
+        
+        for (int i = 0; i < batch.size(); i++) {
+            final int rowIndex = i;
+            final String line = batch.get(i);
+            
+            try {
+                Boolean wasInserted = transactionTemplate.execute(status -> {
+                    try {
+                        return processDataRowFast(line, startRowNumber + rowIndex);
+                    } catch (DataIntegrityViolationException e) {
+                        if (e.getMessage() != null && 
+                            (e.getMessage().contains("unique_tariff_business_key") || 
+                             e.getMessage().contains("duplicate key"))) {
+                            return false; // Duplicate
+                        } else {
+                            throw e;
+                        }
+                    }
+                });
+                
+                if (Boolean.TRUE.equals(wasInserted)) {
+                    insertedCount++;
+                } else {
+                    skippedCount++;
+                }
+                
+            } catch (Exception e) {
+                System.err.println("Error processing row " + (startRowNumber + i + 1) + ": " + e.getMessage());
+                skippedCount++;
+            }
+        }
+        
+        return new int[]{insertedCount, skippedCount};
+    }
+
+    private boolean processDataRowFast(String line, int rowNumber) {
+        String[] columns = parseCSVLine(line);
+
+        if (columns.length < 25) {
+            System.err.println("Skipping row " + rowNumber + " due to insufficient columns. Expected 25, got " + columns.length);
+            return false;
         }
 
         // Extract data from original columns (0-15)
@@ -145,31 +268,46 @@ public class DataLoaderService {
         String unit = columns[23].trim();
         String originalSpecificDuty = removeQuotes(columns[24].trim());
 
-        // Create or get entities
-        Country reporter = createOrGetCountry(reporterCode, reporterName, reporterISOCode);
-        Country partner = createOrGetCountry(partnerCode, partnerName, partnerISOCode);
-        Product product = createOrGetProduct(tlCode, description);
-        DutyType dutyType = createOrGetDutyType(dutyTypeCode, dutyCode, dutyTypeDescription);
+        try {
+            // Create or get entities
+            Country reporter = createOrGetCountry(reporterCode, reporterName, reporterISOCode);
+            Country partner = createOrGetCountry(partnerCode, partnerName, partnerISOCode);
+            Product product = createOrGetProduct(tlCode, description);
+            DutyType dutyType = createOrGetDutyType(dutyTypeCode, dutyCode, dutyTypeDescription);
 
-        // Create tariff schedule entry
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
-        tariffSchedule.setDutyType(dutyType);
-        tariffSchedule.setTariffYear(year);
-        tariffSchedule.setNote(note);
-        
-        if (!tlsSuffix.isEmpty()) {
-            tariffSchedule.setTlsSuffix(tlsSuffix);
+            // Normalize tlsSuffix for consistency
+            String normalizedTlsSuffix = (tlsSuffix.isEmpty() || tlsSuffix.equals("0")) ? null : tlsSuffix;
+
+            // Create tariff schedule entry
+            TariffSchedule tariffSchedule = new TariffSchedule();
+            tariffSchedule.setReporter(reporter);
+            tariffSchedule.setPartner(partner);
+            tariffSchedule.setProduct(product);
+            tariffSchedule.setDutyType(dutyType);
+            tariffSchedule.setTariffYear(year);
+            tariffSchedule.setNote(note);
+            tariffSchedule.setTlsSuffix(normalizedTlsSuffix);
+
+            // Attempt to save - let constraint violations be caught
+            tariffSchedule = tariffScheduleRepository.save(tariffSchedule);
+
+            // Create appropriate duty based on cleaned duty type analysis
+            createDutyEntryFromCleanedData(tariffSchedule, cleanedDutyType, avDutyRate, specificDutyRate, 
+                                         standardizedAVRate, specificDutyAmount, currency, unit, 
+                                         originalSpecificDuty, dutyNature, avMethod);
+            
+            return true; // Successfully inserted
+            
+        } catch (DataIntegrityViolationException e) {
+            // Handle duplicate key violations silently
+            if (e.getMessage() != null && 
+                (e.getMessage().contains("unique_tariff_business_key") || 
+                 e.getMessage().contains("duplicate key"))) {
+                return false; // Skip duplicate
+            } else {
+                throw e; // Re-throw other constraint violations
+            }
         }
-
-        tariffSchedule = tariffScheduleRepository.save(tariffSchedule);
-
-        // Create appropriate duty based on cleaned duty type analysis
-        createDutyEntryFromCleanedData(tariffSchedule, cleanedDutyType, avDutyRate, specificDutyRate, 
-                                     standardizedAVRate, specificDutyAmount, currency, unit, 
-                                     originalSpecificDuty, dutyNature, avMethod);
     }
 
     private String removeQuotes(String value) {
