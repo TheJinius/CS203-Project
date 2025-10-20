@@ -1,5 +1,57 @@
 # CS203-Project
 
-Our first steps to creating a successful tariff project!!! :DDDDDD
-We are going to Win the $5k
-LOCK TF IN GUYS
+
+## Project Setup Instructions
+
+Welcome to our CS203 tariff project! Follow these steps to set up and run the application:
+
+### 1. Backend Setup
+
+1. Open a terminal in the root project directory (`CS203-Project`).
+2. Run the following command to install backend dependencies:
+	```
+	mvn install
+	```
+
+### 2. Frontend Setup
+
+1. Navigate to the `frontend` directory:
+	```
+	cd frontend
+	```
+2. Install frontend dependencies:
+	```
+	npm install
+	```
+
+### 3. Running the Application
+
+#### Backend
+From the root project directory, start the backend server:
+```
+mvn spring-boot:run
+```
+
+#### Frontend
+From the `frontend` directory, start the frontend development server:
+```
+npm run dev
+```
+
+The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000).
+
+### 4. Running Backend Tests
+
+To run backend tests, make sure Docker Desktop is running on your machine. Some tests require Docker containers for database or service emulation.
+
+1. Start Docker Desktop (see [Docker Desktop install guide](https://docs.docker.com/desktop/)).
+2. Verify Docker is running by typing the following command in your terminal:
+	```
+	docker ps
+	```
+	If Docker is running, you will see a list of active containers (or an empty list if none are running). If you get an error, Docker is not running.
+2. In the root project directory, run:
+	```
+	mvn test
+	```
+If Docker is not running, tests may fail to start the required containers.

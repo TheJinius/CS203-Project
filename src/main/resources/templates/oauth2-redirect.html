@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth2 Redirect (Implicit Flow)</title>
+</head>
+<body>
+    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
+        <h1>OAuth2 Authentication - Implicit Flow</h1>
+        <div id="status">
+            <div style="color: blue;">
+                <h3>Processing Authentication...</h3>
+                <p>Please wait while we process your authentication response.</p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+            <h4>Debug Information:</h4>
+            <p><strong>URL:</strong> <span id="current-url">Loading...</span></p>
+            <p><strong>Code:</strong> <span th:text="${code ?: 'Not present'}">N/A</span></p>
+            <p><strong>State:</strong> <span th:text="${state ?: 'Not present'}">N/A</span></p>
+            <p><strong>Error:</strong> <span th:text="${error ?: 'None'}">N/A</span></p>
+            <p><strong>Error Description:</strong> <span th:text="${errorDescription ?: 'None'}">N/A</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Wait for page to load completely
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log("=== OAuth2 Redirect Handler - Implicit Flow ===");
+            
+            // Set current URL in debug section
+            document.getElementById('current-url').textContent = window.location.href;
+            
+            // Get current URL and fragment
+            const fullUrl = window.location.href;
+            const fragment = window.location.hash;
+            console.log("Full URL:", fullUrl);
+            console.log("URL fragment:", fragment);
+            
+            // Function to parse URL fragment for implicit flow tokens
+            function parseFragment(fragment) {
+                const params = {};
+                if (fragment && fragment.startsWith('#')) {
+                    const pairs = fragment.substring(1).split('&');
+                    pairs.forEach(pair => {
+                        const [key, value] = pair.split('=');
+                        if (key && value) {
+                            params[decodeURIComponent(key)] = decodeURIComponent(value);
+                        }
+                    });
+                }
+                return params;
+            }
+            
+            // Check for authentication data from implicit flow (in URL fragment)
+            if (fragment) {
+                console.log("Processing implicit flow response...");
+                const tokenData = parseFragment(fragment);
+                console.log("Token data from fragment:", tokenData);
+                
+                if (tokenData.access_token) {
+                    console.log("Success: Access token received!");
+                    console.log("Access Token:", tokenData.access_token);
+                    console.log("ID Token:", tokenData.id_token);
+                    console.log("Token Type:", tokenData.token_type || "Bearer");
+                    console.log("Expires In:", tokenData.expires_in);
+                    console.log("State:", tokenData.state);
+                    
+                    // Try to complete the OAuth2 flow with Swagger UI
+                    if (window.opener && window.opener.swaggerUIRedirectOauth2) {
+                        console.log("Calling swaggerUIRedirectOauth2...");
+                        try {
+                            window.opener.swaggerUIRedirectOauth2({
+                                auth: {
+                                    schema: {
+                                        get: function(key) {
+                                            if (key === 'flow') return 'implicit';
+                                            return null;
+                                        }
+                                    }
+                                },
+                                authId: 'oauth2',
+                                body: {
+                                    access_token: tokenData.access_token,
+                                    id_token: tokenData.id_token,
+                                    token_type: tokenData.token_type || 'Bearer',
+                                    expires_in: tokenData.expires_in,
+                                    state: tokenData.state
+                                },
+                                redirectUrl: window.location.href
+                            });
+                            console.log("Successfully called swaggerUIRedirectOauth2");
+                            setTimeout(() => window.close(), 1000); // Close after 1 second
+                        } catch (error) {
+                            console.error("Error calling swaggerUIRedirectOauth2:", error);
+                            displayManualInstructions(tokenData.access_token);
+                        }
+                    } else {
+                        console.log("Swagger UI callback not available, showing manual instructions");
+                        displayManualInstructions(tokenData.access_token);
+                    }
+                    
+                } else if (tokenData.error) {
+                    console.error("OAuth2 Error:", tokenData.error);
+                    console.error("Error Description:", tokenData.error_description);
+                    document.getElementById('status').innerHTML = `
+                        <div style="color: red;">
+                            <h3>Authentication Error</h3>
+                            <p><strong>Error:</strong> ${tokenData.error}</p>
+                            <p><strong>Description:</strong> ${tokenData.error_description || 'Unknown error'}</p>
+                        </div>
+                    `;
+                } else {
+                    console.log("ℹ️ No authentication data found in URL fragment");
+                    document.getElementById('status').innerHTML = `
+                        <div style="color: orange;">
+                            <h3>No Authentication Data</h3>
+                            <p>No tokens found in URL fragment. This might indicate an issue with the OAuth2 configuration.</p>
+                        </div>
+                    `;
+                }
+            } else {
+                console.log("ℹ️ No URL fragment found");
+                document.getElementById('status').innerHTML = `
+                    <div style="color: gray;">
+                        <h3>Waiting for Authentication</h3>
+                        <p>No authentication data received yet.</p>
+                    </div>
+                `;
+            }
+            
+            // Function to display manual token instructions
+            function displayManualInstructions(accessToken) {
+                document.getElementById('status').innerHTML = `
+                    <div style="color: green;">
+                        <h3>Authentication Successful!</h3>
+                        <p>Your access token has been generated. Here's how to use it in Swagger UI:</p>
+                        
+                        <div style="background: #f0f8ff; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #007bff;">
+                            <h4>Bearer Token Authentication</h4>
+                            <ol>
+                                <li>Go back to <a href="/swagger-ui.html" target="_blank">Swagger UI</a></li>
+                                <li>Click the "Authorize" button</li>
+                                <li>Look for the <strong>"bearerAuth (http, Bearer)"</strong> section</li>
+                                <li>In the text field, paste your token (without "Bearer " prefix)</li>
+                                <li>Click "Authorize" then "Close"</li>
+                            </ol>
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #ffc107;">
+                            <h4>About OAuth2 Section</h4>
+                            <p>The "oauth2" section has an "Authorize" button that redirects to AWS Cognito for authentication. Since you already completed the OAuth2 flow and got your token, you should use the <strong>Bearer Auth</strong> method above instead.</p>
+                        </div>
+                        
+                        <div style="background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; word-break: break-all;">
+                            <strong>Your Access Token (copy this):</strong><br>
+                            <code style="font-size: 12px; user-select: all; background: white; padding: 5px; border-radius: 3px; display: block; margin-top: 5px;">${accessToken}</code>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <button onclick="copyToClipboard('${accessToken}')" style="padding: 8px 16px; margin-right: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Copy Token
+                            </button>
+                            <button onclick="openSwaggerUI()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Open Swagger UI
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 10px; background: #d1ecf1; border-radius: 4px; border-left: 4px solid #17a2b8;">
+                            <small><strong>Note:</strong> Your token is valid for 1 hour. After it expires, you'll need to authenticate again through the OAuth2 flow.</small>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Function to copy token to clipboard
+            window.copyToClipboard = function(text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    alert('Token copied to clipboard!');
+                }, function(err) {
+                    console.error('Could not copy text: ', err);
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        alert('Token copied to clipboard!');
+                    } catch (err) {
+                        alert('Failed to copy token. Please copy it manually.');
+                    }
+                    document.body.removeChild(textArea);
+                });
+            };
+            
+            // Function to open Swagger UI
+            window.openSwaggerUI = function() {
+                window.open('/swagger-ui.html', '_blank');
+            };
+        });
+    </script>
+</body>
+</html>
