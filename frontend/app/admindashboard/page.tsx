@@ -1,17 +1,20 @@
 // app/dashboard/page.tsx
 'use client';
+import { useState } from 'react';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import TopBar from '../../components/TopBar';
-
 export default function DashboardPage() {
   const { user, signOut, isAdmin } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const onToggleSidebar = () => setSidebarOpen(prev => !prev);
 
   return (
     <ProtectedRoute>
@@ -23,7 +26,7 @@ export default function DashboardPage() {
               Sign Out
             </Button>
           </div>
-          <TopBar/>
+          <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={onToggleSidebar} />
 
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Welcome!</h2>

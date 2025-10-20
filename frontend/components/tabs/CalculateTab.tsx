@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,19 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
 import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts } from "@/lib/api"
+
+interface Product {
+  code: string
+  tlCode?: string
+  description?: string
+  name?: string
+  matchType?: string
+}
+
+interface Tariff {
+  tariffId: number
+  description?: string
+}
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
@@ -20,7 +33,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
-  const [selectedYear, setSelectedYear] = useState<string>("2023") // Add year state
+  const [selectedYear, setSelectedYear] = useState<string>("2023")
 
   // Product search state
   const [productSearchQuery, setProductSearchQuery] = useState<string>("")
@@ -28,10 +41,9 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
 
   // Calculate state  
-  const [availableTariffs, setAvailableTariffs] = useState<any[]>([])
+  const [availableTariffs, setAvailableTariffs] = useState<Tariff[]>([])
   const [selectedTariff, setSelectedTariff] = useState<string>("")
   const [amountOfProduct, setAmountOfProduct] = useState<string>("")
-  //const [currency, setCurrency] = useState<string>("USD")
 
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
@@ -43,7 +55,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
 
-  // Product search functionality
+  // Product search functionality - predefined products
   const predefinedProducts = [
     { code: "27079940", description: "Carbazole, Energy" },
     { code: "1012100", description: "Pure Bred Breeding Horses" },
@@ -51,15 +63,15 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
     { code: "74130000", description: "Copper Wire" }
   ]
 
-  // Product search API call with fallback to predefined products
-  const searchProducts = async (query: string) => {
+  // Product search API call with fallback to predefined products - wrapped in useCallback
+  const searchProducts = useCallback(async (query: string) => {
     try {
       // Try backend API first
       const { ok, data } = await apiSearchProducts(query, 5)
 
       if (ok && data.products && Array.isArray(data.products)) {
         console.log(`🔍 Backend search found ${data.products.length} results using ${data.searchType} search`)
-        return data.products.map((p: any) => ({
+        return data.products.map((p: Product) => ({
           code: p.code || p.tlCode,
           description: p.description || p.name || "No description available",
           matchType: p.matchType
@@ -96,7 +108,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
     }
-  }
+  }, []) // Empty dependency array since predefinedProducts is constant
 
   // Handle product search with debouncing
   useEffect(() => {
@@ -120,7 +132,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         clearTimeout(searchTimeout)
       }
     }
-  }, [productSearchQuery])
+  }, [productSearchQuery, searchProducts]) // Added searchProducts to dependencies
 
   // Helper function to get human-readable match type labels
   const getMatchTypeLabel = (matchType?: string) => {
@@ -168,7 +180,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         reporter: selectedDestination,
         partner: selectedSource,
         tlCode: selectedProduct,
-        year: parseInt(selectedYear), // Use dynamic year instead of hardcoded 2023
+        year: parseInt(selectedYear),
       })
       if (ok) {
         console.log(data);
@@ -296,7 +308,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   type="text"
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
-                  placeholder="Search by HS Code (e.g., 27079940) or description (e.g., carbazole)"
+                  placeholder="Search by HS Code or description"
                   className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-16"
                 />
                 {productSearchQuery && (
@@ -343,7 +355,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 )}
                 {productSearchQuery && productSearchResults.length === 0 && searchTimeout === null && (
                   <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg p-3 text-center text-sm text-slate-500 dark:text-slate-400">
-                    No products found matching "{productSearchQuery}"
+                    No products found matching &quot;{productSearchQuery}&quot;
                   </div>
                 )}
               </div>

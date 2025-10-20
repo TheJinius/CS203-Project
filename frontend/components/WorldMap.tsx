@@ -1,9 +1,31 @@
 import { useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 
+// Define proper types for Mapbox
+interface MapboxMap {
+  remove: () => void
+  addControl: (control: unknown, position?: string) => void
+  on: (event: string, callback: () => void) => void
+}
+
+declare global {
+  interface Window {
+    mapboxgl: {
+      accessToken: string
+      Map: new (options: {
+        container: HTMLElement
+        style: string
+        center: [number, number]
+        zoom: number
+      }) => MapboxMap
+      NavigationControl: new () => unknown
+    }
+  }
+}
+
 export default function WorldMap() {
-  const mapContainer = useRef(null)
-  const map = useRef(null)
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<MapboxMap | null>(null)
 
   useEffect(() => {
     // Only initialize map once
@@ -34,7 +56,7 @@ export default function WorldMap() {
       if (!window.mapboxgl || !mapContainer.current) return
 
       // You'll need to replace this with your actual Mapbox access token
-      window.mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+      window.mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
       map.current = new window.mapboxgl.Map({
         container: mapContainer.current,

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, Bug } from "lucide-react"
+import { EyeOff, Bug } from "lucide-react"
 
 export default function DebugAuth() {
   const [showDebug, setShowDebug] = useState(false)

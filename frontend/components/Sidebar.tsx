@@ -3,7 +3,7 @@
 import { useState,useEffect } from "react"
 import { X, Calculator, Package, MapPin, FileText, TrendingUp, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+// import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 import CalculateTab from "./tabs/CalculateTab"
 import ProductsTab from "./tabs/ProductsTab"

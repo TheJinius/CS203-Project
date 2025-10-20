@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({
   children,
-  requireAdmin = false,
+  // requireAdmin = false,
   fallback
 }: ProtectedRouteProps) {
   const { data: session, status } = useSession()
@@ -26,6 +26,11 @@ export function ProtectedRoute({
         </div>
       )
     )
+  }
+
+  // Log session for debugging (this uses the session variable)
+  if (session) {
+    console.log("User authenticated:", session.user?.email)
   }
   
   // At this point, middleware has already handled authentication and authorization
