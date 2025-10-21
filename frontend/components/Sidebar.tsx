@@ -45,14 +45,13 @@ export default function Sidebar({
     }
   }, [activeTab, isAdmin, onTabChange])
 
-  const sidebarItems = [
-    { id: "calculate", label: "Calculate Tariff", icon: Calculator },
-    { id: "products", label: "Products", icon: Package },
-    { id: "countries", label: "Countries", icon: MapPin },
-    { id: "tariffs", label: "Tariffs", icon: FileText },
-    { id: "results", label: "Results", icon: TrendingUp },
-    // Only include "Edit tariffs" if user is admin
-    ...(isAdmin() ? [{ id: "edit", label: "Edit Tariffs", icon: Edit }] : []),
+  const tabs = [
+    { id: "calculate", name: "Calculate", icon: Calculator },
+    { id: "products", name: "Products", icon: Package },
+    { id: "countries", name: "Countries", icon: MapPin },
+    { id: "tariffs", name: "Tariffs", icon: FileText },
+    { id: "results", name: "Results", icon: TrendingUp },
+    ...(isAdmin() ? [{ id: "edit", name: "Edit Tariff", icon: Edit }] : []),
   ]
 
   if (!isOpen) return null
@@ -87,7 +86,7 @@ export default function Sidebar({
 
         {/* Navigation Tabs */}
         <nav className="space-y-1">
-          {sidebarItems.map((item) => {
+          {tabs.map((item) => {
             const Icon = item.icon
             return (
               <Button
@@ -106,7 +105,7 @@ export default function Sidebar({
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
                 <span className={`truncate ${width < 350 ? 'text-xs' : 'text-sm'}`}>
-                  {item.label}
+                  {item.name}
                 </span>
               </Button>
             )
@@ -116,7 +115,7 @@ export default function Sidebar({
 
       {/* Tab Content Container with proper overflow handling */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto p-6">
           {/* Calculate Tab - Full height container */}
           {activeTab === "calculate" && (
             <div className="h-full">
@@ -129,36 +128,12 @@ export default function Sidebar({
           )}
           
           {/* Other Tabs - Standard padding */}
-          {activeTab === "products" && (
-            <div className="p-4">
-              <ProductsTab />
-            </div>
-          )}
-          
-          {activeTab === "countries" && (
-            <div className="p-4">
-              <CountriesTab />
-            </div>
-          )}
-          
-          {activeTab === "tariffs" && (
-            <div className="p-4">
-              <TariffsTab />
-            </div>
-          )}
-          
-          {activeTab === "results" && (
-            <div className="p-4">
-              <ResultsTab calculationResult={calculationResult} />
-            </div>
-          )}
-          
+          {activeTab === "products" && <ProductsTab />}
+          {activeTab === "countries" && <CountriesTab />}
+          {activeTab === "tariffs" && <TariffsTab />}
+          {activeTab === "results" && <ResultsTab calculationResult={calculationResult} currency={currency} />}
           {/* Access control: only render edit tab for admins */}
-          {activeTab === "edit" && isAdmin() && (
-            <div className="p-4">
-              <EditTariffTab />
-            </div>
-          )}
+          {activeTab === "edit" && isAdmin() && <EditTariffTab />}
         </div>
       </div>
 
