@@ -1,5 +1,6 @@
 "use client"
-import { useState, useRef, useEffect } from "react"
+
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,15 +21,17 @@ export default function FloatingChatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hello! I'm your tariff compliance assistant. Ask me anything about tariff rules, HS classifications, or documentation requirements.",
+      content:
+        "Hello! I'm your tariff compliance assistant. Ask me anything about tariff rules, HS classifications, or documentation requirements.",
     },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [hoveredSource, setHoveredSource] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
@@ -40,48 +43,61 @@ export default function FloatingChatbot() {
     const userMessage = input.trim()
     setInput("")
     setError("")
-
-    // Add user message
     setMessages((prev) => [...prev, { role: "user", content: userMessage }])
     setLoading(true)
 
     try {
       const response = await fetch("http://127.0.0.1:8000/query", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: userMessage }),
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
 
       const data = await response.json()
-
-      // Add assistant message with sources
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: data.response,
-          sources: data.sources,
-        },
+        { role: "assistant", content: data.response, sources: data.sources },
       ])
     } catch (err) {
       console.error("Chatbot error:", err)
-      setError("Failed to get response from chatbot. Please make sure the Python backend is running on http://127.0.0.1:8000")
+      setError(
+        "Failed to get response from chatbot. Please make sure the Python backend is running on http://127.0.0.1:8000"
+      )
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
+        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
       ])
     } finally {
       setLoading(false)
     }
+  }
+
+  // Calculate total source text length for the hovered message
+  const getSourcesLength = (index: number) => {
+    const message = messages[index]
+    if (!message?.sources) return 0
+    return message.sources.reduce((acc, source) => acc + source.text.length, 0)
+  }
+
+  // Determine if we should expand the chatbot based on sources
+  const shouldExpand = hoveredSource !== null && getSourcesLength(hoveredSource) > 500
+
+  const handleMouseEnterSource = (index: number) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    setHoveredSource(index)
+  }
+
+  const handleMouseLeaveSource = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredSource(null)
+    }, 150)
   }
 
   return (
@@ -97,9 +113,13 @@ export default function FloatingChatbot() {
         </button>
       )}
 
-      {/* Chat Window */}
+      {/* Chat Window - Dynamic sizing, fixed right edge */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-96 h-[600px] shadow-2xl flex flex-col z-50 animate-in slide-in-from-bottom-4">
+        <Card
+          className={`fixed bottom-6 right-6 shadow-2xl flex flex-col z-50 animate-in slide-in-from-bottom-4 transition-all duration-300 ${
+            shouldExpand ? "w-[48rem] h-[700px]" : "w-96 h-[600px]"
+          }`}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
             <CardTitle className="flex items-center gap-2 text-lg">
               <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
@@ -107,12 +127,7 @@ export default function FloatingChatbot() {
               </div>
               Compliance Assistant
             </CardTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           </CardHeader>
@@ -129,9 +144,7 @@ export default function FloatingChatbot() {
               {messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`flex gap-3 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {message.role === "assistant" && (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
@@ -139,39 +152,70 @@ export default function FloatingChatbot() {
                     </div>
                   )}
 
-                  <div
-                    className={`max-w-[75%] ${
-                      message.role === "user"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 dark:bg-gray-800"
-                    } rounded-lg p-3`}
-                  >
-                    <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  <div className="flex-1 flex flex-col">
+                    <div
+                      className={`${
+                        message.role === "user"
+                          ? "bg-blue-600 text-white self-end max-w-[75%]"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 self-start"
+                      } rounded-lg p-3`}
+                    >
+                      <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                    </div>
 
-                    {/* Show sources if available */}
-                    {message.sources && message.sources.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-                        <p className="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-400">
-                          Sources:
-                        </p>
-                        <div className="space-y-2">
-                          {message.sources.map((source, idx) => (
-                            <div
-                              key={idx}
-                              className="text-xs p-2 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700"
-                            >
-                              <p className="font-medium text-gray-700 dark:text-gray-300">
-                                📄 {source.source_document}
-                              </p>
-                              <p className="text-gray-500 dark:text-gray-400 mt-1">
-                                Lines: {source.line_range}
-                              </p>
-                              <p className="text-gray-600 dark:text-gray-300 mt-1 italic line-clamp-2">
-                                "{source.text.substring(0, 100)}..."
-                              </p>
+                    {/* Sources button aligned to the right */}
+                    {message.role === "assistant" && message.sources && message.sources.length > 0 && (
+                      <div
+                        className="flex justify-end mt-2 relative"
+                        onMouseEnter={() => handleMouseEnterSource(index)}
+                        onMouseLeave={handleMouseLeaveSource}
+                      >
+                        <button
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors cursor-pointer"
+                          aria-label="Show sources"
+                        >
+                          Sources · {message.sources.length}
+                        </button>
+
+                        {hoveredSource === index && (
+                          <div
+                            className={`absolute top-full right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4 z-[60] ${
+                              shouldExpand ? "w-[42rem] max-h-[32rem]" : "w-[28rem] max-h-[22rem]"
+                            } overflow-auto`}
+                            onMouseEnter={() => handleMouseEnterSource(index)}
+                            onMouseLeave={handleMouseLeaveSource}
+                          >
+                            <div className="space-y-3">
+                              {message.sources.map((source, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+                                >
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold">
+                                      {idx + 1}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-all">
+                                        {source.source_document}
+                                      </p>
+                                      {source.line_range && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                          Lines: {source.line_range}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* FULL SOURCE TEXT */}
+                                  <div className="mt-2 p-3 bg-white dark:bg-gray-900 rounded text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap border-l-2 border-blue-500">
+                                    {source.text}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -208,11 +252,7 @@ export default function FloatingChatbot() {
                 className="flex-1"
               />
               <Button type="submit" disabled={loading || !input.trim()} size="icon">
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </form>
           </CardContent>
