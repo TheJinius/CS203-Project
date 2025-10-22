@@ -33,7 +33,7 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
 
   return (
     <>
-      <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4">
+      <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 relative z-20">
         <div className="flex items-center">
           {!sidebarOpen && (
             <Button variant="ghost" size="sm" onClick={onToggleSidebar} className="mr-4">

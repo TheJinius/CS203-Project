@@ -1,0 +1,5 @@
+python-dotenv
+openai>=1.37.0
+pinecone-client>=5.0.0
+fastapi
+uvicorn

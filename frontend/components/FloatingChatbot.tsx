@@ -82,7 +82,8 @@ export default function FloatingChatbot() {
   }
 
   // Determine if we should expand the chatbot based on sources
-  const shouldExpand = hoveredSource !== null && getSourcesLength(hoveredSource) > 500
+  // Expand if there are sources being hovered (regardless of length)
+  const shouldExpand = hoveredSource !== null
 
   const handleMouseEnterSource = (index: number) => {
     if (hoverTimeoutRef.current) {

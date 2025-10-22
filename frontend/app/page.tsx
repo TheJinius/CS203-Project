@@ -69,15 +69,15 @@ export default function TariffCalculatorPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
-        {/* Sidebar Container */}
-        {sidebarOpen && (
-          <div
-            ref={sidebarRef}
-            className={`relative flex-shrink-0 transition-all duration-200 ease-in-out ${
-              isResizing ? 'select-none' : ''
-            }`}
-            style={{ width: `${sidebarWidth}px` }}
-          >
+        {/* Sidebar Container - Always rendered but width animates */}
+        <div
+          ref={sidebarRef}
+          className={`relative flex-shrink-0 transition-all duration-500 ease-out ${
+            isResizing ? 'select-none' : ''
+          }`}
+          style={{ width: sidebarOpen ? `${sidebarWidth}px` : '0px' }}
+        >
+          {sidebarOpen && (
             <Sidebar
               isOpen={sidebarOpen}
               activeTab={activeTab}
@@ -87,8 +87,10 @@ export default function TariffCalculatorPage() {
               onCalculationResult={setCalculationResult}
               width={sidebarWidth}
             />
-            
-            {/* Improved Resize Handle */}
+          )}
+          
+          {/* Improved Resize Handle - Only show when sidebar is open */}
+          {sidebarOpen && (
             <div
               className={`absolute top-0 right-0 h-full w-1 bg-transparent hover:bg-blue-200 dark:hover:bg-blue-800 cursor-col-resize group transition-all duration-200 z-10 ${
                 isResizing ? 'bg-blue-300 dark:bg-blue-700' : ''
@@ -108,11 +110,11 @@ export default function TariffCalculatorPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 transition-all duration-500 ease-out">
           <TopBar 
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
