@@ -9,7 +9,6 @@ import com.ubs.tariffapp.models.dto.TariffResponse;
 import com.ubs.tariffapp.models.duty.*;
 import com.ubs.tariffapp.repositories.*;
 import com.ubs.tariffapp.repositories.duty.*;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class TariffManagementService {
 
     private final TariffScheduleRepository tariffRepository;
@@ -32,6 +30,27 @@ public class TariffManagementService {
     private final SpecificDutyRepository specificDutyRepository;
     private final CombinedDutyRepository combinedDutyRepository;
     private final OtherDutyRepository otherDutyRepository;
+
+    // Manual constructor (replaces @RequiredArgsConstructor)
+    public TariffManagementService(TariffScheduleRepository tariffRepository,
+                                 CountryRepository countryRepository,
+                                 ProductRepository productRepository,
+                                 DutyTypeRepository dutyTypeRepository,
+                                 DutyRepository dutyRepository,
+                                 AdValoremDutyRepository adValoremDutyRepository,
+                                 SpecificDutyRepository specificDutyRepository,
+                                 CombinedDutyRepository combinedDutyRepository,
+                                 OtherDutyRepository otherDutyRepository) {
+        this.tariffRepository = tariffRepository;
+        this.countryRepository = countryRepository;
+        this.productRepository = productRepository;
+        this.dutyTypeRepository = dutyTypeRepository;
+        this.dutyRepository = dutyRepository;
+        this.adValoremDutyRepository = adValoremDutyRepository;
+        this.specificDutyRepository = specificDutyRepository;
+        this.combinedDutyRepository = combinedDutyRepository;
+        this.otherDutyRepository = otherDutyRepository;
+    }
 
     @Transactional
     public TariffResponse createTariff(TariffRequest request) {
