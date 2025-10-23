@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Edit, Plus, CheckCircle, XCircle, Trash2 } from "lucide-react"
+import { ArrowLeft, Search, Edit, Plus, CheckCircle, XCircle, Trash2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { searchProducts as apiSearchProducts } from "@/lib/api"
 import { getSession, signOut } from "next-auth/react"
@@ -52,6 +52,14 @@ interface TariffRequest {
   compoundRate2?: number
 }
 
+interface NotificationPopup {
+  show: boolean
+  type: 'success' | 'error'
+  title: string
+  message: string
+  details?: string
+}
+
 export default function EditTariffTab() {
   // Search state (same as CalculateTab)
   const [selectedProduct, setSelectedProduct] = useState<string>("")
@@ -85,6 +93,15 @@ export default function EditTariffTab() {
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = manage
 
+  // UPDATED: Notification popup state (only for success/error operations)
+  const [notification, setNotification] = useState<NotificationPopup>({
+    show: false,
+    type: 'success',
+    title: '',
+    message: '',
+    details: ''
+  })
+
   // Predefined products (same as CalculateTab)
   const predefinedProducts = [
     { code: "27079940", description: "Carbazole, Energy" },
@@ -92,6 +109,22 @@ export default function EditTariffTab() {
     { code: "29092000", description: "Cyclanic, Pharmaceutical" },
     { code: "74130000", description: "Copper Wire" }
   ]
+
+  // UPDATED: Show notification popup (only for update/delete operations)
+  const showNotification = (type: 'success' | 'error', title: string, message: string, details?: string) => {
+    setNotification({
+      show: true,
+      type,
+      title,
+      message,
+      details
+    })
+  }
+
+  // Hide notification popup
+  const hideNotification = () => {
+    setNotification(prev => ({ ...prev, show: false }))
+  }
 
   // Product search functionality (same as CalculateTab)
   const searchProducts = useCallback(async (query: string) => {
@@ -190,7 +223,7 @@ export default function EditTariffTab() {
     }
   }
 
-  // Search for tariffs (same pattern as CalculateTab)
+  // UPDATED: Search for tariffs (NO popup, just inline success message)
   const handleSearchTariffs = async () => {
     setLoading(true)
     setError("")
@@ -220,9 +253,12 @@ export default function EditTariffTab() {
       setAvailableTariffs(data.tariffs || [])
       setStep(2)
       setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
+      
+      // NO popup for search results - just inline message
     } catch (e) {
       const error = e as Error
       setError(`Search failed: ${error.message}`)
+      // NO popup for search errors - just inline message
     }
     setLoading(false)
   }
@@ -268,11 +304,12 @@ export default function EditTariffTab() {
     } catch (e) {
       const error = e as Error
       setError(`Failed to load tariff: ${error.message}`)
+      // NO popup for load errors - just inline message
     }
     setLoading(false)
   }
 
-  // Save tariff changes
+  // UPDATED: Save tariff changes with notification popup
   const handleSaveTariff = async () => {
     if (!selectedTariff) return
     
@@ -293,22 +330,40 @@ export default function EditTariffTab() {
         throw new Error(errorData.message || `Update failed (${response.status})`)
       }
 
+      const updatedTariff = await response.json()
+      
       setSuccess("Tariff updated successfully!")
       setIsEditDialogOpen(false)
       setSelectedTariff(null)
+      
+      // Show SUCCESS popup
+      showNotification(
+        'success',
+        'Tariff Updated!',
+        `Tariff ID ${selectedTariff.tariffId} has been successfully updated`,
+        `Product: ${editFormData.tlCode}\nRoute: ${editFormData.partnerCode} → ${editFormData.reporterCode}\nYear: ${editFormData.tariffYear}`
+      )
       
       // Refresh the tariff list
       await handleSearchTariffs()
     } catch (e) {
       const error = e as Error
       setError(`Update failed: ${error.message}`)
+      
+      // Show ERROR popup
+      showNotification(
+        'error',
+        'Update Failed',
+        `Failed to update tariff ${selectedTariff.tariffId}`,
+        error.message
+      )
     }
     setLoading(false)
   }
 
-  // Delete tariff
+  // UPDATED: Delete tariff with notification popup
   const handleDeleteTariff = async (tariff: TariffData) => {
-    if (!confirm(`Are you sure you want to delete tariff ${tariff.tariffId}?`)) return
+    if (!confirm(`Are you sure you want to delete tariff ${tariff.tariffId}?\n\nProduct: ${tariff.tlCode} - ${tariff.productDescription}\nRoute: ${tariff.partnerName} → ${tariff.reporterName}`)) return
     
     setLoading(true)
     try {
@@ -327,11 +382,27 @@ export default function EditTariffTab() {
 
       setSuccess("Tariff deleted successfully!")
       
+      // Show SUCCESS popup
+      showNotification(
+        'success',
+        'Tariff Deleted!',
+        `Tariff ID ${tariff.tariffId} has been permanently deleted`,
+        `Product: ${tariff.tlCode} - ${tariff.productDescription}`
+      )
+      
       // Refresh the tariff list
       await handleSearchTariffs()
     } catch (e) {
       const error = e as Error
       setError(`Delete failed: ${error.message}`)
+      
+      // Show ERROR popup
+      showNotification(
+        'error',
+        'Delete Failed',
+        `Failed to delete tariff ${tariff.tariffId}`,
+        error.message
+      )
     }
     setLoading(false)
   }
@@ -611,7 +682,83 @@ export default function EditTariffTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Status Messages */}
+      {/* UPDATED: Smaller Notification Popup (ONLY for update/delete operations) */}
+      {notification.show && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className={`w-full max-w-md mx-auto rounded-lg shadow-xl border transform transition-all duration-300 ${
+            notification.type === 'success' 
+              ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700' 
+              : 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700'
+          }`}>
+            <div className="p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {notification.type === 'success' ? (
+                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  )}
+                  <h3 className={`text-lg font-bold ${
+                    notification.type === 'success' 
+                      ? 'text-green-900 dark:text-green-100'
+                      : 'text-red-900 dark:text-red-100'
+                  }`}>
+                    {notification.title}
+                  </h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={hideNotification}
+                  className={`${
+                    notification.type === 'success' 
+                      ? 'text-green-600 hover:text-green-700 hover:bg-green-100 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-800'
+                      : 'text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-800'
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <p className={`text-sm mb-3 ${
+                notification.type === 'success' 
+                  ? 'text-green-800 dark:text-green-200'
+                  : 'text-red-800 dark:text-red-200'
+              }`}>
+                {notification.message}
+              </p>
+              
+              {notification.details && (
+                <div className={`p-3 rounded text-xs mb-3 ${
+                  notification.type === 'success' 
+                    ? 'bg-green-100 dark:bg-green-800/50 text-green-800 dark:text-green-200'
+                    : 'bg-red-100 dark:bg-red-800/50 text-red-800 dark:text-red-200'
+                }`}>
+                  <div className="whitespace-pre-line font-mono">
+                    {notification.details}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={hideNotification}
+                  className={`${
+                    notification.type === 'success' 
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  Got it
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPDATED: Status Messages (matching CalculateTab styling exactly) */}
       {(error || success) && (
         <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${success
             ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
