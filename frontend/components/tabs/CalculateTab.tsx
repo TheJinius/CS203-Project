@@ -225,7 +225,16 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       if (ok) {
         const tariffAmountUSD = data.tariffAmount // Backend returns in USD
         setBaseTariffAmountUSD(tariffAmountUSD) // Store USD base amount
-        setCalculationDetails(data.calculationDetails) // Store calculation details
+        
+        // Debug logging - NOW READING DIRECTLY FROM RESPONSE
+        console.log('🔍 FULL RESPONSE DATA:', JSON.stringify(data, null, 2))
+        console.log('🔍 steps (direct):', data.steps)
+        console.log('🔍 steps type:', typeof data.steps)
+        console.log('🔍 steps length:', data.steps?.length)
+        console.log('🔍 dutyType:', data.dutyType)
+        console.log('🔍 formula:', data.formula)
+        
+        setCalculationDetails(data) // Store entire response as calculation details
 
         // Convert to selected currency
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
@@ -520,6 +529,10 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <CardTitle className="text-base flex items-center gap-2 text-blue-900 dark:text-blue-100">
               <Calculator className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               Calculation Logic
+              {/* Debug indicator */}
+              <span className="text-xs text-gray-500">
+                (Steps: {calculationDetails.steps?.length || 0})
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-3 text-sm">
@@ -539,6 +552,11 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Duty Type</div>
                 <div className="text-slate-600 dark:text-slate-400 text-xs">
                   {calculationDetails.dutyType}
+                  {calculationDetails.combinationType && (
+                    <span className="ml-2 text-purple-600 dark:text-purple-400">
+                      ({calculationDetails.combinationType})
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -553,56 +571,41 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
               </div>
             )}
 
-            {/* Parameters */}
-            <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
-              <div className="font-medium text-slate-900 dark:text-slate-100 mb-2">Parameters</div>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Product Value:</span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100">
-                    ${parseFloat(amountOfProduct).toFixed(2)}
-                  </span>
+            {/* Step-by-Step Calculation */}
+            {calculationDetails.steps && calculationDetails.steps.length > 0 && (
+              <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded border border-emerald-200 dark:border-emerald-800">
+                <div className="font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  Step-by-Step Calculation
                 </div>
-                {calculationDetails.rate && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Rate:</span>
-                    <span className="font-mono text-slate-900 dark:text-slate-100">
-                      {calculationDetails.rate}
-                    </span>
-                  </div>
-                )}
-                {calculationDetails.amountPerUnit && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Amount per Unit:</span>
-                    <span className="font-mono text-slate-900 dark:text-slate-100">
-                      {calculationDetails.amountPerUnit}
-                    </span>
-                  </div>
-                )}
-                {calculationDetails.multiplier && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Multiplier:</span>
-                    <span className="font-mono text-slate-900 dark:text-slate-100">
-                      {calculationDetails.multiplier}
-                    </span>
-                  </div>
-                )}
-                {calculationDetails.combinationType && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Combination Type:</span>
-                    <span className="font-mono text-slate-900 dark:text-slate-100 text-xs">
-                      {calculationDetails.combinationType}
-                    </span>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  {calculationDetails.steps.map((step: any, index: number) => (
+                    <div 
+                      key={index} 
+                      className="flex items-start gap-2 p-2 bg-white dark:bg-slate-800 rounded border border-emerald-100 dark:border-emerald-900"
+                    >
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 dark:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center">
+                        {step.step}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-0.5">
+                          {step.description}
+                        </div>
+                        <div className="text-xs font-mono text-emerald-700 dark:text-emerald-400 break-all">
+                          {step.value}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Calculation */}
+            {/* Summary Calculation (one-liner) */}
             {calculationDetails.calculation && (
-              <div className="p-2 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded border border-green-200 dark:border-green-800">
-                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Calculation</div>
-                <div className="text-green-700 dark:text-green-400 font-mono text-xs break-all">
+              <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1 text-xs">Full Calculation</div>
+                <div className="text-blue-700 dark:text-blue-400 font-mono text-xs break-all">
                   {calculationDetails.calculation}
                 </div>
               </div>

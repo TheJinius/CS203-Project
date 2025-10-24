@@ -41,6 +41,16 @@ public class DutyController {
         this.exchangeRateService = exchangeRateService;
     }
 
+    // TEST ENDPOINT - Check if backend is working
+    @PostMapping("/test")
+    public ResponseEntity<Map<String, String>> testEndpoint() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "🔥 NEW BACKEND CODE IS RUNNING! 🔥");
+        response.put("timestamp", java.time.LocalDateTime.now().toString());
+        System.out.println("🔥🔥🔥 TEST ENDPOINT HIT! Backend code is working!");
+        return ResponseEntity.ok(response);
+    }
+
     // NEW ENDPOINT 1: Search for available tariffs
     @PostMapping("/search")
     public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
@@ -144,11 +154,24 @@ public class DutyController {
             response.put("tariffAmount", convertedAmount);
             response.put("currency", requestedCurrency);
             response.put("tariffId", request.getTariffId());
-            response.put("calculationDetails", getCalculationDetails(request.getTariffId(), request.getAmountOfProduct()));
             response.put("status", "success");
+            response.put("cacheBuster", System.currentTimeMillis()); // Force cache invalidation
+            response.put("PROOF_NEW_CODE_IS_RUNNING", "🚀 VERSION 2.0 🚀"); // UNIQUE MARKER
+            
+            // Add calculation details directly to response (flattened, not nested)
+            Map<String, Object> calcDetails = getCalculationDetails(request.getTariffId(), request.getAmountOfProduct());
+            System.out.println("🔍 DEBUG: calcDetails has " + calcDetails.size() + " entries");
+            System.out.println("🔍 DEBUG: calcDetails keys: " + calcDetails.keySet());
+            response.putAll(calcDetails); // Merge all calculation details into main response
 
-            System.out.println("✅ SUCCESS: Calculated tariff = " + convertedAmount + " " + requestedCurrency);
-            return ResponseEntity.ok(response);
+            System.out.println("🔥🔥🔥 NEW CODE RUNNING! Tariff = " + convertedAmount + " " + requestedCurrency);
+            System.out.println("🔍 DEBUG: Final response has " + response.size() + " entries");
+            System.out.println("🔍 DEBUG: Final response keys: " + response.keySet());
+            return ResponseEntity.ok()
+                .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                .header("Pragma", "no-cache")
+                .header("Expires", "0")
+                .body(response);
 
         } catch (TariffNotFoundException e) {
             System.err.println("❌ TariffNotFoundException: " + e.getMessage());
@@ -203,6 +226,7 @@ public class DutyController {
 
     // Helper method to get calculation details for a specific tariff
     private Map<String, Object> getCalculationDetails(Integer tariffId, double amountOfProduct) {
+        System.out.println("🔍 DEBUG: getCalculationDetails called with tariffId=" + tariffId + ", amount=" + amountOfProduct);
         Map<String, Object> details = new HashMap<>();
         
         try {
@@ -219,21 +243,84 @@ public class DutyController {
                 if (duty instanceof AdValoremDuty) {
                     AdValoremDuty adValoremDuty = (AdValoremDuty) duty;
                     double rate = adValoremDuty.getRatePercent().doubleValue();
-                    details.put("formula", "Tariff = Product Value × Rate");
-                    details.put("calculation", String.format("$%.2f × %.2f%% = $%.2f", 
-                        amountOfProduct, rate, amountOfProduct * rate / 100.0));
-                    details.put("rate", rate + "%");
+                    double tariffResult = amountOfProduct * rate / 100.0;
+                    
+                    details.put("dutyTypeCode", "AD_VALOREM");
+                    details.put("formula", "Tariff = Product Value × (Ad Valorem Rate / 100)");
+                    details.put("rate", rate);
+                    details.put("rateDisplay", rate + "%");
+                    details.put("productValue", amountOfProduct);
+                    details.put("tariffResult", tariffResult);
+                    
+                    // Step-by-step breakdown
+                    List<Map<String, String>> steps = new ArrayList<>();
+                    steps.add(Map.of(
+                        "step", "1",
+                        "description", "Product Value",
+                        "value", String.format("$%.2f", amountOfProduct)
+                    ));
+                    steps.add(Map.of(
+                        "step", "2",
+                        "description", "Ad Valorem Rate",
+                        "value", String.format("%.2f%%", rate)
+                    ));
+                    steps.add(Map.of(
+                        "step", "3",
+                        "description", "Calculate Tariff",
+                        "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, tariffResult)
+                    ));
+                    details.put("steps", steps);
+                    details.put("calculation", String.format("$%.2f × (%.2f / 100) = $%.2f", 
+                        amountOfProduct, rate, tariffResult));
+                    
+                    System.out.println("🔍 DEBUG AdValorem: Created details map with " + steps.size() + " steps");
                     
                 } else if (duty instanceof SpecificDuty) {
                     SpecificDuty specificDuty = (SpecificDuty) duty;
                     double amount = specificDuty.getAmount().doubleValue();
                     double multiplier = specificDuty.getMultiplier().doubleValue();
+                    double units = amountOfProduct / multiplier;
+                    double tariffResult = units * amount;
+                    
+                    details.put("dutyTypeCode", "SPECIFIC");
                     details.put("formula", "Tariff = (Product Value / Multiplier) × Amount per Unit");
-                    details.put("calculation", String.format("($%.2f / %.2f) × $%.2f = $%.2f",
-                        amountOfProduct, multiplier, amount, 
-                        (amountOfProduct / multiplier) * amount));
-                    details.put("amountPerUnit", "$" + amount);
-                    details.put("multiplier", String.valueOf(multiplier));
+                    details.put("amountPerUnit", amount);
+                    details.put("amountPerUnitDisplay", "$" + String.format("%.2f", amount));
+                    details.put("multiplier", multiplier);
+                    details.put("productValue", amountOfProduct);
+                    details.put("calculatedUnits", units);
+                    details.put("tariffResult", tariffResult);
+                    
+                    // Step-by-step breakdown
+                    List<Map<String, String>> steps = new ArrayList<>();
+                    steps.add(Map.of(
+                        "step", "1",
+                        "description", "Product Value",
+                        "value", String.format("$%.2f", amountOfProduct)
+                    ));
+                    steps.add(Map.of(
+                        "step", "2",
+                        "description", "Multiplier (unit conversion)",
+                        "value", String.format("%.2f", multiplier)
+                    ));
+                    steps.add(Map.of(
+                        "step", "3",
+                        "description", "Calculate Units",
+                        "value", String.format("$%.2f ÷ %.2f = %.2f units", amountOfProduct, multiplier, units)
+                    ));
+                    steps.add(Map.of(
+                        "step", "4",
+                        "description", "Amount per Unit",
+                        "value", String.format("$%.2f per unit", amount)
+                    ));
+                    steps.add(Map.of(
+                        "step", "5",
+                        "description", "Calculate Tariff",
+                        "value", String.format("%.2f units × $%.2f = $%.2f", units, amount, tariffResult)
+                    ));
+                    details.put("steps", steps);
+                    details.put("calculation", String.format("($%.2f / %.2f) × $%.2f = %.2f × $%.2f = $%.2f",
+                        amountOfProduct, multiplier, amount, units, amount, tariffResult));
                     
                 } else if (duty instanceof CombinedDuty) {
                     CombinedDuty combinedDuty = (CombinedDuty) duty;
@@ -242,32 +329,106 @@ public class DutyController {
                     double multiplier = combinedDuty.getMultiplier().doubleValue();
                     String mixedOrConditional = combinedDuty.getMixedOrConditional();
                     
-                    double adValorem = amountOfProduct * rate / 100.0;
-                    double specific = (amountOfProduct / multiplier) * amount;
+                    double adValoremAmount = amountOfProduct * rate / 100.0;
+                    double units = amountOfProduct / multiplier;
+                    double specificAmount = units * amount;
+                    double tariffResult = "M".equals(mixedOrConditional) ? 
+                        (adValoremAmount + specificAmount) : Math.max(adValoremAmount, specificAmount);
+                    
+                    details.put("dutyTypeCode", "COMBINED");
+                    details.put("rate", rate);
+                    details.put("rateDisplay", rate + "%");
+                    details.put("amountPerUnit", amount);
+                    details.put("amountPerUnitDisplay", "$" + String.format("%.2f", amount));
+                    details.put("multiplier", multiplier);
+                    details.put("productValue", amountOfProduct);
+                    details.put("adValoremAmount", adValoremAmount);
+                    details.put("specificAmount", specificAmount);
+                    details.put("calculatedUnits", units);
+                    details.put("tariffResult", tariffResult);
+                    
+                    List<Map<String, String>> steps = new ArrayList<>();
                     
                     if ("M".equals(mixedOrConditional)) {
+                        details.put("combinationType", "Mixed (Sum of both)");
                         details.put("formula", "Tariff = Ad Valorem + Specific Duty");
+                        
+                        steps.add(Map.of(
+                            "step", "1",
+                            "description", "Product Value",
+                            "value", String.format("$%.2f", amountOfProduct)
+                        ));
+                        steps.add(Map.of(
+                            "step", "2",
+                            "description", "Calculate Ad Valorem Component",
+                            "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, adValoremAmount)
+                        ));
+                        steps.add(Map.of(
+                            "step", "3",
+                            "description", "Calculate Units for Specific Duty",
+                            "value", String.format("$%.2f ÷ %.2f = %.2f units", amountOfProduct, multiplier, units)
+                        ));
+                        steps.add(Map.of(
+                            "step", "4",
+                            "description", "Calculate Specific Component",
+                            "value", String.format("%.2f units × $%.2f = $%.2f", units, amount, specificAmount)
+                        ));
+                        steps.add(Map.of(
+                            "step", "5",
+                            "description", "Sum Both Components",
+                            "value", String.format("$%.2f + $%.2f = $%.2f", adValoremAmount, specificAmount, tariffResult)
+                        ));
+                        
                         details.put("calculation", String.format("($%.2f × %.2f%%) + (($%.2f / %.2f) × $%.2f) = $%.2f + $%.2f = $%.2f",
                             amountOfProduct, rate, amountOfProduct, multiplier, amount,
-                            adValorem, specific, adValorem + specific));
-                        details.put("combinationType", "Mixed (Sum of both)");
+                            adValoremAmount, specificAmount, tariffResult));
+                            
                     } else if ("C".equals(mixedOrConditional)) {
+                        details.put("combinationType", "Conditional (Maximum of both)");
                         details.put("formula", "Tariff = MAX(Ad Valorem, Specific Duty)");
+                        
+                        steps.add(Map.of(
+                            "step", "1",
+                            "description", "Product Value",
+                            "value", String.format("$%.2f", amountOfProduct)
+                        ));
+                        steps.add(Map.of(
+                            "step", "2",
+                            "description", "Calculate Ad Valorem Component",
+                            "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, adValoremAmount)
+                        ));
+                        steps.add(Map.of(
+                            "step", "3",
+                            "description", "Calculate Units for Specific Duty",
+                            "value", String.format("$%.2f ÷ %.2f = %.2f units", amountOfProduct, multiplier, units)
+                        ));
+                        steps.add(Map.of(
+                            "step", "4",
+                            "description", "Calculate Specific Component",
+                            "value", String.format("%.2f units × $%.2f = $%.2f", units, amount, specificAmount)
+                        ));
+                        steps.add(Map.of(
+                            "step", "5",
+                            "description", "Choose Maximum",
+                            "value", String.format("MAX($%.2f, $%.2f) = $%.2f", adValoremAmount, specificAmount, tariffResult)
+                        ));
+                        
                         details.put("calculation", String.format("MAX(($%.2f × %.2f%%), (($%.2f / %.2f) × $%.2f)) = MAX($%.2f, $%.2f) = $%.2f",
                             amountOfProduct, rate, amountOfProduct, multiplier, amount,
-                            adValorem, specific, Math.max(adValorem, specific)));
-                        details.put("combinationType", "Conditional (Maximum of both)");
+                            adValoremAmount, specificAmount, tariffResult));
                     }
-                    details.put("rate", rate + "%");
-                    details.put("amountPerUnit", "$" + amount);
-                    details.put("multiplier", String.valueOf(multiplier));
+                    
+                    details.put("steps", steps);
                 }
             }
         } catch (Exception e) {
             System.err.println("Could not get calculation details: " + e.getMessage());
+            e.printStackTrace();
             details.put("error", "Could not retrieve calculation details");
         }
         
+        System.out.println("🔍 DEBUG: Returning details map with keys: " + details.keySet());
+        System.out.println("🔍 DEBUG: Details map content: " + details);
         return details;
     }
 }

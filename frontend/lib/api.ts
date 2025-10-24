@@ -67,12 +67,20 @@ export async function calculateTariff(params: {
   try {
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate`, {
+    // Add cache buster to force new request
+    const cacheBuster = Date.now();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate?_=${cacheBuster}`, {
       method: "POST",
-      headers,
+      headers: {
+        ...headers,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
       body: JSON.stringify(params),
     })
     const data = await response.json()
+    console.log('🔥 RAW BACKEND RESPONSE:', data);
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Calculate tariff error:', error);
