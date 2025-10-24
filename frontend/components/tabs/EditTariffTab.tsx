@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Edit, Plus, CheckCircle, XCircle, Trash2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
-import { searchProducts as apiSearchProducts } from "@/lib/api"
 import { getSession, signOut } from "next-auth/react"
+import { searchTariffs, searchProducts as apiSearchProducts } from "@/lib/api"
 
 interface Product {
   code: string
@@ -21,7 +21,7 @@ interface Product {
 
 interface TariffData {
   tariffId: number
-  year: number
+  tariffYear: number  // Backend sends "year"
   reporterCode: string
   reporterName: string
   partnerCode: string
@@ -31,9 +31,14 @@ interface TariffData {
   dutyType: string
   dutyCode: string
   dutyTypeDescription: string
+  dutyCategory?: string
   tlsSuffix?: string
   note?: string
-  dutyCategory?: string
+  specificRateUnit?: string
+  adValoremRate?: number | null
+  specificRate?: number | null
+  compoundRate1?: number | null
+  compoundRate2?: number | null
 }
 
 interface TariffRequest {
@@ -43,13 +48,13 @@ interface TariffRequest {
   tlCode: string
   dutyType: string
   dutyCode: string
-  tlsSuffix?: string
-  note?: string
-  adValoremRate?: number
-  specificRate?: number
-  specificRateUnit?: string
-  compoundRate1?: number
-  compoundRate2?: number
+  tlsSuffix: string
+  note: string
+  adValoremRate?: number  // ✅ Optional means undefined when not present
+  specificRate?: number    // ✅ Optional means undefined when not present
+  specificRateUnit: string
+  compoundRate1?: number   // ✅ Optional means undefined when not present
+  compoundRate2?: number   // ✅ Optional means undefined when not present
 }
 
 interface NotificationPopup {
@@ -61,21 +66,28 @@ interface NotificationPopup {
 }
 
 export default function EditTariffTab() {
-  // Search state (same as CalculateTab)
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
   const [selectedYear, setSelectedYear] = useState<string>("2023")
 
-  // Product search state (same as CalculateTab)
   const [productSearchQuery, setProductSearchQuery] = useState<string>("")
   const [productSearchResults, setProductSearchResults] = useState<Array<{ code: string, description: string, matchType?: string }>>([])
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
 
-  // Tariff management state
+  // ✅ ADD THESE MISSING STATE VARIABLES
+  const [searchResults, setSearchResults] = useState<TariffData[]>([])
+  const [searchParams, setSearchParams] = useState({
+    reporterCountry: "",
+    partnerCountry: "",
+    productCode: "",
+    year: 2023,
+  })
+
   const [availableTariffs, setAvailableTariffs] = useState<TariffData[]>([])
   const [selectedTariff, setSelectedTariff] = useState<TariffData | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  
   const [editFormData, setEditFormData] = useState<TariffRequest>({
     tariffYear: new Date().getFullYear(),
     reporterCode: "",
@@ -85,15 +97,14 @@ export default function EditTariffTab() {
     dutyCode: "",
     tlsSuffix: "",
     note: "",
+    specificRateUnit: "",
   })
 
-  // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [step, setStep] = useState(1) // 1 = search, 2 = manage
+  const [step, setStep] = useState(1)
 
-  // UPDATED: Notification popup state (only for success/error operations)
   const [notification, setNotification] = useState<NotificationPopup>({
     show: false,
     type: 'success',
@@ -102,7 +113,6 @@ export default function EditTariffTab() {
     details: ''
   })
 
-  // Predefined products (same as CalculateTab)
   const predefinedProducts = [
     { code: "27079940", description: "Carbazole, Energy" },
     { code: "1012100", description: "Pure Bred Breeding Horses" },
@@ -110,49 +120,33 @@ export default function EditTariffTab() {
     { code: "74130000", description: "Copper Wire" }
   ]
 
-  // UPDATED: Show notification popup (only for update/delete operations)
   const showNotification = (type: 'success' | 'error', title: string, message: string, details?: string) => {
-    setNotification({
-      show: true,
-      type,
-      title,
-      message,
-      details
-    })
+    setNotification({ show: true, type, title, message, details })
   }
 
-  // Hide notification popup
   const hideNotification = () => {
     setNotification(prev => ({ ...prev, show: false }))
   }
 
-  // Product search functionality (same as CalculateTab)
   const searchProducts = useCallback(async (query: string) => {
     try {
       const { ok, data } = await apiSearchProducts(query, 5)
-
       if (ok && data.products && Array.isArray(data.products)) {
-        console.log(`🔍 Backend search found ${data.products.length} results using ${data.searchType} search`)
         return data.products.map((p: Product) => ({
           code: p.code || p.tlCode,
           description: p.description || p.name || "No description available",
           matchType: p.matchType
         }))
       }
-
-      console.log('🔄 Falling back to predefined products')
       const isNumericQuery = /^\d+$/.test(query)
-
       const filtered = predefinedProducts.filter(product =>
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5)
-
       return filtered.map(product => ({
         ...product,
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
-
     } catch (error) {
       console.error('Product search error:', error)
       const isNumericQuery = /^\d+$/.test(query)
@@ -160,7 +154,6 @@ export default function EditTariffTab() {
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5)
-
       return filtered.map(product => ({
         ...product,
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
@@ -168,200 +161,280 @@ export default function EditTariffTab() {
     }
   }, [])
 
-  // Handle product search with debouncing (same as CalculateTab)
   useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout)
-    }
-
+    if (searchTimeout) clearTimeout(searchTimeout)
     if (productSearchQuery.length > 0) {
       const timeout = setTimeout(async () => {
         const results = await searchProducts(productSearchQuery)
         setProductSearchResults(results)
       }, 300)
-
       setSearchTimeout(timeout)
     } else {
       setProductSearchResults([])
     }
-
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout)
-      }
-    }
+    return () => { if (searchTimeout) clearTimeout(searchTimeout) }
   }, [productSearchQuery, searchProducts])
 
-  // Handle product selection (same as CalculateTab)
-  const handleProductSelect = (product: { code: string, description: string, matchType?: string }) => {
+  const handleProductSelect = (product: { code: string, description: string }) => {
     setSelectedProduct(product.code)
     setProductSearchQuery(`${product.code} - ${product.description}`)
     setProductSearchResults([])
   }
 
-  // Auth headers helper
-  const getAuthHeaders = async (): Promise<HeadersInit> => {
+  const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
     if (typeof window === "undefined") return {}
-    
     try {
       const session = await getSession()
+      console.log("🔐 Current session:", session) // ✅ Debug
+      console.log("🔐 Access token:", session?.accessToken ? "EXISTS" : "MISSING") // ✅ Debug
+      console.log("🔐 User:", session?.user) // ✅ Debug
       
       if (session?.error === "RefreshAccessTokenError") {
         await signOut({ callbackUrl: '/login' })
         throw new Error("Session expired. Please sign in again.")
       }
-      
       const token = session?.accessToken
       
-      return {
+      const headers = {
         "Content-Type": "application/json",
         "Authorization": token ? `Bearer ${token}` : ""
       }
+      
+      console.log("🔐 Headers to send:", {
+        "Content-Type": headers["Content-Type"],
+        "Authorization": headers["Authorization"] ? `Bearer ${headers["Authorization"].substring(0, 20)}...` : "MISSING"
+      }) // ✅ Debug
+      
+      return headers
     } catch (error) {
-      console.error("Error getting auth headers:", error)
+      console.error("❌ Error getting auth headers:", error)
       throw error
     }
-  }
+  }, [])
 
-  // UPDATED: Search for tariffs (NO popup, just inline success message)
   const handleSearchTariffs = async () => {
     setLoading(true)
     setError("")
     setSuccess("")
+    setSearchResults([])
+
     try {
       const headers = await getAuthHeaders()
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/tariffs/search`, {
-        method: 'POST',
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+
+      // ✅ Build search parameters from selected values
+      const searchRequest = {
+        reporterCode: selectedDestination, // ✅ Destination is the reporter
+        partnerCode: selectedSource,       // ✅ Source is the partner
+        productCode: selectedProduct,
+        year: parseInt(selectedYear),
+      }
+
+      console.log("🔍 Searching tariffs with:", searchRequest)
+
+      const response = await fetch(`${apiUrl}/api/admin/tariffs/search`, {
+        method: "POST",
         headers,
-        body: JSON.stringify({
-          reporterCode: selectedDestination,
-          partnerCode: selectedSource,
-          productCode: selectedProduct,
-          year: parseInt(selectedYear),
-        }),
-        mode: 'cors',
-        credentials: 'include',
+        body: JSON.stringify(searchRequest),
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Search failed (${response.status})`)
+        const errorText = await response.text()
+        throw new Error(`Search failed: ${errorText}`)
       }
 
       const data = await response.json()
-      setAvailableTariffs(data.tariffs || [])
-      setStep(2)
-      setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
-      
-      // NO popup for search results - just inline message
-    } catch (e) {
-      const error = e as Error
-      setError(`Search failed: ${error.message}`)
-      // NO popup for search errors - just inline message
-    }
-    setLoading(false)
-  }
+      console.log("📦 Received search results:", data)
 
-  // Load tariff details for editing
-  const handleEditTariff = async (tariff: TariffData) => {
-    setLoading(true)
-    try {
-      const headers = await getAuthHeaders()
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/tariffs/${tariff.tariffId}`, {
-        method: 'GET',
-        headers,
-        mode: 'cors',
-        credentials: 'include',
-      })
+      // ✅ MAP BACKEND FIELDS TO FRONTEND INTERFACE
+      const mappedResults: TariffData[] = (data.tariffs || []).map((tariff: any) => ({
+        tariffId: tariff.tariffId,
+        tariffYear: tariff.tariffYear || tariff.year,  // ✅ Handle both field names
+        reporterCode: tariff.reporterCode,
+        reporterName: tariff.reporterName,
+        partnerCode: tariff.partnerCode,
+        partnerName: tariff.partnerName,
+        tlCode: tariff.tlCode,
+        productDescription: tariff.productDescription,
+        dutyType: tariff.dutyType,
+        dutyCode: tariff.dutyCode,
+        dutyTypeDescription: tariff.dutyTypeDescription,
+        dutyCategory: tariff.dutyCategory,
+        tlsSuffix: tariff.tlsSuffix || "",
+        note: tariff.note || "",
+        specificRateUnit: tariff.specificRateUnit || "",
+        adValoremRate: tariff.adValoremRate ?? null,
+        specificRate: tariff.specificRate ?? null,
+        compoundRate1: tariff.compoundRate1 ?? null,
+        compoundRate2: tariff.compoundRate2 ?? null,
+      }))
 
-      if (!response.ok) {
-        throw new Error(`Failed to load tariff details (${response.status})`)
+      console.log("✅ Mapped results:", mappedResults)
+
+      setSearchResults(mappedResults)
+      setAvailableTariffs(mappedResults) // ✅ Also update availableTariffs for step 2
+      setStep(2) // ✅ Move to step 2 to show results
+
+      if (mappedResults.length === 0) {
+        setError("No tariffs found matching your criteria")
+      } else {
+        setSuccess(`Found ${mappedResults.length} tariff(s)`)
       }
-
-      const tariffDetails = await response.json()
-      
-      // Populate edit form with current data
-      setEditFormData({
-        tariffYear: tariffDetails.tariffYear,
-        reporterCode: tariffDetails.reporterCode,
-        partnerCode: tariffDetails.partnerCode,
-        tlCode: tariffDetails.tlCode,
-        dutyType: tariffDetails.dutyType,
-        dutyCode: tariffDetails.dutyCode,
-        tlsSuffix: tariffDetails.tlsSuffix || "",
-        note: tariffDetails.note || "",
-        adValoremRate: tariffDetails.adValoremRate,
-        specificRate: tariffDetails.specificRate,
-        specificRateUnit: tariffDetails.specificRateUnit || "",
-        compoundRate1: tariffDetails.compoundRate1,
-        compoundRate2: tariffDetails.compoundRate2,
-      })
-      
-      setSelectedTariff(tariff)
-      setIsEditDialogOpen(true)
     } catch (e) {
-      const error = e as Error
-      setError(`Failed to load tariff: ${error.message}`)
-      // NO popup for load errors - just inline message
+      const err = e as Error
+      console.error("❌ Search error:", err)
+      setError(`Search failed: ${err.message}`)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  // UPDATED: Save tariff changes with notification popup
+  // ✅ FIXED: Fetch full tariff details when editing
+  const handleEditTariff = async (tariff: TariffData) => {
+    console.log("✏️ Opening edit dialog for tariff:", tariff.tariffId)
+    console.log("📦 Full tariff data:", JSON.stringify(tariff, null, 2))
+    
+    if (!tariff.reporterCode || !tariff.partnerCode || !tariff.tlCode || !tariff.dutyType || !tariff.dutyCode) {
+      console.error("❌ Missing required fields in tariff:", tariff)
+      setError("Error: Tariff data is incomplete")
+      return
+    }
+    
+    const formData: TariffRequest = {
+      tariffYear: tariff.tariffYear,
+      reporterCode: tariff.reporterCode,
+      partnerCode: tariff.partnerCode,
+      tlCode: tariff.tlCode,
+      dutyType: tariff.dutyType,
+      dutyCode: tariff.dutyCode,
+      tlsSuffix: tariff.tlsSuffix || "",
+      note: tariff.note || "",
+      specificRateUnit: tariff.specificRateUnit || "",
+      // ✅ Only include if value exists (don't send 0 or undefined)
+      ...(tariff.adValoremRate !== undefined && tariff.adValoremRate !== null && { adValoremRate: tariff.adValoremRate }),
+      ...(tariff.specificRate !== undefined && tariff.specificRate !== null && { specificRate: tariff.specificRate }),
+      ...(tariff.compoundRate1 !== undefined && tariff.compoundRate1 !== null && { compoundRate1: tariff.compoundRate1 }),
+      ...(tariff.compoundRate2 !== undefined && tariff.compoundRate2 !== null && { compoundRate2: tariff.compoundRate2 }),
+    }
+    
+    console.log("✅ Form data populated:", JSON.stringify(formData, null, 2))
+    
+    setSelectedTariff(tariff)
+    setEditFormData(formData)
+    setIsEditDialogOpen(true)
+  }
+
   const handleSaveTariff = async () => {
-    if (!selectedTariff) return
+    if (!selectedTariff) {
+      console.error("❌ selectedTariff is null!")
+      setError("Error: No tariff selected")
+      return
+    }
     
     setLoading(true)
+    setError("")
+    setSuccess("")
+    
     try {
       const headers = await getAuthHeaders()
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/tariffs/${selectedTariff.tariffId}`, {
+      console.log("💾 Updating tariff:", selectedTariff.tariffId)
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      const endpoint = `${apiUrl}/api/admin/tariffs/${selectedTariff.tariffId}`
+      
+      // ✅ BUILD REQUEST BODY - ONLY include the fields that can be updated
+      const requestBody: Record<string, any> = {
+        tlsSuffix: editFormData.tlsSuffix || selectedTariff.tlsSuffix || "",
+        note: editFormData.note || selectedTariff.note || "",
+        specificRateUnit: editFormData.specificRateUnit || selectedTariff.specificRateUnit || "",
+      }
+      
+      // ✅ FIX: Ensure numeric values are actually numbers, not strings
+      const adValoremValue = editFormData.adValoremRate !== undefined 
+        ? Number(editFormData.adValoremRate)  // ✅ Convert to number
+        : (selectedTariff.adValoremRate !== undefined ? Number(selectedTariff.adValoremRate) : undefined)
+    
+      if (adValoremValue !== undefined && !isNaN(adValoremValue) && adValoremValue >= 0) {
+        requestBody.adValoremRate = adValoremValue
+      }
+    
+      const specificValue = editFormData.specificRate !== undefined 
+        ? Number(editFormData.specificRate)  // ✅ Convert to number
+        : (selectedTariff.specificRate !== undefined ? Number(selectedTariff.specificRate) : undefined)
+    
+      if (specificValue !== undefined && !isNaN(specificValue) && specificValue >= 0) {
+        requestBody.specificRate = specificValue
+      }
+    
+      const compound1Value = editFormData.compoundRate1 !== undefined 
+        ? Number(editFormData.compoundRate1)  // ✅ Convert to number
+        : (selectedTariff.compoundRate1 !== undefined ? Number(selectedTariff.compoundRate1) : undefined)
+    
+      if (compound1Value !== undefined && !isNaN(compound1Value) && compound1Value >= 0) {
+        requestBody.compoundRate1 = compound1Value
+      }
+    
+      const compound2Value = editFormData.compoundRate2 !== undefined 
+        ? Number(editFormData.compoundRate2)  // ✅ Convert to number
+        : (selectedTariff.compoundRate2 !== undefined ? Number(selectedTariff.compoundRate2) : undefined)
+    
+      if (compound2Value !== undefined && !isNaN(compound2Value) && compound2Value >= 0) {
+        requestBody.compoundRate2 = compound2Value
+      }
+    
+      console.log("📤 FINAL REQUEST BODY:", JSON.stringify(requestBody, null, 2))
+      
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify(requestBody),
         mode: 'cors',
         credentials: 'include',
       })
 
+      console.log("📡 Response status:", response.status)
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Update failed (${response.status})`)
+        const errorText = await response.text()
+        console.error("❌ Error response body:", errorText)
+        throw new Error(`Update failed (${response.status}): ${errorText}`)
       }
-
+      
       const updatedTariff = await response.json()
+      console.log("✅ Tariff updated:", updatedTariff)
       
       setSuccess("Tariff updated successfully!")
       setIsEditDialogOpen(false)
       setSelectedTariff(null)
       
-      // Show SUCCESS popup
       showNotification(
         'success',
-        'Tariff Updated!',
+        'Tariff Updated! 🎉',
         `Tariff ID ${selectedTariff.tariffId} has been successfully updated`,
-        `Product: ${editFormData.tlCode}\nRoute: ${editFormData.partnerCode} → ${editFormData.reporterCode}\nYear: ${editFormData.tariffYear}`
+        `Product: ${selectedTariff.tlCode}\nRoute: ${selectedTariff.partnerCode} → ${selectedTariff.reporterCode}\nYear: ${selectedTariff.tariffYear}`
       )
       
-      // Refresh the tariff list
+      // Refresh the search results
       await handleSearchTariffs()
-    } catch (e) {
-      const error = e as Error
-      setError(`Update failed: ${error.message}`)
       
-      // Show ERROR popup
+    } catch (e) {
+      const err = e as Error
+      console.error("❌ Update failed:", err)
+      
+      setError(`Update failed: ${err.message}`)
+      
       showNotification(
         'error',
-        'Update Failed',
+        'Update Failed ❌',
         `Failed to update tariff ${selectedTariff.tariffId}`,
-        error.message
+        err.message
       )
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  // UPDATED: Delete tariff with notification popup
   const handleDeleteTariff = async (tariff: TariffData) => {
     if (!confirm(`Are you sure you want to delete tariff ${tariff.tariffId}?\n\nProduct: ${tariff.tlCode} - ${tariff.productDescription}\nRoute: ${tariff.partnerName} → ${tariff.reporterName}`)) return
     
@@ -369,12 +442,19 @@ export default function EditTariffTab() {
     try {
       const headers = await getAuthHeaders()
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/tariffs/${tariff.tariffId}`, {
-        method: 'DELETE',
-        headers,
-        mode: 'cors',
-        credentials: 'include',
-      })
+      console.log("🗑️ Deleting tariff:", tariff.tariffId)
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/tariffs/${tariff.tariffId}`,
+        {
+          method: 'DELETE',
+          headers,
+          mode: 'cors',
+          credentials: 'include',
+        }
+      )
+
+      console.log("📡 Delete response status:", response.status)
 
       if (!response.ok) {
         throw new Error(`Delete failed (${response.status})`)
@@ -382,7 +462,6 @@ export default function EditTariffTab() {
 
       setSuccess("Tariff deleted successfully!")
       
-      // Show SUCCESS popup
       showNotification(
         'success',
         'Tariff Deleted!',
@@ -390,18 +469,18 @@ export default function EditTariffTab() {
         `Product: ${tariff.tlCode} - ${tariff.productDescription}`
       )
       
-      // Refresh the tariff list
       await handleSearchTariffs()
-    } catch (e) {
-      const error = e as Error
-      setError(`Delete failed: ${error.message}`)
       
-      // Show ERROR popup
+    } catch (e) {
+      const err = e as Error
+      console.error("❌ Delete failed:", err)
+      setError(`Delete failed: ${err.message}`)
+      
       showNotification(
         'error',
         'Delete Failed',
         `Failed to delete tariff ${tariff.tariffId}`,
-        error.message
+        err.message
       )
     }
     setLoading(false)
@@ -410,7 +489,7 @@ export default function EditTariffTab() {
   return (
     <div className="h-full flex flex-col space-y-3 p-1">
       {step === 1 ? (
-        // Step 1: Search Form (same as CalculateTab)
+        // Step 1: Search Form
         <Card className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm rounded-none">
           <CardHeader className="pb-0 px-4 pt-0">
             <CardTitle className="text-xl flex items-center gap-2 text-slate-900 dark:text-slate-100">
@@ -547,13 +626,16 @@ export default function EditTariffTab() {
                           Tariff ID: {tariff.tariffId}
                         </span>
                         <span className="text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                          {tariff.year}
+                          {tariff.tariffYear}
                         </span>
                       </div>
                       <div className="text-sm space-y-1">
                         <div><strong>Route:</strong> {tariff.partnerName} → {tariff.reporterName}</div>
                         <div><strong>Product:</strong> {tariff.tlCode} - {tariff.productDescription}</div>
                         <div><strong>Duty:</strong> {tariff.dutyTypeDescription}</div>
+                        {tariff.dutyCategory && (
+                          <div><strong>Category:</strong> {tariff.dutyCategory}</div>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -585,104 +667,384 @@ export default function EditTariffTab() {
         </Card>
       )}
 
-      {/* Edit Dialog */}
+      {/* ✅ FIXED: Edit Dialog with Controlled Inputs */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Tariff {selectedTariff?.tariffId}</DialogTitle>
-            <DialogDescription>
-              Update the tariff information below.
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700">
+          <DialogHeader className="pb-4 border-b border-slate-200 dark:border-slate-700">
+            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Edit className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              Edit Tariff #{selectedTariff?.tariffId}
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-400 mt-2">
+              Update tariff information. <span className="font-semibold">Fields in gray are read-only</span> and cannot be changed.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {/* Basic fields */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Tariff Year</Label>
-                <Input
-                  type="number"
-                  value={editFormData.tariffYear}
-                  onChange={(e) => setEditFormData({
-                    ...editFormData,
-                    tariffYear: parseInt(e.target.value)
-                  })}
-                />
-              </div>
-              <div>
-                <Label>TLS Suffix</Label>
-                <Input
-                  value={editFormData.tlsSuffix}
-                  onChange={(e) => setEditFormData({
-                    ...editFormData,
-                    tlsSuffix: e.target.value
-                  })}
-                />
-              </div>
-            </div>
-
-            {/* Duty rates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Ad Valorem Rate (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editFormData.adValoremRate ?? ""}
-                  onChange={(e) => setEditFormData({
-                    ...editFormData,
-                    adValoremRate: e.target.value ? parseFloat(e.target.value) : undefined
-                  })}
-                />
-              </div>
-              <div>
-                <Label>Specific Rate</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editFormData.specificRate ?? ""}
-                  onChange={(e) => setEditFormData({
-                    ...editFormData,
-                    specificRate: e.target.value ? parseFloat(e.target.value) : undefined
-                  })}
-                />
+          <div className="space-y-6 py-4">
+            {/* Read-only Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                Read-Only Information
+              </h3>
+              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Reporter Code</Label>
+                  <Input 
+                    value={editFormData.reporterCode} 
+                    disabled 
+                    className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 font-mono"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{selectedTariff?.reporterName}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Partner Code</Label>
+                  <Input 
+                    value={editFormData.partnerCode} 
+                    disabled 
+                    className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 font-mono"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{selectedTariff?.partnerName}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Product Code (HS)</Label>
+                  <Input 
+                    value={editFormData.tlCode} 
+                    disabled 
+                    className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 font-mono"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{selectedTariff?.productDescription}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Duty Type</Label>
+                  <Input 
+                    value={`${editFormData.dutyType} - ${editFormData.dutyCode}`} 
+                    disabled 
+                    className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{selectedTariff?.dutyTypeDescription}</p>
+                </div>
               </div>
             </div>
 
-            <div>
-              <Label>Notes</Label>
-              <textarea
-                value={editFormData.note}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  note: e.target.value
-                })}
-                rows={3}
-                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                placeholder="Additional notes..."
-              />
+            {/* Editable Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                <span className="h-1 w-1 rounded-full bg-green-500"></span>
+                Editable Fields
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Tariff Year <span className="text-red-500">*</span>
+                  </Label>
+                  {/* ✅ FIXED: Convert to string for controlled input */}
+                  <Input
+                    type="number"
+                    value={(editFormData.tariffYear || new Date().getFullYear()).toString()}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const parsed = parseInt(value)
+                      setEditFormData({
+                        ...editFormData,
+                        tariffYear: isNaN(parsed) ? new Date().getFullYear() : parsed
+                      })
+                    }}
+                    className="border-2 border-blue-300 dark:border-blue-700 focus:border-blue-500"
+                    min="2000"
+                    max="2100"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Current: {selectedTariff?.tariffYear}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    TLS Suffix
+                  </Label>
+                  <Input
+                    value={editFormData.tlsSuffix}
+                    onChange={(e) => setEditFormData({
+                      ...editFormData,
+                      tlsSuffix: e.target.value
+                    })}
+                    placeholder="Optional suffix"
+                    className="border-2 border-blue-300 dark:border-blue-700 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Current: {selectedTariff?.tlsSuffix || <span className="italic">None</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Duty Rates Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-amber-500"></span>
+                  Duty Rates
+                </h3>
+                {selectedTariff?.dutyCategory && (
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
+                    Category: {selectedTariff.dutyCategory.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
+                {/* Ad Valorem Rate */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Ad Valorem Rate (%)</span>
+                    {selectedTariff?.adValoremRate !== undefined && selectedTariff?.adValoremRate !== null && (
+                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                        Current: {selectedTariff.adValoremRate}%
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.adValoremRate !== undefined ? editFormData.adValoremRate.toString() : ""}
+                    onChange={(e) => {
+                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const newFormData = { ...editFormData }
+                      
+                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                        delete newFormData.adValoremRate
+                      } else {
+                        const parsed = parseFloat(value)
+                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                          newFormData.adValoremRate = parsed
+                        } else {
+                          delete newFormData.adValoremRate
+                        }
+                      }
+                      
+                      setEditFormData(newFormData)
+                    }}
+                    placeholder={selectedTariff?.adValoremRate !== undefined && selectedTariff?.adValoremRate !== null ? `Currently ${selectedTariff.adValoremRate}%` : "e.g., 5.5"}
+                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Specific Rate */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Specific Rate</span>
+                    {selectedTariff?.specificRate !== undefined && selectedTariff?.specificRate !== null && (
+                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                        Current: {selectedTariff.specificRate} {selectedTariff.specificRateUnit}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.specificRate !== undefined ? editFormData.specificRate.toString() : ""}
+                    onChange={(e) => {
+                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const newFormData = { ...editFormData }
+                      
+                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                        delete newFormData.specificRate
+                      } else {
+                        const parsed = parseFloat(value)
+                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                          newFormData.specificRate = parsed
+                        } else {
+                          delete newFormData.specificRate
+                        }
+                      }
+                      
+                      setEditFormData(newFormData)
+                    }}
+                    placeholder={selectedTariff?.specificRate !== undefined && selectedTariff?.specificRate !== null ? `Currently ${selectedTariff.specificRate}` : "e.g., 10.50"}
+                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                  />
+                </div>
+                
+                {/* Compound Rate 1 */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Compound Rate 1</span>
+                    {selectedTariff?.compoundRate1 !== undefined && selectedTariff?.compoundRate1 !== null && (
+                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                        Current: {selectedTariff.compoundRate1}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.compoundRate1 !== undefined ? editFormData.compoundRate1.toString() : ""}
+                    onChange={(e) => {
+                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const newFormData = { ...editFormData }
+                      
+                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                        delete newFormData.compoundRate1
+                      } else {
+                        const parsed = parseFloat(value)
+                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                          newFormData.compoundRate1 = parsed
+                        } else {
+                          delete newFormData.compoundRate1
+                        }
+                      }
+                      
+                      setEditFormData(newFormData)
+                    }}
+                    placeholder={selectedTariff?.compoundRate1 !== undefined && selectedTariff?.compoundRate1 !== null ? `Currently ${selectedTariff.compoundRate1}` : "First component"}
+                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                  />
+                </div>
+                
+                {/* Compound Rate 2 */}
+                <div className="space-y-1.5 col-span-2">
+                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Compound Rate 2</span>
+                    {selectedTariff?.compoundRate2 !== undefined && selectedTariff?.compoundRate2 !== null && (
+                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                        Current: {selectedTariff.compoundRate2}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.compoundRate2 !== undefined ? editFormData.compoundRate2.toString() : ""}
+                    onChange={(e) => {
+                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const newFormData = { ...editFormData }
+                      
+                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                        delete newFormData.compoundRate2
+                      } else {
+                        const parsed = parseFloat(value)
+                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                          newFormData.compoundRate2 = parsed
+                        } else {
+                          delete newFormData.compoundRate2
+                        }
+                      }
+                      
+                      setEditFormData(newFormData)
+                    }}
+                    placeholder={selectedTariff?.compoundRate2 !== undefined && selectedTariff?.compoundRate2 !== null ? `Currently ${selectedTariff.compoundRate2}` : "Second component"}
+                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Summary of Active Rates */}
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">📊 Active Duty Rates Summary:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {selectedTariff?.adValoremRate !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span className="text-slate-700 dark:text-slate-300">Ad Valorem: <strong>{selectedTariff.adValoremRate}%</strong></span>
+                    </div>
+                  )}
+                  {selectedTariff?.specificRate !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span className="text-slate-700 dark:text-slate-300">Specific: <strong>{selectedTariff.specificRate} {selectedTariff.specificRateUnit}</strong></span>
+                    </div>
+                  )}
+                  {selectedTariff?.compoundRate1 !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span className="text-slate-700 dark:text-slate-300">Compound 1: <strong>{selectedTariff.compoundRate1}</strong></span>
+                    </div>
+                  )}
+                  {selectedTariff?.compoundRate2 !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span className="text-slate-700 dark:text-slate-300">Compound 2: <strong>{selectedTariff.compoundRate2}</strong></span>
+                    </div>
+                  )}
+                  {selectedTariff?.adValoremRate === undefined && 
+                   selectedTariff?.specificRate === undefined && 
+                   selectedTariff?.compoundRate1 === undefined && 
+                   selectedTariff?.compoundRate2 === undefined && (
+                    <div className="col-span-2 flex items-center gap-1 text-slate-500">
+                      <XCircle className="h-3 w-3" />
+                      <span className="italic">No duty rates currently set</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                <span className="h-1 w-1 rounded-full bg-purple-500"></span>
+                Additional Notes
+              </h3>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Notes (Max 1000 characters)
+                </Label>
+                <textarea
+                  value={editFormData.note}
+                  onChange={(e) => setEditFormData({
+                    ...editFormData,
+                    note: e.target.value
+                  })}
+                  rows={4}
+                  className="w-full p-3 border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
+                  placeholder={selectedTariff?.note || "Add any additional notes or comments about this tariff..."}
+                  maxLength={1000}
+                />
+                <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                  <span>Current: {selectedTariff?.note ? `"${selectedTariff.note.substring(0, 50)}${selectedTariff.note.length > 50 ? '...' : ''}"` : <span className="italic">No notes</span>}</span>
+                  <span>{editFormData.note.length} / 1000 characters</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t border-slate-200 dark:border-slate-700 gap-3">
             <Button
+              type="button"
               variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
+              onClick={() => {
+                setIsEditDialogOpen(false)
+                setSelectedTariff(null)
+              }}
               disabled={loading}
+              className="min-w-[120px] border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
+              <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
             <Button
+              type="button"
               onClick={handleSaveTariff}
               disabled={loading}
+              className="min-w-[120px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg"
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* UPDATED: Smaller Notification Popup (ONLY for update/delete operations) */}
+      {/* Notification Popup */}
       {notification.show && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className={`w-full max-w-md mx-auto rounded-lg shadow-xl border transform transition-all duration-300 ${
@@ -712,8 +1074,8 @@ export default function EditTariffTab() {
                   onClick={hideNotification}
                   className={`${
                     notification.type === 'success' 
-                      ? 'text-green-600 hover:text-green-700 hover:bg-green-100 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-800'
-                      : 'text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-800'
+                      ? 'text-green-600 hover:text-green-700 hover:bg-green-100'
+                      : 'text-red-600 hover:text-red-700 hover:bg-red-100'
                   }`}
                 >
                   <X className="h-4 w-4" />
@@ -746,9 +1108,9 @@ export default function EditTariffTab() {
                   onClick={hideNotification}
                   className={`${
                     notification.type === 'success' 
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  } text-white`}
                 >
                   Got it
                 </Button>
@@ -758,7 +1120,7 @@ export default function EditTariffTab() {
         </div>
       )}
 
-      {/* UPDATED: Status Messages (matching CalculateTab styling exactly) */}
+      {/* Status Messages */}
       {(error || success) && (
         <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${success
             ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
@@ -775,3 +1137,4 @@ export default function EditTariffTab() {
     </div>
   )
 }
+

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,58 +98,67 @@ public class TariffManagementService {
     }
 
     @Transactional
-    public TariffResponse updateTariff(Integer id, TariffRequest request) {
+    public TariffResponse updateTariff(Integer id, Map<String, Object> updates) {
         TariffSchedule tariff = tariffRepository.findById(id)
-                .orElseThrow(() -> new TariffNotFoundException("Tariff not found with id: " + id));
-
-        // Update basic fields
-        tariff.setTariffYear(request.getTariffYear());
-        tariff.setTlsSuffix(request.getTlsSuffix());
-        tariff.setNote(request.getNote());
-
-        // Update related entities if changed
-        if (!tariff.getReporter().getCountryId().equals(request.getReporterCode())) {
-            Country reporter = countryRepository.findById(request.getReporterCode())
-                    .orElseThrow(() -> new InvalidRequestException("Reporter country not found: " + request.getReporterCode()));
-            tariff.setReporter(reporter);
+            .orElseThrow(() -> new RuntimeException("Tariff not found"));
+        
+        // Only update tariff-level editable fields that are present
+        if (updates.containsKey("tlsSuffix")) {
+            tariff.setTlsSuffix((String) updates.get("tlsSuffix"));
+        }
+        if (updates.containsKey("note")) {
+            tariff.setNote((String) updates.get("note"));
         }
 
-        if (!tariff.getPartner().getCountryId().equals(request.getPartnerCode())) {
-            Country partner = countryRepository.findById(request.getPartnerCode())
-                    .orElseThrow(() -> new InvalidRequestException("Partner country not found: " + request.getPartnerCode()));
-            tariff.setPartner(partner);
-        }
+        // Detect if any duty rate fields are present in the update payload
+        boolean hasDutyUpdate = updates.containsKey("adValoremRate")
+                || updates.containsKey("specificRate")
+                || updates.containsKey("compoundRate1")
+                || updates.containsKey("compoundRate2")
+                || updates.containsKey("specificRateUnit");
 
-        if (!tariff.getProduct().getTlCode().equals(request.getTlCode())) {
-            Product product = productRepository.findById(request.getTlCode())
-                    .orElseThrow(() -> new InvalidRequestException("Product not found: " + request.getTlCode()));
-            tariff.setProduct(product);
-        }
-
-        // Update duty type if changed
-        DutyTypeId newDutyTypeId = new DutyTypeId(request.getDutyType(), request.getDutyCode());
-        if (!tariff.getDutyType().getId().equals(newDutyTypeId)) {
-            DutyType dutyType = dutyTypeRepository.findById(newDutyTypeId)
-                    .orElseThrow(() -> new InvalidRequestException("Duty type not found: " + request.getDutyType() + "-" + request.getDutyCode()));
-            tariff.setDutyType(dutyType);
-        }
-
-        // Validate duty rates
-        validateDutyRates(request);
-
-        // Update duty information
-        if (tariff.getDuty() != null) {
-            updateDutyFromRequest(request, tariff.getDuty());
-        } else {
-            Duty duty = createDutyFromRequest(request, tariff);
-            if (duty == null) {
-                throw new InvalidRequestException("At least one duty rate must be specified");
+        if (hasDutyUpdate) {
+            // Ensure duty exists on the tariff before attempting to update rates
+            if (tariff.getDuty() == null) {
+                throw new DutyNotFoundException("Duty information not found for tariff id: " + id);
             }
-            tariff.setDuty(duty);
-        }
 
+            // Build a TariffRequest DTO with provided rate fields (only set those present)
+            TariffRequest req = new TariffRequest();
+            if (updates.containsKey("adValoremRate")) {
+                Object v = updates.get("adValoremRate");
+                req.setAdValoremRate(v != null ? ((Number) v).doubleValue() : null);
+            }
+            if (updates.containsKey("specificRate")) {
+                Object v = updates.get("specificRate");
+                req.setSpecificRate(v != null ? ((Number) v).doubleValue() : null);
+            }
+            if (updates.containsKey("specificRateUnit")) {
+                req.setSpecificRateUnit((String) updates.get("specificRateUnit"));
+            }
+            if (updates.containsKey("compoundRate1")) {
+                Object v = updates.get("compoundRate1");
+                req.setCompoundRate1(v != null ? ((Number) v).doubleValue() : null);
+            }
+            if (updates.containsKey("compoundRate2")) {
+                Object v = updates.get("compoundRate2");
+                req.setCompoundRate2(v != null ? ((Number) v).doubleValue() : null);
+            }
+
+            // Delegate duty-specific updates to helper
+            updateDutyFromRequest(req, tariff.getDuty());
+        }
+        
         tariff = tariffRepository.save(tariff);
         return convertToResponse(tariff);
+    }
+
+    // ✅ Helper method
+    private boolean hasAnyDutyRate(TariffRequest request) {
+        return request.getAdValoremRate() != null ||
+               request.getSpecificRate() != null ||
+               request.getCompoundRate1() != null ||
+               request.getCompoundRate2() != null;
     }
 
     @Transactional(readOnly = true)
@@ -176,28 +186,29 @@ public class TariffManagementService {
     private void validateDutyRates(TariffRequest request) {
         boolean hasAdValorem = request.getAdValoremRate() != null;
         boolean hasSpecific = request.getSpecificRate() != null;
-        boolean hasCompound = request.getCompoundRate1() != null && request.getCompoundRate2() != null;
-
-        if (!hasAdValorem && !hasSpecific && !hasCompound) {
-            throw new InvalidRequestException("At least one duty rate must be specified");
-        }
+        boolean hasCompound = request.getCompoundRate1() != null || request.getCompoundRate2() != null;
 
         // Validate ad valorem rate range
-        if (hasAdValorem && (request.getAdValoremRate() < 0 || request.getAdValoremRate() > 100)) {
-            throw new InvalidRequestException("Ad valorem rate must be between 0 and 100, got: " + request.getAdValoremRate());
+        if (hasAdValorem) {
+            if (request.getAdValoremRate() < 0 || request.getAdValoremRate() > 100) {
+                throw new InvalidRequestException(
+                    "Ad valorem rate must be between 0 and 100, got: " + request.getAdValoremRate()
+                );
+            }
         }
 
         // Validate specific rate
         if (hasSpecific) {
             if (request.getSpecificRate() < 0) {
-                throw new InvalidRequestException("Specific rate must be non-negative, got: " + request.getSpecificRate());
+                throw new InvalidRequestException(
+                    "Specific rate must be non-negative, got: " + request.getSpecificRate()
+                );
             }
-            if (request.getSpecificRateUnit() == null || request.getSpecificRateUnit().trim().isEmpty()) {
-                throw new InvalidRequestException("Specific rate unit must be specified when specific rate is provided");
-            }
+            // ✅ Require unit ONLY if creating new specific duty (not for updates)
+            // This check is now removed - we'll keep the existing unit if not provided
         }
 
-        // Validate compound rates
+        // Validate compound rates - both must be provided together
         if (request.getCompoundRate1() != null && request.getCompoundRate2() == null) {
             throw new InvalidRequestException("Both compound rates must be specified together");
         }
@@ -207,11 +218,15 @@ public class TariffManagementService {
 
         // Validate compound rate values
         if (hasCompound) {
-            if (request.getCompoundRate1() < 0) {
-                throw new InvalidRequestException("Compound rate 1 must be non-negative, got: " + request.getCompoundRate1());
+            if (request.getCompoundRate1() != null && request.getCompoundRate1() < 0) {
+                throw new InvalidRequestException(
+                    "Compound rate 1 must be non-negative, got: " + request.getCompoundRate1()
+                );
             }
-            if (request.getCompoundRate2() < 0) {
-                throw new InvalidRequestException("Compound rate 2 must be non-negative, got: " + request.getCompoundRate2());
+            if (request.getCompoundRate2() != null && request.getCompoundRate2() < 0) {
+                throw new InvalidRequestException(
+                    "Compound rate 2 must be non-negative, got: " + request.getCompoundRate2()
+                );
             }
         }
     }
@@ -267,43 +282,67 @@ public class TariffManagementService {
     }
 
     private void updateDutyFromRequest(TariffRequest request, Duty duty) {
+        // ✅ Only update if the request contains rates matching the duty type
+        boolean updated = false;
+        
         if (duty instanceof AdValoremDuty && request.getAdValoremRate() != null) {
             AdValoremDuty adValorem = (AdValoremDuty) duty;
             adValorem.setRatePercent(BigDecimal.valueOf(request.getAdValoremRate()));
             adValorem.setMathExpression(request.getAdValoremRate() + "%");
             adValoremDutyRepository.save(adValorem);
+            updated = true;
             
         } else if (duty instanceof SpecificDuty && request.getSpecificRate() != null) {
             SpecificDuty specific = (SpecificDuty) duty;
             specific.setAmount(BigDecimal.valueOf(request.getSpecificRate()));
-            specific.setUnit(request.getSpecificRateUnit());
-            specific.setSpecificDutyRateRaw(request.getSpecificRate() + " " + request.getSpecificRateUnit());
-            specific.setMathExpression(request.getSpecificRate() + " per " + request.getSpecificRateUnit());
-            specificDutyRepository.save(specific);
             
-        } else if (duty instanceof CombinedDuty && request.getCompoundRate1() != null) {
+            // ✅ Only update unit if provided, otherwise keep existing
+            if (request.getSpecificRateUnit() != null && !request.getSpecificRateUnit().trim().isEmpty()) {
+                specific.setUnit(request.getSpecificRateUnit());
+            }
+            
+            specific.setSpecificDutyRateRaw(request.getSpecificRate() + " " + specific.getUnit());
+            specific.setMathExpression(request.getSpecificRate() + " per " + specific.getUnit());
+            specificDutyRepository.save(specific);
+            updated = true;
+            
+        } else if (duty instanceof CombinedDuty && 
+                   (request.getCompoundRate1() != null || request.getCompoundRate2() != null)) {
             CombinedDuty combined = (CombinedDuty) duty;
-            combined.setRatePercent(BigDecimal.valueOf(request.getCompoundRate1()));
-            combined.setAmount(BigDecimal.valueOf(request.getCompoundRate2()));
-            if (request.getSpecificRateUnit() != null) {
+            
+            // ✅ Update only the rates that are provided
+            if (request.getCompoundRate1() != null) {
+                combined.setRatePercent(BigDecimal.valueOf(request.getCompoundRate1()));
+            }
+            if (request.getCompoundRate2() != null) {
+                combined.setAmount(BigDecimal.valueOf(request.getCompoundRate2()));
+            }
+            if (request.getSpecificRateUnit() != null && !request.getSpecificRateUnit().trim().isEmpty()) {
                 combined.setUnit(request.getSpecificRateUnit());
             }
+            
             combined.setSpecificDutyRateRaw(
                 String.format("%.2f%% + %.2f per %s", 
-                    request.getCompoundRate1(), 
-                    request.getCompoundRate2(), 
+                    combined.getRatePercent().doubleValue(), 
+                    combined.getAmount().doubleValue(), 
                     combined.getUnit())
             );
             combined.setMathExpression(
                 String.format("%.2f%% + %.2f/%s", 
-                    request.getCompoundRate1(), 
-                    request.getCompoundRate2(), 
+                    combined.getRatePercent().doubleValue(), 
+                    combined.getAmount().doubleValue(), 
                     combined.getUnit())
             );
             combinedDutyRepository.save(combined);
-            
-        } else {
-            throw new DutyNotFoundException("Cannot update duty: incompatible duty type or missing duty rates for tariff");
+            updated = true;
+        }
+        
+        // ✅ Only throw error if rates were provided but didn't match duty type
+        if (!updated && hasAnyDutyRate(request)) {
+            throw new InvalidRequestException(
+                "Cannot update duty rates: provided rates don't match existing duty type (" + 
+                duty.getClass().getSimpleName() + ")"
+            );
         }
     }
 

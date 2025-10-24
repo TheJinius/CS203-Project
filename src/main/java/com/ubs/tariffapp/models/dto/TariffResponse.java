@@ -2,7 +2,7 @@ package com.ubs.tariffapp.models.dto;
 
 public class TariffResponse {
     private Integer tariffId;
-    private Integer tariffYear;
+    private Integer tariffYear;  // ✅ Keep as "tariffYear" everywhere
     
     // Country information
     private String reporterCode;

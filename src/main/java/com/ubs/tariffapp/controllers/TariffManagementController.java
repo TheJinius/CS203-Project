@@ -1,5 +1,8 @@
 package com.ubs.tariffapp.controllers;
 
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
 import com.ubs.tariffapp.models.dto.TariffRequest;
 import com.ubs.tariffapp.models.dto.TariffResponse;
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
@@ -34,7 +37,7 @@ public class TariffManagementController {
     // NEW: Search for tariffs to edit (same as CalculateTab logic)
     @PostMapping("/search")
     @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<Map<String, Object>> searchTariffsForEdit(@RequestBody TariffSearchRequest request) {
+    public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
         System.out.println("🔍 Admin searching tariffs for editing:");
         System.out.println("ReporterCode = " + request.getReporterCode());
         System.out.println("PartnerCode = " + request.getPartnerCode());
@@ -42,7 +45,6 @@ public class TariffManagementController {
         System.out.println("Year = " + request.getYear());
 
         try {
-            // Use the same DutyService method that works in CalculateTab
             List<TariffSchedule> tariffs = dutyService.searchAvailableTariffs(
                 request.getReporterCode(),
                 request.getPartnerCode(),
@@ -50,12 +52,13 @@ public class TariffManagementController {
                 request.getYear()
             );
             
-            // Convert to admin-friendly format with edit info
+            // Convert to admin-friendly format with FULL duty info
             List<Map<String, Object>> tariffList = tariffs.stream()
                     .map(ts -> {
                         Map<String, Object> tariffMap = new HashMap<>();
                         tariffMap.put("tariffId", ts.getTariffId());
-                        tariffMap.put("year", ts.getTariffYear());
+                        // ✅ CRITICAL FIX: Use "tariffYear" to match frontend interface
+                        tariffMap.put("tariffYear", ts.getTariffYear());  // Changed from "year"
                         tariffMap.put("reporterCode", ts.getReporter().getCountryId());
                         tariffMap.put("reporterName", ts.getReporter().getCountryName());
                         tariffMap.put("partnerCode", ts.getPartner().getCountryId());
@@ -68,10 +71,33 @@ public class TariffManagementController {
                         tariffMap.put("tlsSuffix", ts.getTlsSuffix());
                         tariffMap.put("note", ts.getNote());
                         
-                        // Add duty details for editing
+                        // ✅ ADD FULL DUTY DETAILS
                         if (ts.getDuty() != null) {
                             tariffMap.put("dutyCategory", ts.getDuty().getDutyNature());
-                            // Add specific duty rates based on type (will be populated by service)
+                            
+                            // Extract specific duty rates based on type
+                            if (ts.getDuty() instanceof AdValoremDuty) {
+                                AdValoremDuty avDuty = (AdValoremDuty) ts.getDuty();
+                                // ✅ Convert BigDecimal to Double
+                                tariffMap.put("adValoremRate", avDuty.getRatePercent().doubleValue());
+                                
+                            } else if (ts.getDuty() instanceof SpecificDuty) {
+                                SpecificDuty specDuty = (SpecificDuty) ts.getDuty();
+                                tariffMap.put("specificRate", specDuty.getAmount().doubleValue());
+                                tariffMap.put("specificRateUnit", specDuty.getUnit());
+                                
+                            } else if (ts.getDuty() instanceof CombinedDuty) {
+                                CombinedDuty combDuty = (CombinedDuty) ts.getDuty();
+                                if (combDuty.getRatePercent() != null) {
+                                    tariffMap.put("adValoremRate", combDuty.getRatePercent().doubleValue());
+                                    tariffMap.put("compoundRate1", combDuty.getRatePercent().doubleValue());
+                                }
+                                if (combDuty.getAmount() != null) {
+                                    tariffMap.put("specificRate", combDuty.getAmount().doubleValue());
+                                    tariffMap.put("compoundRate2", combDuty.getAmount().doubleValue());
+                                }
+                                tariffMap.put("specificRateUnit", combDuty.getUnit());
+                            }
                         }
                         
                         return tariffMap;
@@ -84,11 +110,12 @@ public class TariffManagementController {
             response.put("year", request.getYear());
             response.put("status", "success");
             
-            System.out.println("✅ Found " + tariffs.size() + " tariff(s) for editing");
+            System.out.println("✅ Found " + tariffs.size() + " tariff(s) for editing with full duty details");
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             System.err.println("❌ Search error: " + e.getMessage());
+            e.printStackTrace();
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to search tariffs: " + e.getMessage());
             errorResponse.put("status", "error");
@@ -131,17 +158,11 @@ public class TariffManagementController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('Admin')")
     public ResponseEntity<TariffResponse> updateTariff(
-            @PathVariable Integer id,
-            @Valid @RequestBody TariffRequest request) {
-        System.out.println("✏️ Updating tariff ID: " + id);
-        try {
-            TariffResponse response = tariffManagementService.updateTariff(id, request);
-            System.out.println("✅ Tariff updated successfully");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            System.err.println("❌ Error updating tariff: " + e.getMessage());
-            return ResponseEntity.status(400).build();
-        }
+        @PathVariable Integer id,
+        @RequestBody Map<String, Object> updates  // ✅ Change from TariffRequest to Map
+    ) {
+        TariffResponse updated = tariffManagementService.updateTariff(id, updates);
+        return ResponseEntity.ok(updated);
     }
 
     // Delete tariff
