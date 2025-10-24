@@ -95,11 +95,17 @@ nb-configuration.xml
 *.hcl
 *.tfstate.backup
 
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
 #deployment zip files
 *.zip
 
 #env files
 .env
+.venv
 *.pem
 
 #application-local file
