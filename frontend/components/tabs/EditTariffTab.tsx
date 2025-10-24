@@ -808,14 +808,15 @@ export default function EditTariffTab() {
                     step="0.01"
                     value={editFormData.adValoremRate !== undefined ? editFormData.adValoremRate.toString() : ""}
                     onChange={(e) => {
-                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const value = e.target.value.trim()
                       const newFormData = { ...editFormData }
                       
-                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                      if (value === "") {
+                        // Empty input - remove the field
                         delete newFormData.adValoremRate
                       } else {
                         const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
                           newFormData.adValoremRate = parsed
                         } else {
                           delete newFormData.adValoremRate
@@ -844,14 +845,15 @@ export default function EditTariffTab() {
                     step="0.01"
                     value={editFormData.specificRate !== undefined ? editFormData.specificRate.toString() : ""}
                     onChange={(e) => {
-                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const value = e.target.value.trim()
                       const newFormData = { ...editFormData }
                       
-                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                      if (value === "") {
+                        // Empty input - remove the field
                         delete newFormData.specificRate
                       } else {
                         const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
                           newFormData.specificRate = parsed
                         } else {
                           delete newFormData.specificRate
@@ -880,14 +882,15 @@ export default function EditTariffTab() {
                     step="0.01"
                     value={editFormData.compoundRate1 !== undefined ? editFormData.compoundRate1.toString() : ""}
                     onChange={(e) => {
-                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const value = e.target.value.trim()
                       const newFormData = { ...editFormData }
                       
-                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                      if (value === "") {
+                        // Empty input - remove the field
                         delete newFormData.compoundRate1
                       } else {
                         const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
                           newFormData.compoundRate1 = parsed
                         } else {
                           delete newFormData.compoundRate1
@@ -916,14 +919,15 @@ export default function EditTariffTab() {
                     step="0.01"
                     value={editFormData.compoundRate2 !== undefined ? editFormData.compoundRate2.toString() : ""}
                     onChange={(e) => {
-                      const value = e.target.value.trim()  // ✅ Add trim()
+                      const value = e.target.value.trim()
                       const newFormData = { ...editFormData }
                       
-                      if (value === "" || value === "0") {  // ✅ Treat "0" as empty
+                      if (value === "") {
+                        // Empty input - remove the field
                         delete newFormData.compoundRate2
                       } else {
                         const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed > 0) {  // ✅ Only set if > 0
+                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
                           newFormData.compoundRate2 = parsed
                         } else {
                           delete newFormData.compoundRate2
