@@ -69,6 +69,21 @@ public class DutyController {
                             tariffMap.put("productDescription", ts.getProduct().getDescription());
                         }
                         
+                        // Add duty class name and unit information
+                        if (ts.getDuty() != null) {
+                            Duty duty = ts.getDuty();
+                            // Add the Java class name (e.g., "AdValoremDuty", "SpecificDuty", "CombinedDuty")
+                            tariffMap.put("dutyClass", duty.getClass().getSimpleName());
+                            
+                            if (duty instanceof SpecificDuty) {
+                                SpecificDuty specificDuty = (SpecificDuty) duty;
+                                tariffMap.put("unit", specificDuty.getUnit());
+                            } else if (duty instanceof CombinedDuty) {
+                                CombinedDuty combinedDuty = (CombinedDuty) duty;
+                                tariffMap.put("unit", combinedDuty.getUnit());
+                            }
+                        }
+                        
                         return tariffMap;
                     })
                     .collect(Collectors.toList());

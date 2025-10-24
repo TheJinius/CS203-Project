@@ -20,6 +20,9 @@ interface Product {
 interface Tariff {
   tariffId: number
   description?: string
+  dutyType?: string
+  dutyClass?: string  // Add this: Java class name like "AdValoremDuty", "SpecificDuty", etc.
+  unit?: string
 }
 
 interface CalculateTabProps {
@@ -447,12 +450,39 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Amount of Product
+                {selectedTariff && (() => {
+                  const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
+                  if (!tariff) return null
+                  
+                  // Check the Java class name directly instead of description string
+                  const isAdValorem = tariff.dutyClass === 'AdValoremDuty'
+                  
+                  if (isAdValorem) {
+                    return <span className="text-blue-600 dark:text-blue-400"> (in dollars, $)</span>
+                  } else if (tariff.unit) {
+                    return <span className="text-blue-600 dark:text-blue-400"> (in {tariff.unit})</span>
+                  }
+                  return null
+                })()}
               </Label>
               <Input
                 type="number"
                 value={amountOfProduct}
                 onChange={(e) => setAmountOfProduct(e.target.value)}
-                placeholder="Enter quantity/amount (e.g., 1000)"
+                placeholder={(() => {
+                  const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
+                  if (!tariff) return "Enter quantity/amount (e.g., 1000)"
+                  
+                  // Check the Java class name directly
+                  const isAdValorem = tariff.dutyClass === 'AdValoremDuty'
+                  
+                  if (isAdValorem) {
+                    return "Enter dollar value (e.g., 10000)"
+                  } else if (tariff.unit) {
+                    return `Enter quantity in ${tariff.unit} (e.g., 1000)`
+                  }
+                  return "Enter quantity/amount (e.g., 1000)"
+                })()}
                 step="0.01"
                 min="0"
                 className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium"
