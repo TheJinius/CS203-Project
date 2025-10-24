@@ -305,7 +305,7 @@ public class DutyController {
                     double amount = combinedDuty.getAmount().doubleValue();
                     double multiplier = combinedDuty.getMultiplier().doubleValue();
                     String unit = combinedDuty.getUnit();
-                    String mixedOrConditional = combinedDuty.getMixedOrConditional();
+                    String mixedOrConditional = combinedDuty.getMixedOrCompound();
                     
                     double adValoremAmount = amountOfProduct * rate / 100.0;
                     double units = amountOfProduct / multiplier;

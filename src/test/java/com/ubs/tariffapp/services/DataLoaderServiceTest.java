@@ -169,9 +169,9 @@ public class DataLoaderServiceTest {
             // Test first combined duty
             CombinedDuty firstDuty = combinedDuties.get(0);
             assertNotNull(firstDuty.getTariffSchedule(), "Duty should be linked to tariff schedule");
-            assertNotNull(firstDuty.getMixedOrConditional(), "Mixed/Conditional flag should be set");
-            assertTrue(firstDuty.getMixedOrConditional().equals("M") || 
-                      firstDuty.getMixedOrConditional().equals("C"), "Should be M (Mixed) or C (Compound)");
+            assertNotNull(firstDuty.getMixedOrCompound(), "Mixed/Conditional flag should be set");
+            assertTrue(firstDuty.getMixedOrCompound().equals("M") || 
+                      firstDuty.getMixedOrCompound().equals("C"), "Should be M (Mixed) or C (Compound)");
             
             // At least one component should be present
             boolean hasAdValorem = firstDuty.getRatePercent() != null && 
@@ -422,9 +422,9 @@ public class DataLoaderServiceTest {
             int dutiesWithBothComponents = 0;
             
             for (CombinedDuty duty : combinedDuties) {
-                if ("M".equals(duty.getMixedOrConditional())) {
+                if ("M".equals(duty.getMixedOrCompound())) {
                     mixedDuties++;
-                } else if ("C".equals(duty.getMixedOrConditional())) {
+                } else if ("C".equals(duty.getMixedOrCompound())) {
                     compoundDuties++;
                 }
                 

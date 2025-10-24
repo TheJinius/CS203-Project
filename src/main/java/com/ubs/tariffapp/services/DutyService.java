@@ -107,9 +107,9 @@ public class DutyService {
             double adValorem = amountOfProduct * combinedDuty.getRatePercent().doubleValue() / 100.0;
             double specific = (amountOfProduct / combinedDuty.getMultiplier().doubleValue()) * combinedDuty.getAmount().doubleValue();
             
-            if ("M".equals(combinedDuty.getMixedOrConditional())) {
+            if ("M".equals(combinedDuty.getMixedOrCompound())) {
                 tariffAmount = adValorem + specific;
-            } else if ("C".equals(combinedDuty.getMixedOrConditional())) {
+            } else if ("C".equals(combinedDuty.getMixedOrCompound())) {
                 tariffAmount = Math.max(adValorem, specific);
             }
         } else {

@@ -51,7 +51,7 @@ public class CombinedDutyRepositoryTest {
         assertThat(found.getTariffId()).isEqualTo(generatedId);
         assertThat(found.getDutyNature()).isEqualTo(duty.getDutyNature());
         assertThat(found.getMathExpression()).isEqualTo(duty.getMathExpression());
-        assertThat(found.getMixedOrConditional()).isEqualTo(duty.getMixedOrConditional());
+        assertThat(found.getMixedOrCompound()).isEqualTo(duty.getMixedOrCompound());
         assertThat(found.getRatePercent()).isEqualByComparingTo(duty.getRatePercent());
         assertThat(found.getAmount()).isEqualByComparingTo(duty.getAmount());
         assertThat(found.getUnit()).isEqualTo(duty.getUnit());

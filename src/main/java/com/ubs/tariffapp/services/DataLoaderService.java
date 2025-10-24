@@ -410,11 +410,11 @@ public class DataLoaderService {
         
         // Determine if it's Mixed (M) or Compound (C) based on avMethod
         if ("M".equals(avMethod)) {
-            duty.setMixedOrConditional("M");
+            duty.setMixedOrCompound("M");
         } else if ("C".equals(avMethod)) {
-            duty.setMixedOrConditional("C");
+            duty.setMixedOrCompound("C");
         } else {
-            duty.setMixedOrConditional("C"); // Default to compound
+            duty.setMixedOrCompound("C"); // Default to compound
         }
         
         // Set ad valorem component (including 0 rates)

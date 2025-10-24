@@ -310,7 +310,7 @@ public class DutyServiceTest {
         combinedDuty.setRatePercent(BigDecimal.valueOf(ratePercent));
         combinedDuty.setAmount(BigDecimal.valueOf(amount));
         combinedDuty.setMultiplier(multiplier);
-        combinedDuty.setMixedOrConditional(mixedOrConditional);
+        combinedDuty.setMixedOrCompound(mixedOrConditional);
         combinedDuty.setTariffSchedule(tariffSchedule);
         
         tariffSchedule.setDuty(combinedDuty);
