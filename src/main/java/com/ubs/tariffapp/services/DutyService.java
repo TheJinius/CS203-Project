@@ -7,8 +7,7 @@ import com.ubs.tariffapp.exceptions.InvalidRequestException;
 import com.ubs.tariffapp.exceptions.TariffNotFoundException;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.duty.*;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import com.ubs.tariffapp.utils.DutyCalculationUtils;
 import java.util.List;
 
 @Service
@@ -128,51 +127,61 @@ public class DutyService {
         
         if (duty instanceof AdValoremDuty) {
             AdValoremDuty adValoremDuty = (AdValoremDuty) duty;
-            tariffAmount = amountOfProduct * adValoremDuty.getRatePercent().doubleValue() / 100.0;
+            tariffAmount = DutyCalculationUtils.calculateAdValoremAmount(
+                amountOfProduct, 
+                adValoremDuty.getRatePercent().doubleValue()
+            );
             
         } else if (duty instanceof SpecificDuty) {
             SpecificDuty specificDuty = (SpecificDuty) duty;
-            tariffAmount = (amountOfProduct / specificDuty.getMultiplier().doubleValue()) * specificDuty.getAmount().doubleValue();
+            tariffAmount = DutyCalculationUtils.calculateSpecificAmount(
+                amountOfProduct,
+                specificDuty.getMultiplier().doubleValue(),
+                specificDuty.getAmount().doubleValue()
+            );
             
         } else if (duty instanceof CombinedDuty) {
-            CombinedDuty combinedDuty = (CombinedDuty) duty;
-            double adValorem = amountOfProduct * combinedDuty.getRatePercent().doubleValue() / 100.0;
-            double specific = (amountOfProduct / combinedDuty.getMultiplier().doubleValue()) * combinedDuty.getAmount().doubleValue();
+            // LEGACY: Single value used for both Ad Valorem and Specific calculations
+            // This has semantic ambiguity and is inherently wrong - prefer using calculateTariffById with separate productValueDollars
+            System.out.println("WARNING: Using legacy Combined Duty calculation with single value (semantically ambiguous)");
             
-            if ("M".equals(combinedDuty.getMixedOrCompound())) {
-                tariffAmount = adValorem + specific;
-            } else if ("C".equals(combinedDuty.getMixedOrCompound())) {
-                tariffAmount = Math.max(adValorem, specific);
-            }
+            CombinedDuty combinedDuty = (CombinedDuty) duty;
+            double adValorem = DutyCalculationUtils.calculateAdValoremAmount(
+                amountOfProduct,
+                combinedDuty.getRatePercent().doubleValue()
+            );
+            double specific = DutyCalculationUtils.calculateSpecificAmount(
+                amountOfProduct,
+                combinedDuty.getMultiplier().doubleValue(),
+                combinedDuty.getAmount().doubleValue()
+            );
+            
+            tariffAmount = DutyCalculationUtils.calculateCombinedDutyResult(combinedDuty.getMixedOrCompound(), adValorem, specific);
         } else {
             tariffAmount = 0.0;
         }
 
-        return BigDecimal.valueOf(tariffAmount)
-                .setScale(2, RoundingMode.HALF_EVEN)
-                .doubleValue();
+        return DutyCalculationUtils.roundToTwoDecimals(tariffAmount);
     }
 
     // Calculate tariff for Combined Duty with separate product value and quantity
     private double calculateTariffAmountForCombined(CombinedDuty combinedDuty, double productValueDollars, double productQuantity) {
         // Ad Valorem component uses dollar value
-        double adValorem = productValueDollars * combinedDuty.getRatePercent().doubleValue() / 100.0;
+        double adValorem = DutyCalculationUtils.calculateAdValoremAmount(
+            productValueDollars,
+            combinedDuty.getRatePercent().doubleValue()
+        );
         
         // Specific component uses quantity in units
-        double specific = (productQuantity / combinedDuty.getMultiplier().doubleValue()) * combinedDuty.getAmount().doubleValue();
+        double specific = DutyCalculationUtils.calculateSpecificAmount(
+            productQuantity,
+            combinedDuty.getMultiplier().doubleValue(),
+            combinedDuty.getAmount().doubleValue()
+        );
         
-        double tariffAmount;
-        if ("M".equals(combinedDuty.getMixedOrCompound())) {
-            tariffAmount = adValorem + specific;
-        } else if ("C".equals(combinedDuty.getMixedOrCompound())) {
-            tariffAmount = Math.max(adValorem, specific);
-        } else {
-            tariffAmount = 0.0;
-        }
+        double tariffAmount = DutyCalculationUtils.calculateCombinedDutyResult(combinedDuty.getMixedOrCompound(), adValorem, specific);
 
-        return BigDecimal.valueOf(tariffAmount)
-                .setScale(2, RoundingMode.HALF_EVEN)
-                .doubleValue();
+        return DutyCalculationUtils.roundToTwoDecimals(tariffAmount);
     }
 
     public double calculateTariff(TariffSchedule tariffSchedule, double amountOfProduct) {

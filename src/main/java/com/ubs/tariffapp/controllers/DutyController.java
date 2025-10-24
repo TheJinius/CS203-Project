@@ -26,6 +26,7 @@ import com.ubs.tariffapp.models.request.TariffSearchRequest;
 import com.ubs.tariffapp.services.DutyService;
 import com.ubs.tariffapp.services.ExchangeRateService;
 import com.ubs.tariffapp.services.TariffScheduleService;
+import com.ubs.tariffapp.utils.DutyCalculationUtils;
 
 @RestController
 @RequestMapping("/api/tariffs")
@@ -336,8 +337,7 @@ public class DutyController {
                         specificAmount = units * amount;
                     }
                     
-                    tariffResult = "M".equals(mixedOrConditional) ? 
-                        (adValoremAmount + specificAmount) : Math.max(adValoremAmount, specificAmount);
+                    tariffResult = DutyCalculationUtils.calculateCombinedDutyResult(mixedOrConditional, adValoremAmount, specificAmount);
                     
                     details.put("dutyTypeCode", "COMBINED");
                     details.put("rate", rate);
@@ -361,8 +361,8 @@ public class DutyController {
                     
                     List<Map<String, String>> steps = new ArrayList<>();
                     
-                    if ("M".equals(mixedOrConditional)) {
-                        details.put("combinationType", "Mixed (Sum of both)");
+                    if ("C".equals(mixedOrConditional)) {
+                        details.put("combinationType", "Compound (Sum of both)");
                         
                         if (hasSeparateValues) {
                             details.put("formula", "Tariff = Ad Valorem + Specific Duty");
@@ -435,8 +435,8 @@ public class DutyController {
                                 adValoremAmount, specificAmount, tariffResult));
                         }
                             
-                    } else if ("C".equals(mixedOrConditional)) {
-                        details.put("combinationType", "Conditional (Maximum of both)");
+                    } else if ("M".equals(mixedOrConditional)) {
+                        details.put("combinationType", "Mixed (Maximum of both)");
                         
                         if (hasSeparateValues) {
                             details.put("formula", "Tariff = MAX(Ad Valorem, Specific Duty)");
