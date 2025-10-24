@@ -48,6 +48,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
   const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
+  const [calculationDetails, setCalculationDetails] = useState<any>(null)
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -224,6 +225,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       if (ok) {
         const tariffAmountUSD = data.tariffAmount // Backend returns in USD
         setBaseTariffAmountUSD(tariffAmountUSD) // Store USD base amount
+        setCalculationDetails(data.calculationDetails) // Store calculation details
 
         // Convert to selected currency
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
@@ -509,6 +511,117 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
           )}
           <span className="flex-1 break-words">{success || error}</span>
         </div>
+      )}
+
+      {/* Calculation Details Card */}
+      {calculationDetails && success && (
+        <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 shadow-sm">
+          <CardHeader className="pb-2 px-4 pt-3">
+            <CardTitle className="text-base flex items-center gap-2 text-blue-900 dark:text-blue-100">
+              <Calculator className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              Calculation Logic
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 px-4 pb-3 text-sm">
+            {/* Product Info */}
+            {calculationDetails.productDescription && (
+              <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Product</div>
+                <div className="text-slate-600 dark:text-slate-400 text-xs">
+                  {calculationDetails.productCode}: {calculationDetails.productDescription}
+                </div>
+              </div>
+            )}
+
+            {/* Duty Type */}
+            {calculationDetails.dutyType && (
+              <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Duty Type</div>
+                <div className="text-slate-600 dark:text-slate-400 text-xs">
+                  {calculationDetails.dutyType}
+                </div>
+              </div>
+            )}
+
+            {/* Formula */}
+            {calculationDetails.formula && (
+              <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Formula</div>
+                <div className="text-blue-600 dark:text-blue-400 font-mono text-xs">
+                  {calculationDetails.formula}
+                </div>
+              </div>
+            )}
+
+            {/* Parameters */}
+            <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+              <div className="font-medium text-slate-900 dark:text-slate-100 mb-2">Parameters</div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Product Value:</span>
+                  <span className="font-mono text-slate-900 dark:text-slate-100">
+                    ${parseFloat(amountOfProduct).toFixed(2)}
+                  </span>
+                </div>
+                {calculationDetails.rate && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Rate:</span>
+                    <span className="font-mono text-slate-900 dark:text-slate-100">
+                      {calculationDetails.rate}
+                    </span>
+                  </div>
+                )}
+                {calculationDetails.amountPerUnit && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Amount per Unit:</span>
+                    <span className="font-mono text-slate-900 dark:text-slate-100">
+                      {calculationDetails.amountPerUnit}
+                    </span>
+                  </div>
+                )}
+                {calculationDetails.multiplier && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Multiplier:</span>
+                    <span className="font-mono text-slate-900 dark:text-slate-100">
+                      {calculationDetails.multiplier}
+                    </span>
+                  </div>
+                )}
+                {calculationDetails.combinationType && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Combination Type:</span>
+                    <span className="font-mono text-slate-900 dark:text-slate-100 text-xs">
+                      {calculationDetails.combinationType}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Calculation */}
+            {calculationDetails.calculation && (
+              <div className="p-2 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded border border-green-200 dark:border-green-800">
+                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Calculation</div>
+                <div className="text-green-700 dark:text-green-400 font-mono text-xs break-all">
+                  {calculationDetails.calculation}
+                </div>
+              </div>
+            )}
+
+            {/* Final Result */}
+            <div className="p-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded border border-blue-300 dark:border-blue-700">
+              <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Final Tariff</div>
+              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                {currency} {baseTariffAmountUSD !== null ? convertFromUSD(baseTariffAmountUSD, currency, exchangeRates).toFixed(2) : '0.00'}
+              </div>
+              {currency !== "USD" && baseTariffAmountUSD && (
+                <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Base: USD ${baseTariffAmountUSD.toFixed(2)}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

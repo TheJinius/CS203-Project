@@ -1,25 +1,31 @@
 package com.ubs.tariffapp.controllers;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.FacesRequestAttributes;
-
-import com.ubs.tariffapp.models.request.TariffCalculationRequest;
-import com.ubs.tariffapp.models.request.TariffSearchRequest;
-import com.ubs.tariffapp.models.ExchangeRates;
-import com.ubs.tariffapp.models.TariffSchedule;
-import com.ubs.tariffapp.services.DutyService;
-import com.ubs.tariffapp.services.ExchangeRateService;
-import com.ubs.tariffapp.services.TariffScheduleService;
-import com.ubs.tariffapp.exceptions.*;
-import com.ubs.tariffapp.models.dto.TariffOptionsResponse;
-
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.ubs.tariffapp.exceptions.DutyNotFoundException;
+import com.ubs.tariffapp.exceptions.InvalidRequestException;
+import com.ubs.tariffapp.exceptions.TariffNotFoundException;
+import com.ubs.tariffapp.models.ExchangeRates;
+import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.Duty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.models.request.TariffCalculationRequest;
+import com.ubs.tariffapp.models.request.TariffSearchRequest;
+import com.ubs.tariffapp.services.DutyService;
+import com.ubs.tariffapp.services.ExchangeRateService;
+import com.ubs.tariffapp.services.TariffScheduleService;
 
 @RestController
 @RequestMapping("/api/tariffs")
@@ -138,7 +144,7 @@ public class DutyController {
             response.put("tariffAmount", convertedAmount);
             response.put("currency", requestedCurrency);
             response.put("tariffId", request.getTariffId());
-            response.put("calculationDetails", getCalculationDetails(request.getTariffId()));
+            response.put("calculationDetails", getCalculationDetails(request.getTariffId(), request.getAmountOfProduct()));
             response.put("status", "success");
 
             System.out.println("✅ SUCCESS: Calculated tariff = " + convertedAmount + " " + requestedCurrency);
@@ -196,16 +202,72 @@ public class DutyController {
     }
 
     // Helper method to get calculation details for a specific tariff
-    private String getCalculationDetails(Integer tariffId) {
+    private Map<String, Object> getCalculationDetails(Integer tariffId, double amountOfProduct) {
+        Map<String, Object> details = new HashMap<>();
+        
         try {
             TariffSchedule tariff = tariffScheduleService.getTariffScheduleById(tariffId);
             if (tariff != null && tariff.getDuty() != null) {
-                return "Applied " + tariff.getDutyType().getDutyTypeDescription() + 
-                       " duty for " + tariff.getProduct().getDescription();
+                Duty duty = tariff.getDuty();
+                String dutyType = tariff.getDutyType().getDutyTypeDescription();
+                
+                details.put("dutyType", dutyType);
+                details.put("productDescription", tariff.getProduct().getDescription());
+                details.put("productCode", tariff.getProduct().getTlCode());
+                
+                // Add specific calculation formulas based on duty type
+                if (duty instanceof AdValoremDuty) {
+                    AdValoremDuty adValoremDuty = (AdValoremDuty) duty;
+                    double rate = adValoremDuty.getRatePercent().doubleValue();
+                    details.put("formula", "Tariff = Product Value × Rate");
+                    details.put("calculation", String.format("$%.2f × %.2f%% = $%.2f", 
+                        amountOfProduct, rate, amountOfProduct * rate / 100.0));
+                    details.put("rate", rate + "%");
+                    
+                } else if (duty instanceof SpecificDuty) {
+                    SpecificDuty specificDuty = (SpecificDuty) duty;
+                    double amount = specificDuty.getAmount().doubleValue();
+                    double multiplier = specificDuty.getMultiplier().doubleValue();
+                    details.put("formula", "Tariff = (Product Value / Multiplier) × Amount per Unit");
+                    details.put("calculation", String.format("($%.2f / %.2f) × $%.2f = $%.2f",
+                        amountOfProduct, multiplier, amount, 
+                        (amountOfProduct / multiplier) * amount));
+                    details.put("amountPerUnit", "$" + amount);
+                    details.put("multiplier", String.valueOf(multiplier));
+                    
+                } else if (duty instanceof CombinedDuty) {
+                    CombinedDuty combinedDuty = (CombinedDuty) duty;
+                    double rate = combinedDuty.getRatePercent().doubleValue();
+                    double amount = combinedDuty.getAmount().doubleValue();
+                    double multiplier = combinedDuty.getMultiplier().doubleValue();
+                    String mixedOrConditional = combinedDuty.getMixedOrConditional();
+                    
+                    double adValorem = amountOfProduct * rate / 100.0;
+                    double specific = (amountOfProduct / multiplier) * amount;
+                    
+                    if ("M".equals(mixedOrConditional)) {
+                        details.put("formula", "Tariff = Ad Valorem + Specific Duty");
+                        details.put("calculation", String.format("($%.2f × %.2f%%) + (($%.2f / %.2f) × $%.2f) = $%.2f + $%.2f = $%.2f",
+                            amountOfProduct, rate, amountOfProduct, multiplier, amount,
+                            adValorem, specific, adValorem + specific));
+                        details.put("combinationType", "Mixed (Sum of both)");
+                    } else if ("C".equals(mixedOrConditional)) {
+                        details.put("formula", "Tariff = MAX(Ad Valorem, Specific Duty)");
+                        details.put("calculation", String.format("MAX(($%.2f × %.2f%%), (($%.2f / %.2f) × $%.2f)) = MAX($%.2f, $%.2f) = $%.2f",
+                            amountOfProduct, rate, amountOfProduct, multiplier, amount,
+                            adValorem, specific, Math.max(adValorem, specific)));
+                        details.put("combinationType", "Conditional (Maximum of both)");
+                    }
+                    details.put("rate", rate + "%");
+                    details.put("amountPerUnit", "$" + amount);
+                    details.put("multiplier", String.valueOf(multiplier));
+                }
             }
         } catch (Exception e) {
             System.err.println("Could not get calculation details: " + e.getMessage());
+            details.put("error", "Could not retrieve calculation details");
         }
-        return "Tariff calculation completed";
+        
+        return details;
     }
 }
