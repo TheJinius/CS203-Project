@@ -36,7 +36,7 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	python -m venv .venv
 	```
 
-3. In PowerShell (and NOT the Command Prompt), run this command. You should see `( venv) in the PowerShell prompt:
+3. In PowerShell (and NOT the Command Prompt), run this command. You should see `( venv)` in the PowerShell prompt:
     ```
     .\.venv\Scripts\Activate.ps1
     ```
@@ -50,8 +50,6 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
     ```
     pip install -r requirements.txt
     ```
-
-6. 
 
 ### 3. Running the Application
 
