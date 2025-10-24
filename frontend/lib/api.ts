@@ -1,7 +1,6 @@
 import { getSession, signOut } from "next-auth/react";
 
 const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
-console.log(API_BASE_ROUTE);
 
 // Helper function to get current auth headers
 async function getAuthHeaders() {
@@ -28,8 +27,6 @@ export async function searchTariffs(params: {
   tlCode: string;
   year: number;
 }) {
-  console.log('🔍 Searching tariffs with data:', params);
-  
   // Map frontend field names to backend expected names  
   const backendRequest = {
     reporterCode: params.reporter,
@@ -62,25 +59,15 @@ export async function calculateTariff(params: {
   amountOfProduct: number;
   currency: string;
 }) {
-  console.log('🧮 Calculating tariff with data:', params);
-  
   try {
     const headers = await getAuthHeaders();
     
-    // Add cache buster to force new request
-    const cacheBuster = Date.now();
-    
-    const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate?_=${cacheBuster}`, {
+    const response = await fetch(`${API_BASE_ROUTE}/tariffs/calculate`, {
       method: "POST",
-      headers: {
-        ...headers,
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers,
       body: JSON.stringify(params),
     })
     const data = await response.json()
-    console.log('🔥 RAW BACKEND RESPONSE:', data);
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Calculate tariff error:', error);
@@ -97,7 +84,6 @@ export async function getExchangeRate() {
       headers,
     })
     const data = await response.json()
-    console.log('📊 Exchange rate data:', data)
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Get exchange rate error:', error);
@@ -106,8 +92,6 @@ export async function getExchangeRate() {
 }
 
 export async function searchProducts(query: string, limit: number = 5) {
-  console.log('🔍 Searching products with query:', query);
-  
   try {
     const headers = await getAuthHeaders();
     

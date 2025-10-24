@@ -41,25 +41,9 @@ public class DutyController {
         this.exchangeRateService = exchangeRateService;
     }
 
-    // TEST ENDPOINT - Check if backend is working
-    @PostMapping("/test")
-    public ResponseEntity<Map<String, String>> testEndpoint() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "🔥 NEW BACKEND CODE IS RUNNING! 🔥");
-        response.put("timestamp", java.time.LocalDateTime.now().toString());
-        System.out.println("🔥🔥🔥 TEST ENDPOINT HIT! Backend code is working!");
-        return ResponseEntity.ok(response);
-    }
-
     // NEW ENDPOINT 1: Search for available tariffs
     @PostMapping("/search")
     public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
-        System.out.println("🔍 Searching tariffs:");
-        System.out.println("ReporterCode = " + request.getReporterCode());
-        System.out.println("PartnerCode = " + request.getPartnerCode());
-        System.out.println("ProductCode = " + request.getProductCode());
-        System.out.println("Year = " + request.getYear());
-
         try {
             // Use real DutyService method instead of fake data
             List<TariffSchedule> tariffs = dutyService.searchAvailableTariffs(
@@ -95,11 +79,9 @@ public class DutyController {
             response.put("year", request.getYear());
             response.put("status", "success");
             
-            System.out.println("✅ Found " + tariffs.size() + " tariff(s)");
             return ResponseEntity.ok(response);
             
         } catch (TariffNotFoundException e) {
-            System.err.println("❌ TariffNotFoundException: " + e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             errorResponse.put("status", "not_found");
@@ -108,8 +90,6 @@ public class DutyController {
             return ResponseEntity.status(404).body(errorResponse);
             
         } catch (Exception e) {
-            System.err.println("❌ Unexpected error: " + e.getMessage());
-            e.printStackTrace();
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Internal server error: " + e.getMessage());
             errorResponse.put("status", "error");
@@ -120,9 +100,6 @@ public class DutyController {
     // NEW ENDPOINT 2: Calculate tariff using specific tariff ID
     @PostMapping("/calculate")
     public ResponseEntity<Map<String, Object>> calculateTariff(@RequestBody TariffCalculationRequest request) {
-        System.out.println("💰 Calculating tariff:");
-        System.out.println("TariffId = " + request.getTariffId());
-        System.out.println("AmountofProduct = " + request.getAmountOfProduct());
         String requestedCurrency = request.getCurrency() != null ? request.getCurrency() : "USD";
 
         try {
@@ -132,8 +109,6 @@ public class DutyController {
                 request.getAmountOfProduct()
             );
             
-            System.out.println("🧮 Base tariff amount (USD): " + tariffAmount);
-
             // Fetch exchange rates using ExchangeRateService
             ExchangeRates rates = exchangeRateService.fetchRates();
             double rate = 1.0;
@@ -155,18 +130,11 @@ public class DutyController {
             response.put("currency", requestedCurrency);
             response.put("tariffId", request.getTariffId());
             response.put("status", "success");
-            response.put("cacheBuster", System.currentTimeMillis()); // Force cache invalidation
-            response.put("PROOF_NEW_CODE_IS_RUNNING", "🚀 VERSION 2.0 🚀"); // UNIQUE MARKER
             
             // Add calculation details directly to response (flattened, not nested)
             Map<String, Object> calcDetails = getCalculationDetails(request.getTariffId(), request.getAmountOfProduct());
-            System.out.println("🔍 DEBUG: calcDetails has " + calcDetails.size() + " entries");
-            System.out.println("🔍 DEBUG: calcDetails keys: " + calcDetails.keySet());
             response.putAll(calcDetails); // Merge all calculation details into main response
 
-            System.out.println("🔥🔥🔥 NEW CODE RUNNING! Tariff = " + convertedAmount + " " + requestedCurrency);
-            System.out.println("🔍 DEBUG: Final response has " + response.size() + " entries");
-            System.out.println("🔍 DEBUG: Final response keys: " + response.keySet());
             return ResponseEntity.ok()
                 .header("Cache-Control", "no-cache, no-store, must-revalidate")
                 .header("Pragma", "no-cache")
@@ -174,29 +142,24 @@ public class DutyController {
                 .body(response);
 
         } catch (TariffNotFoundException e) {
-            System.err.println("❌ TariffNotFoundException: " + e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             errorResponse.put("status", "tariff_not_found");
             return ResponseEntity.status(404).body(errorResponse);
 
         } catch (DutyNotFoundException e) {
-            System.err.println("❌ DutyNotFoundException: " + e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             errorResponse.put("status", "duty_not_found");
             return ResponseEntity.status(404).body(errorResponse);
 
         } catch (InvalidRequestException e) {
-            System.err.println("❌ InvalidRequestException: " + e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             errorResponse.put("status", "bad_request");
             return ResponseEntity.badRequest().body(errorResponse);
 
         } catch (Exception e) {
-            System.err.println("❌ Unexpected error: " + e.getMessage());
-            e.printStackTrace();
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Internal server error: " + e.getMessage());
             errorResponse.put("status", "internal_error");
@@ -226,7 +189,6 @@ public class DutyController {
 
     // Helper method to get calculation details for a specific tariff
     private Map<String, Object> getCalculationDetails(Integer tariffId, double amountOfProduct) {
-        System.out.println("🔍 DEBUG: getCalculationDetails called with tariffId=" + tariffId + ", amount=" + amountOfProduct);
         Map<String, Object> details = new HashMap<>();
         
         try {
@@ -272,8 +234,6 @@ public class DutyController {
                     details.put("steps", steps);
                     details.put("calculation", String.format("$%.2f × (%.2f / 100) = $%.2f", 
                         amountOfProduct, rate, tariffResult));
-                    
-                    System.out.println("🔍 DEBUG AdValorem: Created details map with " + steps.size() + " steps");
                     
                 } else if (duty instanceof SpecificDuty) {
                     SpecificDuty specificDuty = (SpecificDuty) duty;
@@ -422,13 +382,9 @@ public class DutyController {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Could not get calculation details: " + e.getMessage());
-            e.printStackTrace();
             details.put("error", "Could not retrieve calculation details");
         }
         
-        System.out.println("🔍 DEBUG: Returning details map with keys: " + details.keySet());
-        System.out.println("🔍 DEBUG: Details map content: " + details);
         return details;
     }
 }

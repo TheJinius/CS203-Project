@@ -71,7 +71,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       const { ok, data } = await apiSearchProducts(query, 5)
 
       if (ok && data.products && Array.isArray(data.products)) {
-        console.log(`🔍 Backend search found ${data.products.length} results using ${data.searchType} search`)
         return data.products.map((p: Product) => ({
           code: p.code || p.tlCode,
           description: p.description || p.name || "No description available",
@@ -80,7 +79,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       }
 
       // Fallback to predefined products if API fails or returns no results
-      console.log('🔄 Falling back to predefined products')
       const isNumericQuery = /^\d+$/.test(query)
 
       const filtered = predefinedProducts.filter(product =>
@@ -184,7 +182,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         year: parseInt(selectedYear),
       })
       if (ok) {
-        console.log(data);
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
         setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
@@ -225,14 +222,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       if (ok) {
         const tariffAmountUSD = data.tariffAmount // Backend returns in USD
         setBaseTariffAmountUSD(tariffAmountUSD) // Store USD base amount
-        
-        // Debug logging - NOW READING DIRECTLY FROM RESPONSE
-        console.log('🔍 FULL RESPONSE DATA:', JSON.stringify(data, null, 2))
-        console.log('🔍 steps (direct):', data.steps)
-        console.log('🔍 steps type:', typeof data.steps)
-        console.log('🔍 steps length:', data.steps?.length)
-        console.log('🔍 dutyType:', data.dutyType)
-        console.log('🔍 formula:', data.formula)
         
         setCalculationDetails(data) // Store entire response as calculation details
 
@@ -529,10 +518,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
             <CardTitle className="text-base flex items-center gap-2 text-blue-900 dark:text-blue-100">
               <Calculator className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               Calculation Logic
-              {/* Debug indicator */}
-              <span className="text-xs text-gray-500">
-                (Steps: {calculationDetails.steps?.length || 0})
-              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4 pb-3 text-sm">
