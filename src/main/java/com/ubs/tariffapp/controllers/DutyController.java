@@ -250,6 +250,7 @@ public class DutyController {
                     details.put("productValue", amountOfProduct);
                     details.put("calculatedUnits", units);
                     details.put("tariffResult", tariffResult);
+                    details.put("specificDutyRateRaw", specificDuty.getSpecificDutyRateRaw());
                     
                     // Step-by-step breakdown
                     List<Map<String, String>> steps = new ArrayList<>();
@@ -306,6 +307,7 @@ public class DutyController {
                     details.put("specificAmount", specificAmount);
                     details.put("calculatedUnits", units);
                     details.put("tariffResult", tariffResult);
+                    details.put("specificDutyRateRaw", combinedDuty.getSpecificDutyRateRaw());
                     
                     List<Map<String, String>> steps = new ArrayList<>();
                     

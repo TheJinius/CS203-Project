@@ -553,6 +553,11 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                 <div className="text-blue-600 dark:text-blue-400 font-mono text-xs">
                   {calculationDetails.formula}
                 </div>
+                {calculationDetails.specificDutyRateRaw && (
+                  <div className="mt-1 text-slate-600 dark:text-slate-400 text-xs">
+                    <span className="font-medium">Raw Rate:</span> {calculationDetails.specificDutyRateRaw}
+                  </div>
+                )}
               </div>
             )}
 
