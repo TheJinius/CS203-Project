@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar"
 import WorldMap from "@/components/WorldMap"
 import TopBar from "@/components/TopBar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import ConditionalChatbot from "@/components/ConditionalChatbot"
 
 export default function TariffCalculatorPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -15,6 +16,7 @@ export default function TariffCalculatorPage() {
   
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isResizingRef = useRef(false)
+  const lastResizeTime = useRef(0)
 
   const startResizing = useCallback(() => {
     setIsResizing(true)
@@ -32,14 +34,21 @@ export default function TariffCalculatorPage() {
 
   const resize = useCallback((mouseMoveEvent: MouseEvent) => {
     if (isResizingRef.current && sidebarRef.current) {
-      const newWidth = mouseMoveEvent.clientX
-      // Better width constraints for different screen sizes
-      const minWidth = 320
-      const maxWidth = Math.min(800, window.innerWidth * 0.6)
+      const now = Date.now()
+      // Throttle to 60fps (16.67ms)
+      if (now - lastResizeTime.current < 16) return
+      lastResizeTime.current = now
       
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        setSidebarWidth(newWidth)
-      }
+      requestAnimationFrame(() => {
+        const newWidth = mouseMoveEvent.clientX
+        // Better width constraints for different screen sizes
+        const minWidth = 320
+        const maxWidth = Math.min(800, window.innerWidth * 0.6)
+        
+        if (newWidth >= minWidth && newWidth <= maxWidth) {
+          setSidebarWidth(newWidth)
+        }
+      })
     }
   }, [])
 
@@ -73,10 +82,14 @@ export default function TariffCalculatorPage() {
         {sidebarOpen && (
           <div
             ref={sidebarRef}
-            className={`relative flex-shrink-0 transition-all duration-200 ease-in-out ${
-              isResizing ? 'select-none' : ''
+            className={`relative flex-shrink-0 ${
+              isResizing ? 'select-none transition-none' : 'transition-all duration-200 ease-in-out'
             }`}
-            style={{ width: `${sidebarWidth}px` }}
+            style={{ 
+              width: `${sidebarWidth}px`,
+              minWidth: `${sidebarWidth}px`,
+              maxWidth: `${sidebarWidth}px`
+            }}
           >
             <Sidebar
               isOpen={sidebarOpen}
@@ -112,13 +125,13 @@ export default function TariffCalculatorPage() {
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <TopBar 
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           />
 
-          <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900">
+          <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900 relative">
             <WorldMap />
             
             {/* Loading overlay when resizing */}
@@ -128,6 +141,9 @@ export default function TariffCalculatorPage() {
           </div>
         </div>
       </div>
+      
+      {/* Chatbot */}
+      <ConditionalChatbot />
     </ProtectedRoute>
   )
 }

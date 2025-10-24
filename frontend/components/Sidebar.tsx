@@ -59,8 +59,12 @@ export default function Sidebar({
 
   return (
     <div 
-      className="h-full bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shadow-lg"
-      style={{ width: `${width}px` }}
+      className="h-full bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shadow-lg overflow-hidden"
+      style={{ 
+        width: `${width}px`,
+        minWidth: `${width}px`,
+        maxWidth: `${width}px`
+      }}
     >
       {/* Header Section */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
