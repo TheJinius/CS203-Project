@@ -58,6 +58,7 @@ export async function calculateTariff(params: {
   tariffId: number;
   amountOfProduct: number;
   currency: string;
+  productValueDollars?: number; // Optional: for Combined Duty Ad Valorem calculation
 }) {
   try {
     const headers = await getAuthHeaders();

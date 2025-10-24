@@ -63,6 +63,38 @@ public class DutyService {
         return calculateTariffAmount(duty, amountOfProduct);
     }
 
+    // Overloaded method for Combined Duty with separate product value and quantity
+    public double calculateTariffById(Integer tariffId, double amountOfProduct, Double productValueDollars) {
+        
+        if (amountOfProduct <= 0) {
+            throw new InvalidRequestException("Amount of product must be greater than 0");
+        }
+        
+        if (tariffId == null) {
+            throw new InvalidRequestException("Tariff ID is required");
+        }
+        
+        TariffSchedule tariffSchedule = tariffScheduleService.getTariffScheduleById(tariffId);
+        
+        if (tariffSchedule == null) {
+            throw new TariffNotFoundException("No tariff schedule found for ID: " + tariffId);
+        }
+        
+        // Get Duty directly from the one-to-one relationship
+        Duty duty = tariffSchedule.getDuty();
+        
+        if (duty == null) {
+            throw new DutyNotFoundException("No duty information found for TariffSchedule ID: " + tariffSchedule.getTariffId());
+        }
+        
+        // Calculate tariff - use productValueDollars if provided and it's Combined Duty
+        if (duty instanceof CombinedDuty && productValueDollars != null) {
+            return calculateTariffAmountForCombined((CombinedDuty) duty, productValueDollars, amountOfProduct);
+        }
+        
+        return calculateTariffAmount(duty, amountOfProduct);
+    }
+
     // Keep old methods for backward compatibility
     public double calculateTariff(String reporterCode, String partnerCode, String productCode, double amountOfProduct, int year) {
         
@@ -120,6 +152,29 @@ public class DutyService {
                 .setScale(2, RoundingMode.HALF_EVEN)
                 .doubleValue();
     }
+
+    // Calculate tariff for Combined Duty with separate product value and quantity
+    private double calculateTariffAmountForCombined(CombinedDuty combinedDuty, double productValueDollars, double productQuantity) {
+        // Ad Valorem component uses dollar value
+        double adValorem = productValueDollars * combinedDuty.getRatePercent().doubleValue() / 100.0;
+        
+        // Specific component uses quantity in units
+        double specific = (productQuantity / combinedDuty.getMultiplier().doubleValue()) * combinedDuty.getAmount().doubleValue();
+        
+        double tariffAmount;
+        if ("M".equals(combinedDuty.getMixedOrCompound())) {
+            tariffAmount = adValorem + specific;
+        } else if ("C".equals(combinedDuty.getMixedOrCompound())) {
+            tariffAmount = Math.max(adValorem, specific);
+        } else {
+            tariffAmount = 0.0;
+        }
+
+        return BigDecimal.valueOf(tariffAmount)
+                .setScale(2, RoundingMode.HALF_EVEN)
+                .doubleValue();
+    }
+
     public double calculateTariff(TariffSchedule tariffSchedule, double amountOfProduct) {
         if (amountOfProduct <= 0) {
             throw new InvalidRequestException("Amount of product must be greater than 0");

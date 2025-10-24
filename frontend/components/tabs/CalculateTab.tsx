@@ -47,6 +47,8 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [availableTariffs, setAvailableTariffs] = useState<Tariff[]>([])
   const [selectedTariff, setSelectedTariff] = useState<string>("")
   const [amountOfProduct, setAmountOfProduct] = useState<string>("")
+  const [productValueDollars, setProductValueDollars] = useState<string>("") // For Combined Duty Ad Valorem
+  const [productQuantity, setProductQuantity] = useState<string>("") // For Combined Duty Specific
 
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
@@ -212,13 +214,18 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         setExchangeRates(rates) // Store exchange rates for currency conversion
       }
 
+      // Get the selected tariff to check if it's Combined Duty
+      const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
+      const isCombinedDuty = tariff?.dutyClass === 'CombinedDuty'
+
       // Calculate tariff (backend now returns amount in USD)
       const { ok, data } = await calculateTariff({
         reporterCode: selectedDestination,
         partnerCode: selectedSource,
         productCode: selectedProduct,
         tariffId: parseInt(selectedTariff),
-        amountOfProduct: parseFloat(amountOfProduct),
+        amountOfProduct: isCombinedDuty ? parseFloat(productQuantity) : parseFloat(amountOfProduct),
+        productValueDollars: isCombinedDuty ? parseFloat(productValueDollars) : undefined,
         currency: "USD", // Always request in USD from backend
       })
 
@@ -447,47 +454,93 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Amount of Product
-                {selectedTariff && (() => {
-                  const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
-                  if (!tariff) return null
-                  
-                  // Check the Java class name directly instead of description string
-                  const isAdValorem = tariff.dutyClass === 'AdValoremDuty'
-                  
-                  if (isAdValorem) {
-                    return <span className="text-blue-600 dark:text-blue-400"> (in dollars, $)</span>
-                  } else if (tariff.unit) {
-                    return <span className="text-blue-600 dark:text-blue-400"> (in {tariff.unit})</span>
-                  }
-                  return null
-                })()}
-              </Label>
-              <Input
-                type="number"
-                value={amountOfProduct}
-                onChange={(e) => setAmountOfProduct(e.target.value)}
-                placeholder={(() => {
-                  const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
-                  if (!tariff) return "Enter quantity/amount (e.g., 1000)"
-                  
-                  // Check the Java class name directly
-                  const isAdValorem = tariff.dutyClass === 'AdValoremDuty'
-                  
-                  if (isAdValorem) {
-                    return "Enter dollar value (e.g., 10000)"
-                  } else if (tariff.unit) {
-                    return `Enter quantity in ${tariff.unit} (e.g., 1000)`
-                  }
-                  return "Enter quantity/amount (e.g., 1000)"
-                })()}
-                step="0.01"
-                min="0"
-                className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium"
-              />
-            </div>
+            {/* Conditional Input Fields based on Duty Type */}
+            {selectedTariff && (() => {
+              const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
+              const isCombinedDuty = tariff?.dutyClass === 'CombinedDuty'
+              
+              if (isCombinedDuty) {
+                // Show TWO input fields for Combined Duty
+                return (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Product Value for Ad Valorem
+                        <span className="text-blue-600 dark:text-blue-400"> (in dollars, $)</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        value={productValueDollars}
+                        onChange={(e) => setProductValueDollars(e.target.value)}
+                        placeholder="Enter dollar value (e.g., 10000)"
+                        step="0.01"
+                        min="0"
+                        className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Product Quantity for Specific Duty
+                        {tariff.unit && <span className="text-blue-600 dark:text-blue-400"> (in {tariff.unit})</span>}
+                      </Label>
+                      <Input
+                        type="number"
+                        value={productQuantity}
+                        onChange={(e) => setProductQuantity(e.target.value)}
+                        placeholder={`Enter quantity in ${tariff.unit || 'units'} (e.g., 1000)`}
+                        step="0.01"
+                        min="0"
+                        className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium"
+                      />
+                    </div>
+                  </>
+                )
+              } else {
+                // Show single input field for Ad Valorem or Specific Duty
+                return (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Amount of Product
+                      {(() => {
+                        if (!tariff) return null
+                        
+                        // Check the Java class name directly
+                        const isAdValorem = tariff.dutyClass === 'AdValoremDuty'
+                        
+                        if (isAdValorem) {
+                          return <span className="text-blue-600 dark:text-blue-400"> (in dollars, $)</span>
+                        } else if (tariff.unit) {
+                          return <span className="text-blue-600 dark:text-blue-400"> (in {tariff.unit})</span>
+                        }
+                        return null
+                      })()}
+                    </Label>
+                    <Input
+                      type="number"
+                      value={amountOfProduct}
+                      onChange={(e) => setAmountOfProduct(e.target.value)}
+                      placeholder={(() => {
+                        if (!tariff) return "Enter quantity/amount (e.g., 1000)"
+                        
+                        // Check the Java class name directly
+                        const isAdValorem = tariff.dutyClass === 'AdValoremDuty'
+                        
+                        if (isAdValorem) {
+                          return "Enter dollar value (e.g., 10000)"
+                        } else if (tariff.unit) {
+                          return `Enter quantity in ${tariff.unit} (e.g., 1000)`
+                        }
+                        return "Enter quantity/amount (e.g., 1000)"
+                      })()}
+                      step="0.01"
+                      min="0"
+                      className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm font-medium"
+                    />
+                  </div>
+                )
+              }
+            })()}
 
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -516,7 +569,18 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
 
             <Button
               onClick={handleCalculate}
-              disabled={loading || !selectedTariff || !amountOfProduct}
+              disabled={(() => {
+                if (loading || !selectedTariff) return true
+                const tariff = availableTariffs.find(t => t.tariffId.toString() === selectedTariff)
+                const isCombinedDuty = tariff?.dutyClass === 'CombinedDuty'
+                
+                // For Combined Duty, need both fields filled
+                if (isCombinedDuty) {
+                  return !productValueDollars || !productQuantity
+                }
+                // For other duties, need single field filled
+                return !amountOfProduct
+              })()}
               className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Calculator className="h-4 w-4" />

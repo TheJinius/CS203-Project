@@ -118,11 +118,22 @@ public class DutyController {
         String requestedCurrency = request.getCurrency() != null ? request.getCurrency() : "USD";
 
         try {
-            // Use real DutyService calculation instead of fake calculation
-            double tariffAmount = dutyService.calculateTariffById(
-                request.getTariffId(),
-                request.getAmountOfProduct()
-            );
+            // Use real DutyService calculation - handle Combined Duty with separate values
+            double tariffAmount;
+            if (request.getProductValueDollars() != null) {
+                // Combined Duty: use separate product value and quantity
+                tariffAmount = dutyService.calculateTariffById(
+                    request.getTariffId(),
+                    request.getAmountOfProduct(),  // quantity in units for Specific component
+                    request.getProductValueDollars() // dollar value for Ad Valorem component
+                );
+            } else {
+                // Other duty types: use single amountOfProduct value
+                tariffAmount = dutyService.calculateTariffById(
+                    request.getTariffId(),
+                    request.getAmountOfProduct()
+                );
+            }
             
             // Fetch exchange rates using ExchangeRateService
             ExchangeRates rates = exchangeRateService.fetchRates();
@@ -147,7 +158,7 @@ public class DutyController {
             response.put("status", "success");
             
             // Add calculation details directly to response (flattened, not nested)
-            Map<String, Object> calcDetails = getCalculationDetails(request.getTariffId(), request.getAmountOfProduct());
+            Map<String, Object> calcDetails = getCalculationDetails(request.getTariffId(), request.getAmountOfProduct(), request);
             response.putAll(calcDetails); // Merge all calculation details into main response
 
             return ResponseEntity.ok()
@@ -203,7 +214,7 @@ public class DutyController {
     }
 
     // Helper method to get calculation details for a specific tariff
-    private Map<String, Object> getCalculationDetails(Integer tariffId, double amountOfProduct) {
+    private Map<String, Object> getCalculationDetails(Integer tariffId, double amountOfProduct, TariffCalculationRequest request) {
         Map<String, Object> details = new HashMap<>();
         
         try {
@@ -307,10 +318,25 @@ public class DutyController {
                     String unit = combinedDuty.getUnit();
                     String mixedOrConditional = combinedDuty.getMixedOrCompound();
                     
-                    double adValoremAmount = amountOfProduct * rate / 100.0;
-                    double units = amountOfProduct / multiplier;
-                    double specificAmount = units * amount;
-                    double tariffResult = "M".equals(mixedOrConditional) ? 
+                    // Check if separate values provided for Combined Duty
+                    Double productValueDollars = request.getProductValueDollars();
+                    boolean hasSeparateValues = productValueDollars != null;
+                    
+                    double adValoremAmount, specificAmount, units, tariffResult;
+                    
+                    if (hasSeparateValues) {
+                        // Use separate values: productValueDollars for Ad Valorem, amountOfProduct for Specific
+                        adValoremAmount = productValueDollars * rate / 100.0;
+                        units = amountOfProduct / multiplier;
+                        specificAmount = units * amount;
+                    } else {
+                        // Legacy: use single value for both (old behavior for backward compatibility)
+                        adValoremAmount = amountOfProduct * rate / 100.0;
+                        units = amountOfProduct / multiplier;
+                        specificAmount = units * amount;
+                    }
+                    
+                    tariffResult = "M".equals(mixedOrConditional) ? 
                         (adValoremAmount + specificAmount) : Math.max(adValoremAmount, specificAmount);
                     
                     details.put("dutyTypeCode", "COMBINED");
@@ -319,7 +345,14 @@ public class DutyController {
                     details.put("amountPerUnit", amount);
                     details.put("amountPerUnitDisplay", "$" + String.format("%.2f", amount));
                     details.put("multiplier", multiplier);
-                    details.put("productValue", amountOfProduct);
+                    
+                    if (hasSeparateValues) {
+                        details.put("productValueDollars", productValueDollars);
+                        details.put("productQuantity", amountOfProduct);
+                    } else {
+                        details.put("productValue", amountOfProduct);
+                    }
+                    
                     details.put("adValoremAmount", adValoremAmount);
                     details.put("specificAmount", specificAmount);
                     details.put("calculatedUnits", units);
@@ -330,71 +363,151 @@ public class DutyController {
                     
                     if ("M".equals(mixedOrConditional)) {
                         details.put("combinationType", "Mixed (Sum of both)");
-                        details.put("formula", "Tariff = Ad Valorem + Specific Duty (NOTE: Input has mixed semantics)");
                         
-                        steps.add(Map.of(
-                            "step", "1",
-                            "description", "Input Value (treated as $ for Ad Valorem, " + (unit != null ? unit : "units") + " for Specific)",
-                            "value", String.format("%.2f", amountOfProduct)
-                        ));
-                        steps.add(Map.of(
-                            "step", "2",
-                            "description", "Calculate Ad Valorem Component (as dollar value)",
-                            "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, adValoremAmount)
-                        ));
-                        steps.add(Map.of(
-                            "step", "3",
-                            "description", "Calculate Billing Units for Specific (as quantity in " + (unit != null ? unit : "units") + ")",
-                            "value", String.format("%.2f %s ÷ %.2f = %.2f billing units", amountOfProduct, unit != null ? unit : "", multiplier, units)
-                        ));
-                        steps.add(Map.of(
-                            "step", "4",
-                            "description", "Calculate Specific Component",
-                            "value", String.format("%.2f billing units × $%.2f = $%.2f", units, amount, specificAmount)
-                        ));
-                        steps.add(Map.of(
-                            "step", "5",
-                            "description", "Sum Both Components",
-                            "value", String.format("$%.2f + $%.2f = $%.2f", adValoremAmount, specificAmount, tariffResult)
-                        ));
-                        
-                        details.put("calculation", String.format("($%.2f × %.2f%%) + ((%.2f %s / %.2f) × $%.2f) = $%.2f + $%.2f = $%.2f",
-                            amountOfProduct, rate, amountOfProduct, unit != null ? unit : "", multiplier, amount,
-                            adValoremAmount, specificAmount, tariffResult));
+                        if (hasSeparateValues) {
+                            details.put("formula", "Tariff = Ad Valorem + Specific Duty");
+                            
+                            steps.add(Map.of(
+                                "step", "1a",
+                                "description", "Product Value for Ad Valorem",
+                                "value", String.format("$%.2f", productValueDollars)
+                            ));
+                            steps.add(Map.of(
+                                "step", "1b",
+                                "description", "Product Quantity for Specific Duty",
+                                "value", String.format("%.2f %s", amountOfProduct, unit != null ? unit : "units")
+                            ));
+                            steps.add(Map.of(
+                                "step", "2",
+                                "description", "Calculate Ad Valorem Component",
+                                "value", String.format("$%.2f × %.2f%% = $%.2f", productValueDollars, rate, adValoremAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "3",
+                                "description", "Calculate Billing Units for Specific",
+                                "value", String.format("%.2f %s ÷ %.2f = %.2f billing units", amountOfProduct, unit != null ? unit : "", multiplier, units)
+                            ));
+                            steps.add(Map.of(
+                                "step", "4",
+                                "description", "Calculate Specific Component",
+                                "value", String.format("%.2f billing units × $%.2f = $%.2f", units, amount, specificAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "5",
+                                "description", "Sum Both Components",
+                                "value", String.format("$%.2f + $%.2f = $%.2f", adValoremAmount, specificAmount, tariffResult)
+                            ));
+                            
+                            details.put("calculation", String.format("($%.2f × %.2f%%) + ((%.2f %s / %.2f) × $%.2f) = $%.2f + $%.2f = $%.2f",
+                                productValueDollars, rate, amountOfProduct, unit != null ? unit : "", multiplier, amount,
+                                adValoremAmount, specificAmount, tariffResult));
+                        } else {
+                            details.put("formula", "Tariff = Ad Valorem + Specific Duty (NOTE: Input has mixed semantics)");
+                            
+                            steps.add(Map.of(
+                                "step", "1",
+                                "description", "Input Value (treated as $ for Ad Valorem, " + (unit != null ? unit : "units") + " for Specific)",
+                                "value", String.format("%.2f", amountOfProduct)
+                            ));
+                            steps.add(Map.of(
+                                "step", "2",
+                                "description", "Calculate Ad Valorem Component (as dollar value)",
+                                "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, adValoremAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "3",
+                                "description", "Calculate Billing Units for Specific (as quantity in " + (unit != null ? unit : "units") + ")",
+                                "value", String.format("%.2f %s ÷ %.2f = %.2f billing units", amountOfProduct, unit != null ? unit : "", multiplier, units)
+                            ));
+                            steps.add(Map.of(
+                                "step", "4",
+                                "description", "Calculate Specific Component",
+                                "value", String.format("%.2f billing units × $%.2f = $%.2f", units, amount, specificAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "5",
+                                "description", "Sum Both Components",
+                                "value", String.format("$%.2f + $%.2f = $%.2f", adValoremAmount, specificAmount, tariffResult)
+                            ));
+                            
+                            details.put("calculation", String.format("($%.2f × %.2f%%) + ((%.2f %s / %.2f) × $%.2f) = $%.2f + $%.2f = $%.2f",
+                                amountOfProduct, rate, amountOfProduct, unit != null ? unit : "", multiplier, amount,
+                                adValoremAmount, specificAmount, tariffResult));
+                        }
                             
                     } else if ("C".equals(mixedOrConditional)) {
                         details.put("combinationType", "Conditional (Maximum of both)");
-                        details.put("formula", "Tariff = MAX(Ad Valorem, Specific Duty) (NOTE: Input has mixed semantics)");
                         
-                        steps.add(Map.of(
-                            "step", "1",
-                            "description", "Input Value (treated as $ for Ad Valorem, " + (unit != null ? unit : "units") + " for Specific)",
-                            "value", String.format("%.2f", amountOfProduct)
-                        ));
-                        steps.add(Map.of(
-                            "step", "2",
-                            "description", "Calculate Ad Valorem Component (as dollar value)",
-                            "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, adValoremAmount)
-                        ));
-                        steps.add(Map.of(
-                            "step", "3",
-                            "description", "Calculate Billing Units for Specific (as quantity in " + (unit != null ? unit : "units") + ")",
-                            "value", String.format("%.2f %s ÷ %.2f = %.2f billing units", amountOfProduct, unit != null ? unit : "", multiplier, units)
-                        ));
-                        steps.add(Map.of(
-                            "step", "4",
-                            "description", "Calculate Specific Component",
-                            "value", String.format("%.2f billing units × $%.2f = $%.2f", units, amount, specificAmount)
-                        ));
-                        steps.add(Map.of(
-                            "step", "5",
-                            "description", "Choose Maximum",
-                            "value", String.format("MAX($%.2f, $%.2f) = $%.2f", adValoremAmount, specificAmount, tariffResult)
-                        ));
-                        
-                        details.put("calculation", String.format("MAX(($%.2f × %.2f%%), ((%.2f %s / %.2f) × $%.2f)) = MAX($%.2f, $%.2f) = $%.2f",
-                            amountOfProduct, rate, amountOfProduct, unit != null ? unit : "", multiplier, amount,
-                            adValoremAmount, specificAmount, tariffResult));
+                        if (hasSeparateValues) {
+                            details.put("formula", "Tariff = MAX(Ad Valorem, Specific Duty)");
+                            
+                            steps.add(Map.of(
+                                "step", "1a",
+                                "description", "Product Value for Ad Valorem",
+                                "value", String.format("$%.2f", productValueDollars)
+                            ));
+                            steps.add(Map.of(
+                                "step", "1b",
+                                "description", "Product Quantity for Specific Duty",
+                                "value", String.format("%.2f %s", amountOfProduct, unit != null ? unit : "units")
+                            ));
+                            steps.add(Map.of(
+                                "step", "2",
+                                "description", "Calculate Ad Valorem Component",
+                                "value", String.format("$%.2f × %.2f%% = $%.2f", productValueDollars, rate, adValoremAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "3",
+                                "description", "Calculate Billing Units for Specific",
+                                "value", String.format("%.2f %s ÷ %.2f = %.2f billing units", amountOfProduct, unit != null ? unit : "", multiplier, units)
+                            ));
+                            steps.add(Map.of(
+                                "step", "4",
+                                "description", "Calculate Specific Component",
+                                "value", String.format("%.2f billing units × $%.2f = $%.2f", units, amount, specificAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "5",
+                                "description", "Choose Maximum",
+                                "value", String.format("MAX($%.2f, $%.2f) = $%.2f", adValoremAmount, specificAmount, tariffResult)
+                            ));
+                            
+                            details.put("calculation", String.format("MAX(($%.2f × %.2f%%), ((%.2f %s / %.2f) × $%.2f)) = MAX($%.2f, $%.2f) = $%.2f",
+                                productValueDollars, rate, amountOfProduct, unit != null ? unit : "", multiplier, amount,
+                                adValoremAmount, specificAmount, tariffResult));
+                        } else {
+                            details.put("formula", "Tariff = MAX(Ad Valorem, Specific Duty) (NOTE: Input has mixed semantics)");
+                            
+                            steps.add(Map.of(
+                                "step", "1",
+                                "description", "Input Value (treated as $ for Ad Valorem, " + (unit != null ? unit : "units") + " for Specific)",
+                                "value", String.format("%.2f", amountOfProduct)
+                            ));
+                            steps.add(Map.of(
+                                "step", "2",
+                                "description", "Calculate Ad Valorem Component (as dollar value)",
+                                "value", String.format("$%.2f × %.2f%% = $%.2f", amountOfProduct, rate, adValoremAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "3",
+                                "description", "Calculate Billing Units for Specific (as quantity in " + (unit != null ? unit : "units") + ")",
+                                "value", String.format("%.2f %s ÷ %.2f = %.2f billing units", amountOfProduct, unit != null ? unit : "", multiplier, units)
+                            ));
+                            steps.add(Map.of(
+                                "step", "4",
+                                "description", "Calculate Specific Component",
+                                "value", String.format("%.2f billing units × $%.2f = $%.2f", units, amount, specificAmount)
+                            ));
+                            steps.add(Map.of(
+                                "step", "5",
+                                "description", "Choose Maximum",
+                                "value", String.format("MAX($%.2f, $%.2f) = $%.2f", adValoremAmount, specificAmount, tariffResult)
+                            ));
+                            
+                            details.put("calculation", String.format("MAX(($%.2f × %.2f%%), ((%.2f %s / %.2f) × $%.2f)) = MAX($%.2f, $%.2f) = $%.2f",
+                                amountOfProduct, rate, amountOfProduct, unit != null ? unit : "", multiplier, amount,
+                                adValoremAmount, specificAmount, tariffResult));
+                        }
                     }
                     
                     details.put("steps", steps);
