@@ -10,6 +10,10 @@ import { ArrowLeft, Search, Edit, Plus, CheckCircle, XCircle, Trash2, X } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { getSession, signOut } from "next-auth/react"
 import { searchTariffs, searchProducts as apiSearchProducts } from "@/lib/api"
+import AdValoremDutyForm from "./duty-forms/AdValoremDutyForm"
+import SpecificDutyForm from "./duty-forms/SpecificDutyForm"
+import CombinedDutyForm from "./duty-forms/CombinedDutyForm"
+import OtherDutyForm from "./duty-forms/OtherDutyForm"
 
 interface Product {
   code: string
@@ -104,6 +108,10 @@ export default function EditTariffTab() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1)
+  
+  // ✅ NEW: Track current duty type and mixed/compound selector
+  const [currentDutyType, setCurrentDutyType] = useState<'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' | null>(null)
+  const [combinedDutyMode, setCombinedDutyMode] = useState<'M' | 'C'>('M') // M = Mixed (max), C = Compound (sum)
 
   const [notification, setNotification] = useState<NotificationPopup>({
     show: false,
@@ -127,6 +135,29 @@ export default function EditTariffTab() {
   const hideNotification = () => {
     setNotification(prev => ({ ...prev, show: false }))
   }
+
+  // ✅ NEW: Determine duty type based on which rates are set
+  const determineDutyType = useCallback((formData: typeof editFormData): 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' => {
+    const hasAdValorem = formData.adValoremRate !== undefined && formData.adValoremRate > 0
+    const hasSpecific = formData.specificRate !== undefined && formData.specificRate > 0
+    const hasCompound1 = formData.compoundRate1 !== undefined && formData.compoundRate1 > 0
+    const hasCompound2 = formData.compoundRate2 !== undefined && formData.compoundRate2 > 0
+    
+    // Combined duty: has both ad valorem and specific components
+    if ((hasAdValorem && hasSpecific) || (hasCompound1 && hasCompound2)) {
+      return 'COMBINED'
+    }
+    // Ad valorem only
+    if (hasAdValorem && !hasSpecific) {
+      return 'AD_VALOREM'
+    }
+    // Specific only
+    if (hasSpecific && !hasAdValorem) {
+      return 'SPECIFIC'
+    }
+    // Default to OTHER if no rates set
+    return 'OTHER'
+  }, [])
 
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -319,6 +350,42 @@ export default function EditTariffTab() {
     
     console.log("✅ Form data populated:", JSON.stringify(formData, null, 2))
     
+    // ✅ NEW: Detect duty type based on which rates exist
+    let detectedType: 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' = 'OTHER'
+    
+    const hasAdValorem = (tariff.adValoremRate !== undefined && tariff.adValoremRate !== null && tariff.adValoremRate > 0)
+    const hasSpecific = (tariff.specificRate !== undefined && tariff.specificRate !== null && tariff.specificRate > 0)
+    const hasCompound1 = (tariff.compoundRate1 !== undefined && tariff.compoundRate1 !== null && tariff.compoundRate1 > 0)
+    const hasCompound2 = (tariff.compoundRate2 !== undefined && tariff.compoundRate2 !== null && tariff.compoundRate2 > 0)
+    
+    console.log("🔍 Rate detection:", { hasAdValorem, hasSpecific, hasCompound1, hasCompound2 })
+    
+    // Check for Combined duty first (highest priority)
+    if ((hasAdValorem && hasSpecific) || (hasCompound1 && hasCompound2)) {
+      detectedType = 'COMBINED'
+      console.log("✅ Detected: COMBINED duty")
+    }
+    // Check for Ad Valorem only
+    else if (hasAdValorem && !hasSpecific && !hasCompound1 && !hasCompound2) {
+      detectedType = 'AD_VALOREM'
+      console.log("✅ Detected: AD_VALOREM duty")
+    }
+    // Check for Specific only
+    else if (hasSpecific && !hasAdValorem && !hasCompound1 && !hasCompound2) {
+      detectedType = 'SPECIFIC'
+      console.log("✅ Detected: SPECIFIC duty")
+    }
+    // Check if dutyCategory is provided by backend
+    else if (tariff.dutyCategory) {
+      detectedType = tariff.dutyCategory as 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER'
+      console.log("✅ Using backend category:", tariff.dutyCategory)
+    }
+    else {
+      detectedType = 'OTHER'
+      console.log("⚠️ Defaulting to OTHER duty")
+    }
+    
+    setCurrentDutyType(detectedType)
     setSelectedTariff(tariff)
     setEditFormData(formData)
     setIsEditDialogOpen(true)
@@ -778,209 +845,125 @@ export default function EditTariffTab() {
               </div>
             </div>
 
-            {/* Duty Rates Section */}
+            {/* Duty Rates Section - Dynamic Forms */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
                   <span className="h-1 w-1 rounded-full bg-amber-500"></span>
                   Duty Rates
                 </h3>
-                {selectedTariff?.dutyCategory && (
+                {currentDutyType && (
                   <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
-                    Category: {selectedTariff.dutyCategory.replace(/_/g, ' ')}
+                    Type: {currentDutyType.replace(/_/g, ' ')}
                   </span>
                 )}
               </div>
               
-              <div className="grid grid-cols-2 gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
-                {/* Ad Valorem Rate */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>Ad Valorem Rate (%)</span>
-                    {selectedTariff?.adValoremRate !== undefined && selectedTariff?.adValoremRate !== null && (
-                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                        Current: {selectedTariff.adValoremRate}%
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.adValoremRate !== undefined ? editFormData.adValoremRate.toString() : ""}
-                    onChange={(e) => {
-                      const value = e.target.value.trim()
+              {/* Dynamic form based on duty type */}
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
+                
+                {/* AD VALOREM DUTY FORM */}
+                {currentDutyType === 'AD_VALOREM' && (
+                  <AdValoremDutyForm
+                    adValoremRate={editFormData.adValoremRate}
+                    currentValue={selectedTariff?.adValoremRate}
+                    onChange={(value) => {
                       const newFormData = { ...editFormData }
-                      
-                      if (value === "") {
-                        // Empty input - remove the field
+                      if (value === undefined) {
                         delete newFormData.adValoremRate
                       } else {
-                        const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
-                          newFormData.adValoremRate = parsed
-                        } else {
-                          delete newFormData.adValoremRate
-                        }
+                        newFormData.adValoremRate = value
                       }
-                      
                       setEditFormData(newFormData)
+                      setCurrentDutyType(determineDutyType(newFormData))
                     }}
-                    placeholder={selectedTariff?.adValoremRate !== undefined && selectedTariff?.adValoremRate !== null ? `Currently ${selectedTariff.adValoremRate}%` : "e.g., 5.5"}
-                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
                   />
-                </div>
+                )}
 
-                {/* Specific Rate */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>Specific Rate</span>
-                    {selectedTariff?.specificRate !== undefined && selectedTariff?.specificRate !== null && (
-                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                        Current: {selectedTariff.specificRate} {selectedTariff.specificRateUnit}
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.specificRate !== undefined ? editFormData.specificRate.toString() : ""}
-                    onChange={(e) => {
-                      const value = e.target.value.trim()
+                {/* SPECIFIC DUTY FORM */}
+                {currentDutyType === 'SPECIFIC' && (
+                  <SpecificDutyForm
+                    specificRate={editFormData.specificRate}
+                    specificRateUnit={editFormData.specificRateUnit}
+                    currentRate={selectedTariff?.specificRate}
+                    currentUnit={selectedTariff?.specificRateUnit}
+                    onRateChange={(value) => {
                       const newFormData = { ...editFormData }
-                      
-                      if (value === "") {
-                        // Empty input - remove the field
+                      if (value === undefined) {
                         delete newFormData.specificRate
                       } else {
-                        const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
-                          newFormData.specificRate = parsed
-                        } else {
-                          delete newFormData.specificRate
-                        }
+                        newFormData.specificRate = value
                       }
-                      
                       setEditFormData(newFormData)
+                      setCurrentDutyType(determineDutyType(newFormData))
                     }}
-                    placeholder={selectedTariff?.specificRate !== undefined && selectedTariff?.specificRate !== null ? `Currently ${selectedTariff.specificRate}` : "e.g., 10.50"}
-                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                    onUnitChange={(value) => {
+                      setEditFormData({
+                        ...editFormData,
+                        specificRateUnit: value
+                      })
+                    }}
                   />
-                </div>
-                
-                {/* Compound Rate 1 */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>Compound Rate 1</span>
-                    {selectedTariff?.compoundRate1 !== undefined && selectedTariff?.compoundRate1 !== null && (
-                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                        Current: {selectedTariff.compoundRate1}
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.compoundRate1 !== undefined ? editFormData.compoundRate1.toString() : ""}
-                    onChange={(e) => {
-                      const value = e.target.value.trim()
+                )}
+
+                {/* COMBINED DUTY FORM */}
+                {currentDutyType === 'COMBINED' && (
+                  <CombinedDutyForm
+                    compoundRate1={editFormData.compoundRate1}
+                    compoundRate2={editFormData.compoundRate2}
+                    specificRateUnit={editFormData.specificRateUnit}
+                    combinedMode={combinedDutyMode}
+                    currentRate1={selectedTariff?.compoundRate1}
+                    currentRate2={selectedTariff?.compoundRate2}
+                    currentUnit={selectedTariff?.specificRateUnit}
+                    onRate1Change={(value) => {
                       const newFormData = { ...editFormData }
-                      
-                      if (value === "") {
-                        // Empty input - remove the field
+                      if (value === undefined) {
                         delete newFormData.compoundRate1
                       } else {
-                        const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
-                          newFormData.compoundRate1 = parsed
-                        } else {
-                          delete newFormData.compoundRate1
-                        }
+                        newFormData.compoundRate1 = value
                       }
-                      
                       setEditFormData(newFormData)
+                      setCurrentDutyType(determineDutyType(newFormData))
                     }}
-                    placeholder={selectedTariff?.compoundRate1 !== undefined && selectedTariff?.compoundRate1 !== null ? `Currently ${selectedTariff.compoundRate1}` : "First component"}
-                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
-                  />
-                </div>
-                
-                {/* Compound Rate 2 */}
-                <div className="space-y-1.5 col-span-2">
-                  <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>Compound Rate 2</span>
-                    {selectedTariff?.compoundRate2 !== undefined && selectedTariff?.compoundRate2 !== null && (
-                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                        Current: {selectedTariff.compoundRate2}
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.compoundRate2 !== undefined ? editFormData.compoundRate2.toString() : ""}
-                    onChange={(e) => {
-                      const value = e.target.value.trim()
+                    onRate2Change={(value) => {
                       const newFormData = { ...editFormData }
-                      
-                      if (value === "") {
-                        // Empty input - remove the field
+                      if (value === undefined) {
                         delete newFormData.compoundRate2
                       } else {
-                        const parsed = parseFloat(value)
-                        if (!isNaN(parsed) && parsed >= 0) {  // ✅ Allow 0 and positive values
-                          newFormData.compoundRate2 = parsed
-                        } else {
-                          delete newFormData.compoundRate2
-                        }
+                        newFormData.compoundRate2 = value
                       }
-                      
                       setEditFormData(newFormData)
+                      setCurrentDutyType(determineDutyType(newFormData))
                     }}
-                    placeholder={selectedTariff?.compoundRate2 !== undefined && selectedTariff?.compoundRate2 !== null ? `Currently ${selectedTariff.compoundRate2}` : "Second component"}
-                    className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                    onUnitChange={(value) => {
+                      setEditFormData({
+                        ...editFormData,
+                        specificRateUnit: value
+                      })
+                    }}
+                    onModeChange={(mode) => setCombinedDutyMode(mode)}
                   />
-                </div>
+                )}
+
+                {/* OTHER DUTY FORM */}
+                {currentDutyType === 'OTHER' && <OtherDutyForm />}
               </div>
 
-              {/* Summary of Active Rates */}
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">📊 Active Duty Rates Summary:</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {selectedTariff?.adValoremRate !== undefined && (
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-slate-700 dark:text-slate-300">Ad Valorem: <strong>{selectedTariff.adValoremRate}%</strong></span>
-                    </div>
-                  )}
-                  {selectedTariff?.specificRate !== undefined && (
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-slate-700 dark:text-slate-300">Specific: <strong>{selectedTariff.specificRate} {selectedTariff.specificRateUnit}</strong></span>
-                    </div>
-                  )}
-                  {selectedTariff?.compoundRate1 !== undefined && (
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-slate-700 dark:text-slate-300">Compound 1: <strong>{selectedTariff.compoundRate1}</strong></span>
-                    </div>
-                  )}
-                  {selectedTariff?.compoundRate2 !== undefined && (
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-slate-700 dark:text-slate-300">Compound 2: <strong>{selectedTariff.compoundRate2}</strong></span>
-                    </div>
-                  )}
-                  {selectedTariff?.adValoremRate === undefined && 
-                   selectedTariff?.specificRate === undefined && 
-                   selectedTariff?.compoundRate1 === undefined && 
-                   selectedTariff?.compoundRate2 === undefined && (
-                    <div className="col-span-2 flex items-center gap-1 text-slate-500">
-                      <XCircle className="h-3 w-3" />
-                      <span className="italic">No duty rates currently set</span>
-                    </div>
-                  )}
+              {/* Duty Type Conversion Warning */}
+              {selectedTariff && currentDutyType !== selectedTariff.dutyCategory && (
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                  <p className="text-xs font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                    ⚠️ Duty Type Will Change
+                  </p>
+                  <p className="text-xs text-orange-700 dark:text-orange-300">
+                    Original: <strong>{selectedTariff.dutyCategory?.replace(/_/g, ' ') || 'Unknown'}</strong> → New: <strong>{currentDutyType?.replace(/_/g, ' ')}</strong>
+                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                    The system will automatically convert this tariff from {selectedTariff.dutyCategory || 'current'} to {currentDutyType} duty and update the database tables accordingly.
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Notes Section */}
