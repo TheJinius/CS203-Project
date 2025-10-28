@@ -949,21 +949,6 @@ export default function EditTariffTab() {
                 {/* OTHER DUTY FORM */}
                 {currentDutyType === 'OTHER' && <OtherDutyForm />}
               </div>
-
-              {/* Duty Type Conversion Warning */}
-              {selectedTariff && currentDutyType !== selectedTariff.dutyCategory && (
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                  <p className="text-xs font-semibold text-orange-900 dark:text-orange-100 mb-1">
-                    ⚠️ Duty Type Will Change
-                  </p>
-                  <p className="text-xs text-orange-700 dark:text-orange-300">
-                    Original: <strong>{selectedTariff.dutyCategory?.replace(/_/g, ' ') || 'Unknown'}</strong> → New: <strong>{currentDutyType?.replace(/_/g, ' ')}</strong>
-                  </p>
-                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                    The system will automatically convert this tariff from {selectedTariff.dutyCategory || 'current'} to {currentDutyType} duty and update the database tables accordingly.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Notes Section */}

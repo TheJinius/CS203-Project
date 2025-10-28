@@ -1,6 +1,6 @@
 import { getSession, signOut } from "next-auth/react";
 
-const API_BASE_ROUTE = /*process.env.NEXT_PUBLIC_API_BASE_ROUTE ||*/ "http://localhost:8080/api"
+const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
 console.log(API_BASE_ROUTE);
 
 // Helper function to get current auth headers
