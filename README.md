@@ -73,6 +73,11 @@ uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 
 The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000). The chatbot can be interacted with from the frontend UI.
 
+#### Deployed Frontend and Backend
+Alteratively, you can access the tariff calculation UI from the frontend. The frontend is deployed at [https://trade-optimisation-pathfinder.vercel.app/](https://trade-optimisation-pathfinder.vercel.app/), and the backend is deployed at [https://cs203tariffproject.duckdns.org](https://cs203tariffproject.duckdns.org). 
+
+If you encounter a `NetworkError` while connected to the SMU Wi-Fi, do connect to a different Wi-Fi source and try again (the DNS server is blocked by the school Wi-Fi).
+
 ### 4. Running Backend Tests
 
 To run backend tests, make sure Docker Desktop is running on your machine. Some tests require Docker containers for database or service emulation.
