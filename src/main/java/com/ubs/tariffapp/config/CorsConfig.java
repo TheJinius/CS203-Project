@@ -29,14 +29,7 @@ public class CorsConfig implements WebMvcConfigurer {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://localhost:3000");
-        configuration.addAllowedOrigin("http://127.0.0.1:3000");
-        configuration.addAllowedOrigin("http://localhost:3001");
-        configuration.addAllowedOrigin("http://127.0.0.1:3001");
-        configuration.addAllowedOrigin("http://localhost:8080");
-        configuration.addAllowedOrigin("http://127.0.0.1:8080");
-        configuration.addAllowedOrigin("https://cs203tariffproject.duckdns.org");
-        configuration.addAllowedOrigin("https://trade-optimisation-pathfinder.vercel.app");
+        configuration.addAllowedOriginPattern("*"); // Allow all origins for testing
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
