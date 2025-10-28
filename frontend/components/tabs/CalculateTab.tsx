@@ -25,6 +25,57 @@ interface Tariff {
   unit?: string
 }
 
+interface CalculationStep {
+  step: string
+  description: string
+  value: string
+}
+
+interface CalculationDetails {
+  tariffAmount: number
+  currency: string
+  tariffId: number
+  status: string
+  dutyType?: string
+  dutyTypeCode?: string
+  productDescription?: string
+  productCode?: string
+  formula?: string
+  calculation?: string
+  steps?: CalculationStep[]
+  // Ad Valorem specific
+  rate?: number
+  rateDisplay?: string
+  productValue?: number
+  tariffResult?: number
+  // Specific Duty specific
+  amountPerUnit?: number
+  amountPerUnitDisplay?: string
+  multiplier?: number
+  unit?: string
+  productQuantity?: number
+  billingUnits?: number
+  billingUnitsDisplay?: string
+  specificDutyRateRaw?: string
+  // Combined Duty specific
+  adValoremRate?: number
+  adValoremRateDisplay?: string
+  adValoremProductValue?: number
+  adValoremAmount?: number
+  specificAmountPerUnit?: number
+  specificAmountPerUnitDisplay?: string
+  specificMultiplier?: number
+  specificUnit?: string
+  specificProductQuantity?: number
+  specificBillingUnits?: number
+  specificBillingUnitsDisplay?: string
+  specificAmount?: number
+  mixedOrCompound?: string
+  combinationType?: string
+  combinationLogic?: string
+  error?: string
+}
+
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
   currency: string
@@ -53,7 +104,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
   const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
-  const [calculationDetails, setCalculationDetails] = useState<any>(null)
+  const [calculationDetails, setCalculationDetails] = useState<CalculationDetails | null>(null)
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -663,7 +714,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   Step-by-Step Calculation
                 </div>
                 <div className="space-y-2">
-                  {calculationDetails.steps.map((step: any, index: number) => (
+                  {calculationDetails.steps.map((step: CalculationStep, index: number) => (
                     <div 
                       key={index} 
                       className="flex items-start gap-2 p-2 bg-white dark:bg-slate-800 rounded border border-emerald-100 dark:border-emerald-900"
