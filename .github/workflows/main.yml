@@ -39,4 +39,43 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Update systemd service file with environment variables
+            sudo tee /etc/systemd/system/springboot-app.service > /dev/null <<EOF
+            [Unit]
+            Description=Spring Boot Application
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ec2-user
+            WorkingDirectory=/home/ec2-user
+            ExecStart=/usr/bin/java -jar /home/ec2-user/app.jar
+            Restart=on-failure
+            RestartSec=10
+            StandardOutput=journal
+            StandardError=journal
+            SyslogIdentifier=springboot-app
+            
+            Environment="SPRING_PROFILES_ACTIVE=local"
+            Environment="DB_URL=${{ secrets.DB_URL }}"
+            Environment="DB_USERNAME=${{ secrets.DB_USERNAME }}"
+            Environment="DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+            Environment="DB_DRIVER_CLASS_NAME=org.postgresql.Driver"
+            Environment="DB_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect"
+            Environment="REDIS_URL=${{ secrets.REDIS_URL }}"
+            Environment="REDIS_PORT=${{ secrets.REDIS_PORT }}"
+            Environment="REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}"
+            Environment="REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}"
+            Environment="COGNITO_ISSUER=${{ secrets.COGNITO_ISSUER }}"
+            Environment="COGNITO_TOKEN_SIGNING_KEY_URL=${{ secrets.COGNITO_TOKEN_SIGNING_KEY_URL }}"
+            Environment="COGNITO_DOMAIN=${{ secrets.COGNITO_DOMAIN }}"
+            Environment="AWS_REGION=${{ secrets.AWS_REGION }}"
+            Environment="COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}"
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+            
+            # Reload and restart service
+            sudo systemctl daemon-reload
             sudo systemctl restart springboot-app
