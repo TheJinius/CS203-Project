@@ -21,6 +21,7 @@ interface SidebarProps {
   onClose: () => void
   calculationResult: number | null
   onCalculationResult: (result: number | null) => void
+  onRouteCalculated?: (geojson: any) => void
   width: number 
 }
 
@@ -31,6 +32,7 @@ export default function Sidebar({
   onClose, 
   calculationResult, 
   onCalculationResult,
+  onRouteCalculated,
   width
 }: SidebarProps) {
   const { isAdmin } = useAuth();
@@ -126,6 +128,7 @@ export default function Sidebar({
             <div className="h-full">
               <CalculateTab 
                 onCalculationResult={onCalculationResult}
+                onRouteCalculated={onRouteCalculated}
                 currency={currency}
                 onCurrencyChange={setCurrency}
               />

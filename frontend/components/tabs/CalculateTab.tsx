@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
-import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts } from "@/lib/api"
+import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts, getShippingRoute, COUNTRY_COORDINATES } from "@/lib/api"
 
 // Move predefined products outside component to prevent recreating on every render
 const PREDEFINED_PRODUCTS = [
@@ -86,11 +86,12 @@ interface CalculationDetails {
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
+  onRouteCalculated?: (geojson: any) => void
   currency: string
   onCurrencyChange: (currency: string) => void
 }
 
-export default function CalculateTab({ onCalculationResult, currency, onCurrencyChange }: CalculateTabProps) {
+export default function CalculateTab({ onCalculationResult, onRouteCalculated, currency, onCurrencyChange }: CalculateTabProps) {
   // Search state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
@@ -241,6 +242,11 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         setAvailableTariffs(data.tariffs || [])
         setStep(2)
         setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
+        
+        // Calculate and display shipping route
+        if (onRouteCalculated && selectedSource && selectedDestination) {
+          calculateShippingRoute(selectedSource, selectedDestination)
+        }
       } else {
         setError(data.error || 'Search failed')
       }
@@ -249,6 +255,37 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       setError(`Connection failed: ${error.message}`)
     }
     setLoading(false)
+  }
+
+  // Calculate shipping route between source and destination
+  const calculateShippingRoute = async (sourceCode: string, destCode: string) => {
+    const sourceCoords = COUNTRY_COORDINATES[sourceCode]
+    const destCoords = COUNTRY_COORDINATES[destCode]
+    
+    if (!sourceCoords || !destCoords) {
+      console.warn('⚠️ No coordinates found for selected countries')
+      return
+    }
+
+    console.log(`🚢 Calculating route: ${sourceCoords.name} → ${destCoords.name}`)
+    
+    try {
+      const { ok, data } = await getShippingRoute({
+        src_lat: sourceCoords.lat,
+        src_lon: sourceCoords.lon,
+        dst_lat: destCoords.lat,
+        dst_lon: destCoords.lon,
+      })
+
+      if (ok && data.features && onRouteCalculated) {
+        console.log('✅ Route calculated successfully')
+        onRouteCalculated(data)
+      } else {
+        console.warn('⚠️ Failed to calculate route:', data.error)
+      }
+    } catch (error) {
+      console.error('❌ Error calculating route:', error)
+    }
   }
 
   // Step 2: Calculate tariff with selected tariff
