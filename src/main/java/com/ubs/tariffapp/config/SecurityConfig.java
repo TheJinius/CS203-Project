@@ -26,6 +26,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()//allow cors preflight
                 .requestMatchers("/api/health").permitAll() //allow healthcheck!
                 .requestMatchers("/api/oauth2/exchange-token").permitAll() // Allow token exchange (must be before /api/**)
+                .requestMatchers("/api/products/search").permitAll() // Public product search
+                .requestMatchers("/api/tariffs/search").permitAll() // Public tariff search
+                .requestMatchers("/api/tariffs/calculate").permitAll() // Public tariff calculation
+                .requestMatchers("/api/exchange-rates").permitAll() // Public exchange rates
                 .requestMatchers("/api/**").authenticated()
                 .requestMatchers("/h2-console/**").permitAll() //TODO: REMOVE THIS IN PROD
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api/swagger-resources/**").permitAll() // Allow Swagger UI
