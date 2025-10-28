@@ -79,7 +79,7 @@ export default function FloatingChatbot() {
   //   const message = messages[index]
   //   if (!message?.sources) return 0
   //   return message.sources.reduce((acc, source) => acc + source.text.length, 0)
-  //}
+  // }
 
   // Determine if we should expand the chatbot based on sources
   // Expand if there are sources being hovered (regardless of length)
