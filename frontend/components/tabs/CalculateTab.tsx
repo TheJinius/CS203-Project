@@ -53,7 +53,24 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
   const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
-  const [calculationDetails, setCalculationDetails] = useState<any>(null)
+  interface CalculationStep {
+    step: number | string
+    description?: string
+    value?: string
+  }
+
+  interface CalculationDetails {
+    productDescription?: string
+    productCode?: string
+    dutyType?: string
+    combinationType?: string
+    formula?: string
+    specificDutyRateRaw?: string | number
+    steps?: CalculationStep[]
+    calculation?: string
+  }
+
+  const [calculationDetails, setCalculationDetails] = useState<CalculationDetails | null>(null)
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -112,7 +129,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
     }
-  }, []) // Empty dependency array since predefinedProducts is constant
+  }, [predefinedProducts]) // Include predefinedProducts in dependency array
 
   // Handle product search with debouncing
   useEffect(() => {
@@ -136,7 +153,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         clearTimeout(searchTimeout)
       }
     }
-  }, [productSearchQuery, searchProducts]) // Added searchProducts to dependencies
+  }, [productSearchQuery, searchProducts, searchTimeout]) // Added searchTimeout to dependencies
 
   // Helper function to get human-readable match type labels
   const getMatchTypeLabel = (matchType?: string) => {
@@ -663,7 +680,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                   Step-by-Step Calculation
                 </div>
                 <div className="space-y-2">
-                  {calculationDetails.steps.map((step: any, index: number) => (
+                  {calculationDetails.steps.map((step: CalculationStep, index: number) => (
                     <div 
                       key={index} 
                       className="flex items-start gap-2 p-2 bg-white dark:bg-slate-800 rounded border border-emerald-100 dark:border-emerald-900"

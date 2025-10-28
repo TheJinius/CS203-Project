@@ -75,11 +75,11 @@ export default function FloatingChatbot() {
   }
 
   // Calculate total source text length for the hovered message
-  const getSourcesLength = (index: number) => {
-    const message = messages[index]
-    if (!message?.sources) return 0
-    return message.sources.reduce((acc, source) => acc + source.text.length, 0)
-  }
+  // const getSourcesLength = (index: number) => {
+  //   const message = messages[index]
+  //   if (!message?.sources) return 0
+  //   return message.sources.reduce((acc, source) => acc + source.text.length, 0)
+  // }
 
   // Determine if we should expand the chatbot based on sources
   // Expand if there are sources being hovered (regardless of length)
