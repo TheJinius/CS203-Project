@@ -9,6 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
 import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts } from "@/lib/api"
 
+// Move predefined products outside component to prevent recreating on every render
+const PREDEFINED_PRODUCTS = [
+  { code: "27079940", description: "Carbazole, Energy" },
+  { code: "1012100", description: "Pure Bred Breeding Horses" },
+  { code: "29092000", description: "Cyclanic, Pharmaceutical" },
+  { code: "74130000", description: "Copper Wire" }
+]
+
 interface Product {
   code: string
   tlCode?: string
@@ -112,14 +120,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
 
-  // Product search functionality - predefined products
-  const predefinedProducts = [
-    { code: "27079940", description: "Carbazole, Energy" },
-    { code: "1012100", description: "Pure Bred Breeding Horses" },
-    { code: "29092000", description: "Cyclanic, Pharmaceutical" },
-    { code: "74130000", description: "Copper Wire" }
-  ]
-
   // Product search API call with fallback to predefined products - wrapped in useCallback
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -137,7 +137,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
       // Fallback to predefined products if API fails or returns no results
       const isNumericQuery = /^\d+$/.test(query)
 
-      const filtered = predefinedProducts.filter(product =>
+      const filtered = PREDEFINED_PRODUCTS.filter(product =>
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5) // Limit to top 5 results
@@ -153,7 +153,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
 
       // Fallback to predefined products on error
       const isNumericQuery = /^\d+$/.test(query)
-      const filtered = predefinedProducts.filter(product =>
+      const filtered = PREDEFINED_PRODUCTS.filter(product =>
         product.code.toLowerCase().includes(query.toLowerCase()) ||
         product.description.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5)
@@ -163,7 +163,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
     }
-  }, [predefinedProducts]) // Include predefinedProducts in dependency array
+  }, []) // Empty dependency array - PREDEFINED_PRODUCTS is constant at module level
 
   // Handle product search with debouncing
   useEffect(() => {
@@ -187,7 +187,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         clearTimeout(searchTimeout)
       }
     }
-  }, [productSearchQuery, searchProducts, searchTimeout]) // Added searchTimeout to dependencies
+  }, [productSearchQuery, searchProducts]) // Removed searchTimeout from dependencies
 
   // Helper function to get human-readable match type labels
   const getMatchTypeLabel = (matchType?: string) => {
