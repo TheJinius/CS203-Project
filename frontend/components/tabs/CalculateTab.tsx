@@ -25,6 +25,57 @@ interface Tariff {
   unit?: string
 }
 
+interface CalculationStep {
+  step: string
+  description: string
+  value: string
+}
+
+interface CalculationDetails {
+  tariffAmount: number
+  currency: string
+  tariffId: number
+  status: string
+  dutyType?: string
+  dutyTypeCode?: string
+  productDescription?: string
+  productCode?: string
+  formula?: string
+  calculation?: string
+  steps?: CalculationStep[]
+  // Ad Valorem specific
+  rate?: number
+  rateDisplay?: string
+  productValue?: number
+  tariffResult?: number
+  // Specific Duty specific
+  amountPerUnit?: number
+  amountPerUnitDisplay?: string
+  multiplier?: number
+  unit?: string
+  productQuantity?: number
+  billingUnits?: number
+  billingUnitsDisplay?: string
+  specificDutyRateRaw?: string
+  // Combined Duty specific
+  adValoremRate?: number
+  adValoremRateDisplay?: string
+  adValoremProductValue?: number
+  adValoremAmount?: number
+  specificAmountPerUnit?: number
+  specificAmountPerUnitDisplay?: string
+  specificMultiplier?: number
+  specificUnit?: string
+  specificProductQuantity?: number
+  specificBillingUnits?: number
+  specificBillingUnitsDisplay?: string
+  specificAmount?: number
+  mixedOrCompound?: string
+  combinationType?: string
+  combinationLogic?: string
+  error?: string
+}
+
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
   currency: string
@@ -53,23 +104,6 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
   // Exchange rate and tariff result state
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number }>({})
   const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
-  interface CalculationStep {
-    step: number | string
-    description?: string
-    value?: string
-  }
-
-  interface CalculationDetails {
-    productDescription?: string
-    productCode?: string
-    dutyType?: string
-    combinationType?: string
-    formula?: string
-    specificDutyRateRaw?: string | number
-    steps?: CalculationStep[]
-    calculation?: string
-  }
-
   const [calculationDetails, setCalculationDetails] = useState<CalculationDetails | null>(null)
 
   // UI state
