@@ -16,7 +16,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index = pc.Index(INDEX_NAME)
 
-SYSTEM = "Return zero or more compliance tasks as a JSON array, each in the strict json format with these keys : {task_category, task_name, description, responsible_agency, compliance_requirement, timing, reference, reference_url}. only return results that have score greater than 0.1."
+SYSTEM = "First using the input, identify the country and type of product: metals, agriculture, energy or others. Then return zero or more compliance tasks as a JSON array, each in the strict json format with these keys : {country, sector, task_category, task_name, description, responsible_agency, compliance_requirement, timing, reference, reference_url}. only return results that are relevant to the stated country and product type. Before returning, look at the task_name and description of the result and only return those that may be a compliance requirement for the given input. It is fine to return nothing. Return ONLY the JSON array without any markdown formatting or code blocks."
 
 def embed(text: str):
     """Create an embedding for a given text using OpenAI."""
@@ -36,34 +36,6 @@ def retrieve(query: str, top_k: int = TOP_K):
     matches = res.get("matches", [])
     if not matches:
         return "", []
-
-    # Step 1. Score filter - Keep ALL matches above threshold
-    high_scores = [m for m in matches if m.get("score", 0) >= SCORE_THRESHOLD]
-    
-    # If no matches above threshold, return empty (don't fall back to all matches)
-    if not high_scores:
-        print(f"No matches found above threshold {SCORE_THRESHOLD}")
-        return "", []
-    
-    matches = high_scores
-
-    # Step 2. Optional keyword relevance filter (removed to get more results)
-    # Comment out or modify this section if you want ALL high-scoring results
-    # query_lower = query.lower()
-    # keywords = [w for w in query_lower.replace("?", "").replace(".", "").split() if len(w) > 2]
-
-    # filtered = []
-    # for m in matches:
-    #     text = m["metadata"]["text"].lower()
-    #     if any(k in text for k in keywords):
-    #         filtered.append(m)
-    
-    # Only apply keyword filter if it doesn't eliminate all results
-    # if filtered:
-    #     matches = filtered
-    # Otherwise, keep all high-scoring matches
-
-    print(f"Found {len(matches)} matches above threshold {SCORE_THRESHOLD}")
 
     # Step 3. Context build
     snippets = [m["metadata"]["text"] for m in matches]
@@ -85,7 +57,21 @@ def answer(query: str):
     )
 
     raw = resp.choices[0].message.content.strip()
+    
+    # Remove markdown code blocks and other formatting
     cleaned = raw.replace("**", "").replace("*", "")
+    
+    # Remove markdown code block syntax
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]  # Remove ```json
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]   # Remove ```
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]  # Remove ending ```
+    
+    # Clean up any remaining whitespace
+    cleaned = cleaned.strip()
+    
     return cleaned, matches
 
 

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+import json
 from src.chat_cli import answer
 
 app = FastAPI(title="Tariff RAG Compliance")
@@ -25,12 +26,22 @@ class QueryRequest(BaseModel):
 
 @app.post("/query")
 def query_rag(req: QueryRequest):
+    print(f"Request: {req}")
     try:
-        ans = answer(req.question)
-
-        return {"response": ans}
+        # answer() returns a tuple (response_string, matches)
+        ans, matches = answer(req.question)
+        
+        # Extract just the response string
+        if isinstance(ans, str):
+            response_str = ans
+        else:
+            response_str = str(ans)
+        
+        print(f"Response: {response_str}")
+        return {"response": response_str}
     except Exception as e:
+        print(f"Error in query_rag: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
