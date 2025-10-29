@@ -175,7 +175,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Product search error:', error)
 
       // Fallback to predefined products on error
@@ -214,18 +214,9 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
         clearTimeout(searchTimeout)
       }
     }
-  }, [productSearchQuery, searchProducts]) // Removed searchTimeout from dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productSearchQuery, searchProducts]) // Intentionally excluding searchTimeout
 
-  // Helper function to get human-readable match type labels
-  const getMatchTypeLabel = (matchType?: string) => {
-    switch (matchType) {
-      case 'exact_code': return '';
-      case 'starts_with_code': return '';
-      case 'contains_code': return '';
-      case 'description_match': return '';
-      default: return '';
-    }
-  }
 
   // Handle product selection from dropdown
   const handleProductSelect = (product: { code: string, description: string, matchType?: string }) => {
@@ -536,11 +527,7 @@ export default function CalculateTab({ onCalculationResult, currency, onCurrency
                       >
                         <div className="flex items-center justify-between">
                           <div className="font-medium text-blue-600 dark:text-blue-400">{product.code}</div>
-                          {product.matchType && (
-                            <div className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                              {getMatchTypeLabel(product.matchType)}
-                            </div>
-                          )}
+                          {product.matchType}
                         </div>
                         <div className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
                           {product.description || "No description available"}
