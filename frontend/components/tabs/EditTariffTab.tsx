@@ -136,6 +136,20 @@ export default function EditTariffTab() {
     setNotification(prev => ({ ...prev, show: false }))
   }
 
+  // ✅ Normalize backend dutyCategory values to match frontend type system
+  const normalizeDutyCategory = (category?: string | null): 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' => {
+    if (!category) return 'OTHER'
+    const normalized = category.toUpperCase().trim()
+    
+    // Map common variants to standard types
+    if (normalized === 'AD_VALOREM' || normalized === 'AV' || normalized === 'ADVALOREM') return 'AD_VALOREM'
+    if (normalized === 'SPECIFIC' || normalized === 'SP') return 'SPECIFIC'
+    if (normalized === 'COMBINED' || normalized === 'CO' || normalized === 'COMPOUND') return 'COMBINED'
+    
+    // Catch all other values (O, OT, OTHER, etc.) as OTHER
+    return 'OTHER'
+  }
+
   // ✅ NEW: Determine duty type based on which rates are set
   const determineDutyType = useCallback((formData: typeof editFormData): 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' => {
     const hasAdValorem = formData.adValoremRate !== undefined && formData.adValoremRate > 0
@@ -350,41 +364,53 @@ export default function EditTariffTab() {
     
     console.log("✅ Form data populated:", JSON.stringify(formData, null, 2))
     
-    // ✅ NEW: Detect duty type based on which rates exist
+    // ✅ PRIORITY: Use backend's dutyCategory first, then detect from rates
     let detectedType: 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' = 'OTHER'
     
-    const hasAdValorem = (tariff.adValoremRate !== undefined && tariff.adValoremRate !== null && tariff.adValoremRate > 0)
-    const hasSpecific = (tariff.specificRate !== undefined && tariff.specificRate !== null && tariff.specificRate > 0)
-    const hasCompound1 = (tariff.compoundRate1 !== undefined && tariff.compoundRate1 !== null && tariff.compoundRate1 > 0)
-    const hasCompound2 = (tariff.compoundRate2 !== undefined && tariff.compoundRate2 !== null && tariff.compoundRate2 > 0)
+    console.log("🔍 Backend duty information:")
+    console.log("  - dutyCategory:", tariff.dutyCategory)
+    console.log("  - adValoremRate:", tariff.adValoremRate)
+    console.log("  - specificRate:", tariff.specificRate)
+    console.log("  - compoundRate1:", tariff.compoundRate1)
+    console.log("  - compoundRate2:", tariff.compoundRate2)
     
-    console.log("🔍 Rate detection:", { hasAdValorem, hasSpecific, hasCompound1, hasCompound2 })
-    
-    // Check for Combined duty first (highest priority)
-    if ((hasAdValorem && hasSpecific) || (hasCompound1 && hasCompound2)) {
-      detectedType = 'COMBINED'
-      console.log("✅ Detected: COMBINED duty")
+    // FIRST: Check if dutyCategory is provided by backend (most reliable)
+    if (tariff.dutyCategory) {
+      detectedType = normalizeDutyCategory(tariff.dutyCategory)
+      console.log("✅ Using backend dutyCategory:", tariff.dutyCategory, "→ Normalized to:", detectedType)
     }
-    // Check for Ad Valorem only
-    else if (hasAdValorem && !hasSpecific && !hasCompound1 && !hasCompound2) {
-      detectedType = 'AD_VALOREM'
-      console.log("✅ Detected: AD_VALOREM duty")
-    }
-    // Check for Specific only
-    else if (hasSpecific && !hasAdValorem && !hasCompound1 && !hasCompound2) {
-      detectedType = 'SPECIFIC'
-      console.log("✅ Detected: SPECIFIC duty")
-    }
-    // Check if dutyCategory is provided by backend
-    else if (tariff.dutyCategory) {
-      detectedType = tariff.dutyCategory as 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER'
-      console.log("✅ Using backend category:", tariff.dutyCategory)
-    }
+    // FALLBACK: Detect from rates (only if backend didn't provide category)
     else {
-      detectedType = 'OTHER'
-      console.log("⚠️ Defaulting to OTHER duty")
+      console.log("⚠️ No dutyCategory from backend, detecting from rates...")
+      const hasAdValorem = (tariff.adValoremRate !== undefined && tariff.adValoremRate !== null && tariff.adValoremRate > 0)
+      const hasSpecific = (tariff.specificRate !== undefined && tariff.specificRate !== null && tariff.specificRate > 0)
+      const hasCompound1 = (tariff.compoundRate1 !== undefined && tariff.compoundRate1 !== null && tariff.compoundRate1 > 0)
+      const hasCompound2 = (tariff.compoundRate2 !== undefined && tariff.compoundRate2 !== null && tariff.compoundRate2 > 0)
+      
+      console.log("🔍 Fallback rate detection:", { hasAdValorem, hasSpecific, hasCompound1, hasCompound2 })
+      
+      // Check for Combined duty first (highest priority)
+      if ((hasAdValorem && hasSpecific) || (hasCompound1 && hasCompound2)) {
+        detectedType = 'COMBINED'
+        console.log("✅ Detected: COMBINED duty from rates")
+      }
+      // Check for Ad Valorem only
+      else if (hasAdValorem && !hasSpecific && !hasCompound1 && !hasCompound2) {
+        detectedType = 'AD_VALOREM'
+        console.log("✅ Detected: AD_VALOREM duty from rates")
+      }
+      // Check for Specific only
+      else if (hasSpecific && !hasAdValorem && !hasCompound1 && !hasCompound2) {
+        detectedType = 'SPECIFIC'
+        console.log("✅ Detected: SPECIFIC duty from rates")
+      }
+      else {
+        detectedType = 'OTHER'
+        console.log("⚠️ Defaulting to OTHER duty (no rates found)")
+      }
     }
     
+    console.log("🎯 FINAL detectedType:", detectedType)
     setCurrentDutyType(detectedType)
     setSelectedTariff(tariff)
     setEditFormData(formData)

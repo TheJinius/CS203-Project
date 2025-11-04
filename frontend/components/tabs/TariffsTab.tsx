@@ -6,9 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { Plus, CheckCircle, XCircle, AlertCircle, Trash2, Search } from "lucide-react"
 import { getSession, signOut } from "next-auth/react"
 import { searchProducts as apiSearchProducts } from "@/lib/api"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
+import AdValoremDutyForm from "./duty-forms/AdValoremDutyForm"
+import SpecificDutyForm from "./duty-forms/SpecificDutyForm"
+import CombinedDutyForm from "./duty-forms/CombinedDutyForm"
+import OtherDutyForm from "./duty-forms/OtherDutyForm"
 
 interface Product {
   code: string
@@ -30,6 +35,34 @@ interface NotificationPopup {
   title: string
   message: string
   details?: string
+}
+
+interface TariffData {
+  tariffId: number
+  tariffYear: number
+  reporterCode: string
+  reporterName: string
+  partnerCode: string
+  partnerName: string
+  tlCode: string
+  productDescription: string
+  dutyType: string
+  dutyCode: string
+  dutyTypeDescription: string
+  dutyCategory?: string
+  tlsSuffix?: string
+  note?: string
+  specificRateUnit?: string
+  adValoremRate?: number | null
+  specificRate?: number | null
+  compoundRate1?: number | null
+  compoundRate2?: number | null
+}
+
+interface DeleteConfirmation {
+  show: boolean
+  tariffId: number | null
+  tariffDetails: string
 }
 
 export default function TariffsTab() {
@@ -60,6 +93,10 @@ export default function TariffsTab() {
   const [productSearchResults, setProductSearchResults] = useState<Array<{ code: string, description: string, matchType?: string }>>([])
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
   
+  // Duty type tracking for dynamic forms
+  const [currentDutyType, setCurrentDutyType] = useState<'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' | null>(null)
+  const [combinedDutyMode, setCombinedDutyMode] = useState<'M' | 'C'>('M')
+  
   const [notification, setNotification] = useState<NotificationPopup>({
     show: false,
     type: 'success',
@@ -67,6 +104,18 @@ export default function TariffsTab() {
     message: '',
     details: ''
   })
+
+  // Delete confirmation dialog
+  const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation>({
+    show: false,
+    tariffId: null,
+    tariffDetails: ''
+  })
+
+  // Search/View tariffs
+  const [viewMode, setViewMode] = useState<'create' | 'manage'>('create')
+  const [searchResults, setSearchResults] = useState<TariffData[]>([])
+  const [searchQuery, setSearchQuery] = useState<string>("")
 
   const predefinedProducts = [
     { code: "27079940", description: "Carbazole, Energy" },
@@ -90,6 +139,27 @@ export default function TariffsTab() {
   const hideNotification = () => {
     setNotification(prev => ({ ...prev, show: false }))
   }
+
+  // Update current duty type when duty type selection changes
+  useEffect(() => {
+    if (dutyType) {
+      // Map duty type codes to our internal enum
+      const upperDutyType = dutyType.toUpperCase()
+      if (upperDutyType === 'AV') {
+        setCurrentDutyType('AD_VALOREM')
+      } else if (upperDutyType === 'SP') {
+        setCurrentDutyType('SPECIFIC')
+      } else if (upperDutyType === 'CO') {
+        setCurrentDutyType('COMBINED')
+      } else if (upperDutyType === 'OT') {
+        setCurrentDutyType('OTHER')
+      } else {
+        setCurrentDutyType(null)
+      }
+    } else {
+      setCurrentDutyType(null)
+    }
+  }, [dutyType])
 
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -144,6 +214,19 @@ export default function TariffsTab() {
     setProductSearchResults([])
   }
 
+  // Auto-set product code if user types a numeric code directly
+  const handleProductSearchChange = (value: string) => {
+    setProductSearchQuery(value)
+    
+    // If user types only numbers (likely an HS code), auto-set it as product code
+    const trimmedValue = value.trim()
+    if (/^\d+$/.test(trimmedValue) && trimmedValue.length >= 4) {
+      setProductCode(trimmedValue)
+    } else if (trimmedValue === "") {
+      setProductCode("")
+    }
+  }
+
   const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
     if (typeof window === "undefined") return {}
     try {
@@ -178,6 +261,8 @@ export default function TariffsTab() {
     setSpecificRate("")
     setCompoundRate1("")
     setCompoundRate2("")
+    setCurrentDutyType(null)
+    setCombinedDutyMode('M')
   }
 
   const handleCreateTariff = async () => {
@@ -186,18 +271,42 @@ export default function TariffsTab() {
     setSuccess("")
 
     try {
-      // Validation
-      if (!tariffYear || !reporterCode || !partnerCode || !productCode || !dutyType || !dutyCode) {
-        throw new Error("Please fill in all required fields (Year, Reporter, Partner, Product, Duty Type)")
+      // Validation - check each field individually for better error messages
+      const missingFields = []
+      if (!tariffYear) missingFields.push("Tariff Year")
+      if (!reporterCode) missingFields.push("Reporter Country")
+      if (!partnerCode) missingFields.push("Partner Country")
+      if (!productCode) missingFields.push("Product")
+      if (!dutyType) missingFields.push("Duty Type")
+      if (!dutyCode) missingFields.push("Duty Code")
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Please fill in the following required fields: ${missingFields.join(", ")}`)
       }
 
-      // Validate at least one duty rate is provided
-      const hasAdValorem = adValoremRate.trim() !== ""
-      const hasSpecific = specificRate.trim() !== ""
-      const hasCompound = compoundRate1.trim() !== "" || compoundRate2.trim() !== ""
-
-      if (!hasAdValorem && !hasSpecific && !hasCompound) {
-        throw new Error("Please provide at least one duty rate (Ad Valorem, Specific, or Compound)")
+      // Validate duty rates based on duty type
+      if (currentDutyType === 'AD_VALOREM') {
+        if (!adValoremRate || adValoremRate.trim() === "") {
+          throw new Error("Ad Valorem rate is required for Ad Valorem duty type")
+        }
+      } else if (currentDutyType === 'SPECIFIC') {
+        if (!specificRate || specificRate.trim() === "") {
+          throw new Error("Specific rate is required for Specific duty type")
+        }
+        if (!specificRateUnit || specificRateUnit.trim() === "") {
+          throw new Error("Specific rate unit is required for Specific duty type")
+        }
+      } else if (currentDutyType === 'COMBINED') {
+        if (!compoundRate1 || compoundRate1.trim() === "" || !compoundRate2 || compoundRate2.trim() === "") {
+          throw new Error("Both compound rates are required for Combined duty type")
+        }
+        if (!specificRateUnit || specificRateUnit.trim() === "") {
+          throw new Error("Specific rate unit is required for Combined duty type")
+        }
+      } else if (currentDutyType === 'OTHER') {
+        // OTHER type doesn't require specific rates, can proceed
+      } else {
+        throw new Error("Please select a duty type and fill in the required duty rates")
       }
 
       const headers = await getAuthHeaders()
@@ -216,32 +325,29 @@ export default function TariffsTab() {
         specificRateUnit: specificRateUnit || "",
       }
 
-      // Add duty rates (only if they have values)
-      if (adValoremRate.trim() !== "") {
+      // Add duty rates based on duty type
+      if (currentDutyType === 'AD_VALOREM' && adValoremRate.trim() !== "") {
         const value = parseFloat(adValoremRate)
         if (!isNaN(value) && value >= 0) {
           requestBody.adValoremRate = value
         }
-      }
-
-      if (specificRate.trim() !== "") {
+      } else if (currentDutyType === 'SPECIFIC' && specificRate.trim() !== "") {
         const value = parseFloat(specificRate)
         if (!isNaN(value) && value >= 0) {
           requestBody.specificRate = value
         }
-      }
-
-      if (compoundRate1.trim() !== "") {
-        const value = parseFloat(compoundRate1)
-        if (!isNaN(value) && value >= 0) {
-          requestBody.compoundRate1 = value
+      } else if (currentDutyType === 'COMBINED') {
+        if (compoundRate1.trim() !== "") {
+          const value = parseFloat(compoundRate1)
+          if (!isNaN(value) && value >= 0) {
+            requestBody.compoundRate1 = value
+          }
         }
-      }
-
-      if (compoundRate2.trim() !== "") {
-        const value = parseFloat(compoundRate2)
-        if (!isNaN(value) && value >= 0) {
-          requestBody.compoundRate2 = value
+        if (compoundRate2.trim() !== "") {
+          const value = parseFloat(compoundRate2)
+          if (!isNaN(value) && value >= 0) {
+            requestBody.compoundRate2 = value
+          }
         }
       }
 
@@ -296,18 +402,165 @@ export default function TariffsTab() {
     }
   }
 
+  const handleSearchAllTariffs = async () => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    
+    try {
+      const headers = await getAuthHeaders()
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      
+      const response = await fetch(`${apiUrl}/api/admin/tariffs`, {
+        method: 'GET',
+        headers,
+        mode: 'cors',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tariffs: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const tariffs = data.tariffs || []
+      
+      setSearchResults(tariffs)
+      setSuccess(`Found ${tariffs.length} tariff(s)`)
+      setViewMode('manage')
+    } catch (e) {
+      const err = e as Error
+      console.error("❌ Search failed:", err)
+      setError(`Failed to load tariffs: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteTariff = async (tariffId: number) => {
+    setLoading(true)
+    
+    try {
+      const headers = await getAuthHeaders()
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      
+      console.log("🗑️ Deleting tariff:", tariffId)
+      
+      const response = await fetch(`${apiUrl}/api/admin/tariffs/${tariffId}`, {
+        method: 'DELETE',
+        headers,
+        mode: 'cors',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error(`Delete failed (${response.status})`)
+      }
+
+      setSuccess("Tariff deleted successfully!")
+      
+      showNotification(
+        'success',
+        'Tariff Deleted! 🗑️',
+        `Tariff ID ${tariffId} has been permanently removed from the database`,
+        'This action cannot be undone.'
+      )
+      
+      // Close confirmation dialog
+      setDeleteConfirmation({ show: false, tariffId: null, tariffDetails: '' })
+      
+      // Refresh the list
+      await handleSearchAllTariffs()
+      
+    } catch (e) {
+      const err = e as Error
+      console.error("❌ Delete failed:", err)
+      setError(`Delete failed: ${err.message}`)
+      
+      showNotification(
+        'error',
+        'Delete Failed ❌',
+        `Failed to delete tariff ${tariffId}`,
+        err.message
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const confirmDelete = (tariff: TariffData) => {
+    const details = `Tariff ID: ${tariff.tariffId}
+Product: ${tariff.tlCode} - ${tariff.productDescription}
+Route: ${tariff.partnerName} → ${tariff.reporterName}
+Year: ${tariff.tariffYear}
+Duty Category: ${tariff.dutyCategory || 'Unknown'}`
+    
+    setDeleteConfirmation({
+      show: true,
+      tariffId: tariff.tariffId,
+      tariffDetails: details
+    })
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirmation({ show: false, tariffId: null, tariffDetails: '' })
+  }
+
   return (
     <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="pb-4 border-b border-slate-200 dark:border-slate-700">
-        <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-slate-100">
-          <Plus className="h-5 w-5 text-green-600 dark:text-green-400" />
-          Add New Tariff
-        </CardTitle>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-          Create a new tariff entry in the database
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              {viewMode === 'create' ? (
+                <>
+                  <Plus className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  Add New Tariff
+                </>
+              ) : (
+                <>
+                  <Search className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  Manage Tariffs
+                </>
+              )}
+            </CardTitle>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              {viewMode === 'create' 
+                ? 'Create a new tariff entry in the database'
+                : 'View and delete existing tariffs'}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (viewMode === 'create') {
+                handleSearchAllTariffs()
+              } else {
+                setViewMode('create')
+                setSearchResults([])
+              }
+            }}
+            className="border-2"
+          >
+            {viewMode === 'create' ? (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Manage Tariffs
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New
+              </>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
+        
+        {viewMode === 'create' ? (
+          // CREATE MODE - Existing form
+          <>
         {/* Required Fields Section */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
@@ -315,7 +568,7 @@ export default function TariffsTab() {
             Required Information
           </h3>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* Year */}
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -325,7 +578,7 @@ export default function TariffsTab() {
                 type="number"
                 value={tariffYear}
                 onChange={(e) => setTariffYear(e.target.value)}
-                className="border-2 border-slate-300 dark:border-slate-600"
+                className="border-2 border-slate-300 dark:border-slate-600 w-full"
                 min="2000"
                 max="2100"
               />
@@ -337,7 +590,7 @@ export default function TariffsTab() {
                 Reporter Country <span className="text-red-500">*</span>
               </Label>
               <Select value={reporterCode} onValueChange={setReporterCode}>
-                <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
+                <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600 w-full">
                   <SelectValue placeholder="Select reporter" />
                 </SelectTrigger>
                 <SelectContent>
@@ -354,7 +607,7 @@ export default function TariffsTab() {
                 Partner Country <span className="text-red-500">*</span>
               </Label>
               <Select value={partnerCode} onValueChange={setPartnerCode}>
-                <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
+                <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600 w-full">
                   <SelectValue placeholder="Select partner" />
                 </SelectTrigger>
                 <SelectContent>
@@ -379,7 +632,7 @@ export default function TariffsTab() {
                   setDutyCode(code)
                 }}
               >
-                <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
+                <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600 w-full">
                   <SelectValue placeholder="Select duty type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -398,12 +651,12 @@ export default function TariffsTab() {
             <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Product (HS Code) <span className="text-red-500">*</span>
             </Label>
-            <div className="relative">
+            <div className="relative w-full">
               <Input
                 value={productSearchQuery}
-                onChange={(e) => setProductSearchQuery(e.target.value)}
-                placeholder="Search by HS Code or description"
-                className="border-2 border-slate-300 dark:border-slate-600"
+                onChange={(e) => handleProductSearchChange(e.target.value)}
+                placeholder="Search by HS Code or description (e.g., 999999)"
+                className="border-2 border-slate-300 dark:border-slate-600 w-full"
               />
               {productSearchResults.length > 0 && productSearchQuery && (
                 <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -438,30 +691,19 @@ export default function TariffsTab() {
             Optional Details
           </h3>
           
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                TLS Suffix
-              </Label>
-              <Input
-                value={tlsSuffix}
-                onChange={(e) => setTlsSuffix(e.target.value)}
-                placeholder="e.g., A, B, 01"
-                className="border-2 border-blue-300 dark:border-blue-700"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Specific Rate Unit
-              </Label>
-              <Input
-                value={specificRateUnit}
-                onChange={(e) => setSpecificRateUnit(e.target.value)}
-                placeholder="e.g., kg, liter, unit"
-                className="border-2 border-blue-300 dark:border-blue-700"
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              TLS Suffix
+            </Label>
+            <Input
+              value={tlsSuffix}
+              onChange={(e) => setTlsSuffix(e.target.value)}
+              placeholder="e.g., A, B, 01"
+              className="border-2 border-blue-300 dark:border-blue-700 w-full max-w-md"
+            />
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              Additional classification suffix (optional)
+            </p>
           </div>
         </div>
 
@@ -470,97 +712,80 @@ export default function TariffsTab() {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-amber-500"></span>
-              Duty Rates <span className="text-red-500 text-xs">(At least one required)</span>
+              Duty Rates <span className="text-red-500 text-xs">(Required - select duty type first)</span>
             </h3>
           </div>
           
-          <div className="grid grid-cols-2 gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
-            {/* Ad Valorem Rate */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Ad Valorem Rate (%)
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={adValoremRate}
-                onChange={(e) => setAdValoremRate(e.target.value)}
-                placeholder="e.g., 5.5"
-                className="border-2 border-amber-300 dark:border-amber-700"
-              />
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Percentage-based duty (0-100%)
+          {!currentDutyType ? (
+            <div className="p-6 bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-center">
+              <AlertCircle className="h-8 w-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                Please select a Duty Type above to configure duty rates
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                The form will adapt based on your selection (Ad Valorem, Specific, Combined, or Other)
               </p>
             </div>
+          ) : (
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
+              {/* AD VALOREM DUTY FORM */}
+              {currentDutyType === 'AD_VALOREM' && (
+                <AdValoremDutyForm
+                  adValoremRate={adValoremRate ? parseFloat(adValoremRate) : undefined}
+                  onChange={(value) => {
+                    setAdValoremRate(value !== undefined ? value.toString() : "")
+                    // Clear other rates
+                    setSpecificRate("")
+                    setCompoundRate1("")
+                    setCompoundRate2("")
+                  }}
+                />
+              )}
 
-            {/* Specific Rate */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Specific Rate
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={specificRate}
-                onChange={(e) => setSpecificRate(e.target.value)}
-                placeholder="e.g., 10.50"
-                className="border-2 border-amber-300 dark:border-amber-700"
-              />
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Fixed amount per unit
-              </p>
+              {/* SPECIFIC DUTY FORM */}
+              {currentDutyType === 'SPECIFIC' && (
+                <SpecificDutyForm
+                  specificRate={specificRate ? parseFloat(specificRate) : undefined}
+                  specificRateUnit={specificRateUnit}
+                  onRateChange={(value) => {
+                    setSpecificRate(value !== undefined ? value.toString() : "")
+                    // Clear other rates
+                    setAdValoremRate("")
+                    setCompoundRate1("")
+                    setCompoundRate2("")
+                  }}
+                  onUnitChange={(value) => {
+                    setSpecificRateUnit(value)
+                  }}
+                />
+              )}
+
+              {/* COMBINED DUTY FORM */}
+              {currentDutyType === 'COMBINED' && (
+                <CombinedDutyForm
+                  compoundRate1={compoundRate1 ? parseFloat(compoundRate1) : undefined}
+                  compoundRate2={compoundRate2 ? parseFloat(compoundRate2) : undefined}
+                  specificRateUnit={specificRateUnit}
+                  combinedMode={combinedDutyMode}
+                  onRate1Change={(value) => {
+                    setCompoundRate1(value !== undefined ? value.toString() : "")
+                  }}
+                  onRate2Change={(value) => {
+                    setCompoundRate2(value !== undefined ? value.toString() : "")
+                  }}
+                  onUnitChange={(value) => {
+                    setSpecificRateUnit(value)
+                  }}
+                  onModeChange={(mode) => setCombinedDutyMode(mode)}
+                />
+              )}
+
+              {/* OTHER DUTY FORM */}
+              {currentDutyType === 'OTHER' && (
+                <OtherDutyForm />
+              )}
             </div>
-
-            {/* Compound Rate 1 */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Compound Rate 1
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={compoundRate1}
-                onChange={(e) => setCompoundRate1(e.target.value)}
-                placeholder="First component"
-                className="border-2 border-amber-300 dark:border-amber-700"
-              />
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Combined duty component 1
-              </p>
-            </div>
-
-            {/* Compound Rate 2 */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Compound Rate 2
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={compoundRate2}
-                onChange={(e) => setCompoundRate2(e.target.value)}
-                placeholder="Second component"
-                className="border-2 border-amber-300 dark:border-amber-700"
-              />
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Combined duty component 2
-              </p>
-            </div>
-          </div>
-
-          {/* Rate Type Indicator */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">
-              <AlertCircle className="h-3 w-3 inline mr-1" />
-              Duty Rate Guidelines:
-            </p>
-            <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1 ml-4 list-disc">
-              <li><strong>Ad Valorem:</strong> Use for percentage-based duties (e.g., 5% of value)</li>
-              <li><strong>Specific:</strong> Use for fixed amount per unit (e.g., $10 per kg)</li>
-              <li><strong>Compound:</strong> Use both components for combined duties (e.g., 5% + $2/kg)</li>
-              <li><strong>Note:</strong> You can set rates to 0 if needed</li>
-            </ul>
-          </div>
+          )}
         </div>
 
         {/* Notes Section */}
@@ -577,9 +802,10 @@ export default function TariffsTab() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              className="w-full p-3 border-2 border-purple-300 dark:border-purple-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
+              className="w-full p-3 border-2 border-purple-300 dark:border-purple-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none break-words whitespace-pre-wrap"
               placeholder="Add any additional notes or comments about this tariff..."
               maxLength={1000}
+              style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
             />
             <div className="flex justify-end text-xs text-slate-500 dark:text-slate-400">
               <span>{note.length} / 1000 characters</span>
@@ -606,7 +832,7 @@ export default function TariffsTab() {
           )}
         </Button>
 
-        {/* Status Messages */}
+        {/* Status Messages for Create Mode */}
         {(error || success) && (
           <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
             success
@@ -621,7 +847,164 @@ export default function TariffsTab() {
             <span className="flex-1 break-words">{success || error}</span>
           </div>
         )}
+          </>
+        ) : (
+          // MANAGE MODE - View and Delete Tariffs
+          <>
+            <div className="space-y-3">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>Showing {searchResults.length} tariff(s)</strong>
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Click the delete button to remove a tariff. You will be asked to confirm before deletion.
+                </p>
+              </div>
+
+              <div className="max-h-[600px] overflow-y-auto space-y-3">
+                {searchResults.map((tariff) => (
+                  <div
+                    key={tariff.tariffId}
+                    className="p-4 border-2 border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
+                            ID: {tariff.tariffId}
+                          </span>
+                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                            {tariff.tariffYear}
+                          </span>
+                          {tariff.dutyCategory && (
+                            <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-2 py-1 rounded">
+                              {tariff.dutyCategory.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm space-y-1 text-slate-700 dark:text-slate-300">
+                          <div><strong>Route:</strong> {tariff.partnerName} ({tariff.partnerCode}) → {tariff.reporterName} ({tariff.reporterCode})</div>
+                          <div><strong>Product:</strong> {tariff.tlCode} - {tariff.productDescription}</div>
+                          <div><strong>Duty Type:</strong> {tariff.dutyType}-{tariff.dutyCode} ({tariff.dutyTypeDescription})</div>
+                          {tariff.adValoremRate !== null && tariff.adValoremRate !== undefined && (
+                            <div><strong>Ad Valorem:</strong> {tariff.adValoremRate}%</div>
+                          )}
+                          {tariff.specificRate !== null && tariff.specificRate !== undefined && (
+                            <div><strong>Specific:</strong> {tariff.specificRate} {tariff.specificRateUnit}</div>
+                          )}
+                          {tariff.compoundRate1 !== null && tariff.compoundRate1 !== undefined && (
+                            <div><strong>Compound:</strong> {tariff.compoundRate1}% + {tariff.compoundRate2} {tariff.specificRateUnit}</div>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => confirmDelete(tariff)}
+                        disabled={loading}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-700"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                {searchResults.length === 0 && !loading && (
+                  <div className="text-center p-8 text-slate-500 dark:text-slate-400">
+                    <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No tariffs found. Click "Manage Tariffs" to load all tariffs.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Status Messages for Manage Mode */}
+            {(error || success) && (
+              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
+                success
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+              }`}>
+                {success ? (
+                  <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 mt-0.5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                )}
+                <span className="flex-1 break-words">{success || error}</span>
+              </div>
+            )}
+          </>
+        )}
+        
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmation.show} onOpenChange={(open: boolean) => !open && cancelDelete()}>
+        <DialogContent className="bg-white dark:bg-slate-900 border-2 border-red-300 dark:border-red-700">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="h-6 w-6" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-400 mt-2">
+              This action cannot be undone. This will permanently delete the tariff from the database.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+                You are about to delete:
+              </p>
+              <pre className="text-xs text-red-800 dark:text-red-200 whitespace-pre-line font-mono">
+                {deleteConfirmation.tariffDetails}
+              </pre>
+            </div>
+
+            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-xs font-semibold text-yellow-900 dark:text-yellow-100 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Warning
+              </p>
+              <p className="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
+                This will remove all associated duty information and cannot be recovered.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelDelete}
+              disabled={loading}
+              className="min-w-[120px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => deleteConfirmation.tariffId && handleDeleteTariff(deleteConfirmation.tariffId)}
+              disabled={loading}
+              className="min-w-[120px] bg-red-600 hover:bg-red-700 text-white"
+            >
+              {loading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Yes, Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Notification Popup */}
       {notification.show && (

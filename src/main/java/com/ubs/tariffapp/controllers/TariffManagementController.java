@@ -34,6 +34,33 @@ public class TariffManagementController {
         this.dutyService = dutyService;
     }
 
+    // Get all tariffs (for management view)
+    @GetMapping
+    @PreAuthorize("hasAuthority('Admin')")
+    public ResponseEntity<Map<String, Object>> getAllTariffs() {
+        System.out.println("📋 Fetching all tariffs for management");
+        try {
+            List<TariffResponse> allTariffs = tariffManagementService.getAllTariffs();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("tariffs", allTariffs);
+            response.put("count", allTariffs.size());
+            response.put("status", "success");
+            
+            System.out.println("✅ Retrieved " + allTariffs.size() + " tariff(s)");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching all tariffs: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch tariffs: " + e.getMessage());
+            errorResponse.put("status", "error");
+            errorResponse.put("tariffs", List.of());
+            errorResponse.put("count", 0);
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
     // NEW: Search for tariffs to edit (same as CalculateTab logic)
     @PostMapping("/search")
     @PreAuthorize("hasAuthority('Admin')")
