@@ -141,6 +141,33 @@ export async function getShippingRoute(params: {
   }
 }
 
+export async function getOptimalRoutes(params: {
+  src_lat: number;
+  src_lon: number;
+  dst_lat: number;
+  dst_lon: number;
+  time_constraint_hours?: number;
+}) {
+  console.log('🚢 Getting optimal routes:', params);
+  
+  const GRAPHDB_API = process.env.NEXT_PUBLIC_GRAPHDB_API || "http://localhost:8000";
+  
+  try {
+    const response = await fetch(`${GRAPHDB_API}/optimal-routes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Get optimal routes error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
+}
+
 // Country code to coordinates mapping (major port cities)
 export const COUNTRY_COORDINATES: { [key: string]: { lat: number, lon: number, name: string } } = {
   "702": { lat: 1.29, lon: 103.85, name: "Singapore" },

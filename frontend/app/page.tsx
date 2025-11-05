@@ -14,14 +14,51 @@ export default function TariffCalculatorPage() {
   const [calculationResult, setCalculationResult] = useState<number | null>(null)
   const [isResizing, setIsResizing] = useState(false)
   const [routeGeojson, setRouteGeojson] = useState<any>(null)
+  const [optimalRoutesData, setOptimalRoutesData] = useState<any>(null)
   
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isResizingRef = useRef(false)
   const lastResizeTime = useRef(0)
 
-  const handleRouteCalculated = useCallback((geojson: any) => {
-    console.log("🗺️ Route calculated, updating map with geojson")
-    setRouteGeojson(geojson)
+  const handleRouteCalculated = useCallback((data: any) => {
+    console.log("🗺️ Routes calculated, updating map with data:", data)
+    
+    // Check if this is the new optimal routes format (GeoJSON with features array)
+    if (data.features && data.metadata) {
+      console.log("📊 Transforming optimal routes format")
+      // Transform GeoJSON features into our component format
+      const transformed: any = {}
+      
+      data.features.forEach((feature: any) => {
+        const optType = feature.properties.optimization_type
+        console.log(`Processing feature with optimization_type: ${optType}`, feature)
+        if (optType) {
+          transformed[optType] = {
+            // Preserve the original geometry (could be LineString or MultiLineString)
+            coordinates: feature.geometry.coordinates,
+            geometry: feature.geometry, // Keep full geometry info
+            metrics: {
+              distance_km: feature.properties.distance_km,
+              cost_usd: feature.properties.cost_usd,
+              time_hours: feature.properties.time_hours,
+              co2_kg: feature.properties.co2_kg,
+              risk_score: feature.properties.risk_score,
+              transport_type: feature.properties.transport_type
+            },
+            optimization: optType.replace('_optimized', '')
+          }
+        }
+      })
+      
+      console.log("📊 Transformed data:", transformed)
+      setOptimalRoutesData(transformed)
+      setRouteGeojson(null) // Clear legacy format
+    } else if (data.features) {
+      // Legacy single route format
+      console.log("🚢 Using legacy single route format")
+      setRouteGeojson(data)
+      setOptimalRoutesData(null)
+    }
   }, [])
 
   const startResizing = useCallback(() => {
@@ -139,7 +176,7 @@ export default function TariffCalculatorPage() {
           />
 
           <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900 relative">
-            <WorldMap geojsonData={routeGeojson} />
+            <WorldMap geojsonData={routeGeojson} optimalRoutesData={optimalRoutesData} />
             
             {/* Loading overlay when resizing */}
             {isResizing && (

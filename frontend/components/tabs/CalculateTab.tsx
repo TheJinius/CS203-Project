@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, CheckCircle, XCircle } from "lucide-react"
-import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts, getShippingRoute, COUNTRY_COORDINATES } from "@/lib/api"
+import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts, getShippingRoute, getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
 
 // Move predefined products outside component to prevent recreating on every render
 const PREDEFINED_PRODUCTS = [
@@ -267,24 +267,25 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
       return
     }
 
-    console.log(`🚢 Calculating route: ${sourceCoords.name} → ${destCoords.name}`)
+    console.log(`🚢 Calculating optimal routes: ${sourceCoords.name} → ${destCoords.name}`)
     
     try {
-      const { ok, data } = await getShippingRoute({
+      const { ok, data } = await getOptimalRoutes({
         src_lat: sourceCoords.lat,
         src_lon: sourceCoords.lon,
         dst_lat: destCoords.lat,
         dst_lon: destCoords.lon,
       })
 
-      if (ok && data.features && onRouteCalculated) {
-        console.log('✅ Route calculated successfully')
+      if (ok && onRouteCalculated) {
+        console.log('✅ Optimal routes calculated successfully')
+        // Transform the response to match the expected format
         onRouteCalculated(data)
       } else {
-        console.warn('⚠️ Failed to calculate route:', data.error)
+        console.warn('⚠️ Failed to calculate routes:', data.error)
       }
     } catch (error) {
-      console.error('❌ Error calculating route:', error)
+      console.error('❌ Error calculating routes:', error)
     }
   }
 

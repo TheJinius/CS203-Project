@@ -49,9 +49,9 @@ export default function Sidebar({
 
   const sidebarItems = [
     { id: "calculate", label: "Calculate Tariff", icon: Calculator },
-    { id: "products", label: "Products", icon: Package },
-    { id: "countries", label: "Countries", icon: MapPin },
-    { id: "tariffs", label: "Tariffs", icon: FileText },
+    // { id: "products", label: "Products", icon: Package },
+    // { id: "countries", label: "Countries", icon: MapPin },
+    // { id: "tariffs", label: "Tariffs", icon: FileText },
     { id: "results", label: "Results", icon: TrendingUp },
     // Only include "Edit tariffs" if user is admin
     ...(isAdmin() ? [{ id: "edit", label: "Edit Tariffs", icon: Edit }] : []),
@@ -136,7 +136,7 @@ export default function Sidebar({
           )}
           
           {/* Other Tabs - Standard padding */}
-          {activeTab === "products" && (
+          {/* {activeTab === "products" && (
             <div className="p-4">
               <ProductsTab />
             </div>
@@ -152,7 +152,7 @@ export default function Sidebar({
             <div className="p-4">
               <TariffsTab />
             </div>
-          )}
+          )} */}
           
           {activeTab === "results" && (
             <div className="p-4">
@@ -160,12 +160,12 @@ export default function Sidebar({
             </div>
           )}
           
-          {/* Access control: only render edit tab for admins */}
+          {/* Access control: only render edit tab for admins
           {activeTab === "edit" && isAdmin() && (
             <div className="p-4">
               <EditTariffTab />
             </div>
-          )}
+          )} */}
         </div>
       </div>
 
