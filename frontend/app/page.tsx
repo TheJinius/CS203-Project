@@ -13,10 +13,16 @@ export default function TariffCalculatorPage() {
   const [activeTab, setActiveTab] = useState("calculate")
   const [calculationResult, setCalculationResult] = useState<number | null>(null)
   const [isResizing, setIsResizing] = useState(false)
+  const [routeGeojson, setRouteGeojson] = useState<any>(null)
   
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isResizingRef = useRef(false)
   const lastResizeTime = useRef(0)
+
+  const handleRouteCalculated = useCallback((geojson: any) => {
+    console.log("🗺️ Route calculated, updating map with geojson")
+    setRouteGeojson(geojson)
+  }, [])
 
   const startResizing = useCallback(() => {
     setIsResizing(true)
@@ -98,6 +104,7 @@ export default function TariffCalculatorPage() {
               onClose={() => setSidebarOpen(false)}
               calculationResult={calculationResult}
               onCalculationResult={setCalculationResult}
+              onRouteCalculated={handleRouteCalculated}
               width={sidebarWidth}
             />
             
@@ -132,7 +139,7 @@ export default function TariffCalculatorPage() {
           />
 
           <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900 relative">
-            <WorldMap />
+            <WorldMap geojsonData={routeGeojson} />
             
             {/* Loading overlay when resizing */}
             {isResizing && (

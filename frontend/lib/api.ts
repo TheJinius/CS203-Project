@@ -1,6 +1,7 @@
 import { getSession, signOut } from "next-auth/react";
 
 const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
+console.log(API_BASE_ROUTE);
 
 // Helper function to get current auth headers
 async function getAuthHeaders() {
@@ -27,6 +28,8 @@ export async function searchTariffs(params: {
   tlCode: string;
   year: number;
 }) {
+  console.log('🔍 Searching tariffs with data:', params);
+  
   // Map frontend field names to backend expected names  
   const backendRequest = {
     reporterCode: params.reporter,
@@ -58,8 +61,9 @@ export async function calculateTariff(params: {
   tariffId: number;
   amountOfProduct: number;
   currency: string;
-  productValueDollars?: number; // Optional: for Combined Duty Ad Valorem calculation
 }) {
+  console.log('🧮 Calculating tariff with data:', params);
+  
   try {
     const headers = await getAuthHeaders();
     
@@ -85,6 +89,7 @@ export async function getExchangeRate() {
       headers,
     })
     const data = await response.json()
+    console.log('📊 Exchange rate data:', data)
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Get exchange rate error:', error);
@@ -93,6 +98,8 @@ export async function getExchangeRate() {
 }
 
 export async function searchProducts(query: string, limit: number = 5) {
+  console.log('🔍 Searching products with query:', query);
+  
   try {
     const headers = await getAuthHeaders();
     
@@ -106,4 +113,54 @@ export async function searchProducts(query: string, limit: number = 5) {
     console.error('Search products error:', error);
     return { ok: false, data: { error: (error as Error).message } };
   }
+}
+
+export async function getShippingRoute(params: {
+  src_lat: number;
+  src_lon: number;
+  dst_lat: number;
+  dst_lon: number;
+}) {
+  console.log('🚢 Getting shipping route:', params);
+  
+  const GRAPHDB_API = process.env.NEXT_PUBLIC_GRAPHDB_API || "http://localhost:8000";
+  
+  try {
+    const response = await fetch(`${GRAPHDB_API}/shortest-route`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Get shipping route error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
+}
+
+// Country code to coordinates mapping (major port cities)
+export const COUNTRY_COORDINATES: { [key: string]: { lat: number, lon: number, name: string } } = {
+  "702": { lat: 1.29, lon: 103.85, name: "Singapore" },
+  "840": { lat: 33.74, lon: -118.27, name: "Los Angeles, USA" },
+  "156": { lat: 31.23, lon: 121.47, name: "Shanghai, China" },
+  "392": { lat: 35.68, lon: 139.76, name: "Tokyo, Japan" },
+  "528": { lat: 51.92, lon: 4.48, name: "Rotterdam, Netherlands" },
+  "826": { lat: 51.51, lon: -0.12, name: "London, UK" },
+  "276": { lat: 53.55, lon: 9.99, name: "Hamburg, Germany" },
+  "036": { lat: -33.87, lon: 151.21, name: "Sydney, Australia" },
+  "356": { lat: 18.97, lon: 72.83, name: "Mumbai, India" },
+  "124": { lat: 49.28, lon: -123.12, name: "Vancouver, Canada" },
+  "076": { lat: -23.96, lon: -46.33, name: "Santos, Brazil" },
+  "056": { lat: 51.22, lon: 4.40, name: "Antwerp, Belgium" },
+  "144": { lat: 6.93, lon: 79.85, name: "Colombo, Sri Lanka" },
+  "158": { lat: 22.62, lon: 120.31, name: "Kaohsiung, Taiwan" },
+  "608": { lat: 14.60, lon: 120.98, name: "Manila, Philippines" },
+  "554": { lat: -36.84, lon: 174.76, name: "Auckland, New Zealand" },
+  "784": { lat: 25.27, lon: 55.30, name: "Dubai, UAE" },
+  "410": { lat: 35.18, lon: 129.08, name: "Busan, South Korea" },
+  "344": { lat: 22.32, lon: 114.17, name: "Hong Kong" },
+  "000": { lat: 22.32, lon: 114.17, name: "World" }, // Generic/any country
 }
