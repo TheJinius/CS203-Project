@@ -29,6 +29,10 @@ public class TariffResponse {
     private String specificRateUnit;
     private Double compoundRate1;
     private Double compoundRate2;
+    
+    // OtherDuty specific fields
+    private String rawText;
+    private Boolean isComputable;
 
     // Default constructor
     public TariffResponse() {}
@@ -38,7 +42,8 @@ public class TariffResponse {
                          String partnerCode, String partnerName, String tlCode, String productDescription,
                          String dutyType, String dutyCode, String dutyTypeDescription, String tlsSuffix,
                          String note, String dutyCategory, Double adValoremRate, Double specificRate,
-                         String specificRateUnit, Double compoundRate1, Double compoundRate2) {
+                         String specificRateUnit, Double compoundRate1, Double compoundRate2,
+                         String rawText, Boolean isComputable) {
         this.tariffId = tariffId;
         this.tariffYear = tariffYear;
         this.reporterCode = reporterCode;
@@ -58,6 +63,8 @@ public class TariffResponse {
         this.specificRateUnit = specificRateUnit;
         this.compoundRate1 = compoundRate1;
         this.compoundRate2 = compoundRate2;
+        this.rawText = rawText;
+        this.isComputable = isComputable;
     }
 
     // Builder pattern (manual implementation)
@@ -87,6 +94,8 @@ public class TariffResponse {
         public TariffResponseBuilder specificRateUnit(String specificRateUnit) { response.specificRateUnit = specificRateUnit; return this; }
         public TariffResponseBuilder compoundRate1(Double compoundRate1) { response.compoundRate1 = compoundRate1; return this; }
         public TariffResponseBuilder compoundRate2(Double compoundRate2) { response.compoundRate2 = compoundRate2; return this; }
+        public TariffResponseBuilder rawText(String rawText) { response.rawText = rawText; return this; }
+        public TariffResponseBuilder isComputable(Boolean isComputable) { response.isComputable = isComputable; return this; }
 
         public TariffResponse build() { return response; }
     }
@@ -111,6 +120,8 @@ public class TariffResponse {
     public String getSpecificRateUnit() { return specificRateUnit; }
     public Double getCompoundRate1() { return compoundRate1; }
     public Double getCompoundRate2() { return compoundRate2; }
+    public String getRawText() { return rawText; }
+    public Boolean getIsComputable() { return isComputable; }
 
     // Setters
     public void setTariffId(Integer tariffId) { this.tariffId = tariffId; }
@@ -132,4 +143,6 @@ public class TariffResponse {
     public void setSpecificRateUnit(String specificRateUnit) { this.specificRateUnit = specificRateUnit; }
     public void setCompoundRate1(Double compoundRate1) { this.compoundRate1 = compoundRate1; }
     public void setCompoundRate2(Double compoundRate2) { this.compoundRate2 = compoundRate2; }
+    public void setRawText(String rawText) { this.rawText = rawText; }
+    public void setIsComputable(Boolean isComputable) { this.isComputable = isComputable; }
 }

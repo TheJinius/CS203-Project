@@ -112,6 +112,9 @@ export default function TariffsTab() {
     tariffDetails: ''
   })
 
+  // Add tariff dialog
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+
   // Search/View tariffs
   const [viewMode, setViewMode] = useState<'create' | 'manage'>('create')
   const [searchResults, setSearchResults] = useState<TariffData[]>([])
@@ -124,12 +127,14 @@ export default function TariffsTab() {
     { code: "74130000", description: "Copper Wire" }
   ]
 
-  // Common duty types (you can expand this list)
+  // ✅ Simplified duty type options for users
   const dutyTypes: DutyType[] = [
-    { dutyType: "AV", dutyCode: "01", description: "Ad Valorem" },
-    { dutyType: "SP", dutyCode: "01", description: "Specific" },
-    { dutyType: "CO", dutyCode: "01", description: "Compound/Combined" },
-    { dutyType: "OT", dutyCode: "01", description: "Other" },
+    { dutyType: "0", dutyCode: "0", description: "Standard (MFN)" },
+    { dutyType: "0", dutyCode: "2", description: "Duty-Free" },
+    { dutyType: "1", dutyCode: "0", description: "Preferential (Trade Agreement)" },
+    { dutyType: "1", dutyCode: "1", description: "Preferential (Specific)" },
+    { dutyType: "2", dutyCode: "0", description: "GSP (Developing Countries)" },
+    { dutyType: "3", dutyCode: "0", description: "Temporary" },
   ]
 
   const showNotification = (type: 'success' | 'error' | 'warning', title: string, message: string, details?: string) => {
@@ -140,26 +145,26 @@ export default function TariffsTab() {
     setNotification(prev => ({ ...prev, show: false }))
   }
 
-  // Update current duty type when duty type selection changes
+  // Update current duty type based on which rates user has entered
+  // The duty nature (A/S/C/O) is determined by which rates are provided, not from dutyType selection
   useEffect(() => {
-    if (dutyType) {
-      // Map duty type codes to our internal enum
-      const upperDutyType = dutyType.toUpperCase()
-      if (upperDutyType === 'AV') {
-        setCurrentDutyType('AD_VALOREM')
-      } else if (upperDutyType === 'SP') {
-        setCurrentDutyType('SPECIFIC')
-      } else if (upperDutyType === 'CO') {
-        setCurrentDutyType('COMBINED')
-      } else if (upperDutyType === 'OT') {
-        setCurrentDutyType('OTHER')
-      } else {
-        setCurrentDutyType(null)
-      }
+    // Determine duty type from entered rates
+    const hasAdValorem = adValoremRate && parseFloat(adValoremRate) > 0
+    const hasSpecific = specificRate && parseFloat(specificRate) > 0
+    const hasCompound1 = compoundRate1 && parseFloat(compoundRate1) > 0
+    const hasCompound2 = compoundRate2 && parseFloat(compoundRate2) > 0
+    
+    if ((hasAdValorem && hasSpecific) || (hasCompound1 && hasCompound2)) {
+      setCurrentDutyType('COMBINED')
+    } else if (hasAdValorem) {
+      setCurrentDutyType('AD_VALOREM')
+    } else if (hasSpecific) {
+      setCurrentDutyType('SPECIFIC')
     } else {
+      // No rates entered - don't set a default
       setCurrentDutyType(null)
     }
-  }, [dutyType])
+  }, [adValoremRate, specificRate, compoundRate1, compoundRate2])
 
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -284,29 +289,19 @@ export default function TariffsTab() {
         throw new Error(`Please fill in the following required fields: ${missingFields.join(", ")}`)
       }
 
-      // Validate duty rates based on duty type
-      if (currentDutyType === 'AD_VALOREM') {
-        if (!adValoremRate || adValoremRate.trim() === "") {
-          throw new Error("Ad Valorem rate is required for Ad Valorem duty type")
-        }
-      } else if (currentDutyType === 'SPECIFIC') {
-        if (!specificRate || specificRate.trim() === "") {
-          throw new Error("Specific rate is required for Specific duty type")
-        }
-        if (!specificRateUnit || specificRateUnit.trim() === "") {
-          throw new Error("Specific rate unit is required for Specific duty type")
-        }
-      } else if (currentDutyType === 'COMBINED') {
-        if (!compoundRate1 || compoundRate1.trim() === "" || !compoundRate2 || compoundRate2.trim() === "") {
-          throw new Error("Both compound rates are required for Combined duty type")
-        }
-        if (!specificRateUnit || specificRateUnit.trim() === "") {
-          throw new Error("Specific rate unit is required for Combined duty type")
-        }
-      } else if (currentDutyType === 'OTHER') {
-        // OTHER type doesn't require specific rates, can proceed
-      } else {
-        throw new Error("Please select a duty type and fill in the required duty rates")
+      // Validate duty rates - at least one rate must be provided
+      const hasAdValorem = adValoremRate && adValoremRate.trim() !== "" && parseFloat(adValoremRate) >= 0
+      const hasSpecific = specificRate && specificRate.trim() !== "" && parseFloat(specificRate) >= 0
+      const hasCompound1 = compoundRate1 && compoundRate1.trim() !== "" && parseFloat(compoundRate1) >= 0
+      const hasCompound2 = compoundRate2 && compoundRate2.trim() !== "" && parseFloat(compoundRate2) >= 0
+      
+      if (!hasAdValorem && !hasSpecific && !hasCompound1 && !hasCompound2) {
+        throw new Error("At least one duty rate must be specified (Ad Valorem, Specific, or Combined rates)")
+      }
+      
+      // If specific or combined rates are used, unit is required
+      if ((hasSpecific || hasCompound2) && (!specificRateUnit || specificRateUnit.trim() === "")) {
+        throw new Error("Specific rate unit is required when using specific or combined duties")
       }
 
       const headers = await getAuthHeaders()
@@ -325,29 +320,32 @@ export default function TariffsTab() {
         specificRateUnit: specificRateUnit || "",
       }
 
-      // Add duty rates based on duty type
-      if (currentDutyType === 'AD_VALOREM' && adValoremRate.trim() !== "") {
+      // Add duty rates - backend determines duty nature from which rates are provided
+      if (adValoremRate && adValoremRate.trim() !== "") {
         const value = parseFloat(adValoremRate)
         if (!isNaN(value) && value >= 0) {
           requestBody.adValoremRate = value
         }
-      } else if (currentDutyType === 'SPECIFIC' && specificRate.trim() !== "") {
+      }
+      
+      if (specificRate && specificRate.trim() !== "") {
         const value = parseFloat(specificRate)
         if (!isNaN(value) && value >= 0) {
           requestBody.specificRate = value
         }
-      } else if (currentDutyType === 'COMBINED') {
-        if (compoundRate1.trim() !== "") {
-          const value = parseFloat(compoundRate1)
-          if (!isNaN(value) && value >= 0) {
-            requestBody.compoundRate1 = value
-          }
+      }
+      
+      if (compoundRate1 && compoundRate1.trim() !== "") {
+        const value = parseFloat(compoundRate1)
+        if (!isNaN(value) && value >= 0) {
+          requestBody.compoundRate1 = value
         }
-        if (compoundRate2.trim() !== "") {
-          const value = parseFloat(compoundRate2)
-          if (!isNaN(value) && value >= 0) {
-            requestBody.compoundRate2 = value
-          }
+      }
+      
+      if (compoundRate2 && compoundRate2.trim() !== "") {
+        const value = parseFloat(compoundRate2)
+        if (!isNaN(value) && value >= 0) {
+          requestBody.compoundRate2 = value
         }
       }
 
@@ -364,9 +362,24 @@ export default function TariffsTab() {
       console.log("📡 Response status:", response.status)
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ Error response:", errorText)
-        throw new Error(`Failed to create tariff (${response.status}): ${errorText}`)
+        let errorMessage = `Failed to create tariff (${response.status})`
+        try {
+          const errorText = await response.text()
+          console.error("❌ Error response:", errorText)
+          
+          // Try to parse as JSON first (backend might send structured error)
+          try {
+            const errorJson = JSON.parse(errorText)
+            errorMessage = errorJson.message || errorJson.error || errorText || errorMessage
+          } catch {
+            // Not JSON, use raw text
+            errorMessage = errorText || errorMessage
+          }
+        } catch (parseError) {
+          console.error("❌ Could not parse error response:", parseError)
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const createdTariff = await response.json()
@@ -381,10 +394,11 @@ export default function TariffsTab() {
         `Tariff ID: ${createdTariff.tariffId}\nProduct: ${productCode}\nYear: ${tariffYear}\nReporter: ${reporterCode} → Partner: ${partnerCode}`
       )
 
-      // Reset form after success
+      // Close dialog and reset form after success
+      setIsAddDialogOpen(false)
       setTimeout(() => {
         resetForm()
-      }, 2000)
+      }, 500)
 
     } catch (e) {
       const err = e as Error
@@ -507,60 +521,149 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
   }
 
   return (
+    <>
     <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-slate-100">
-              {viewMode === 'create' ? (
-                <>
-                  <Plus className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  Add New Tariff
-                </>
-              ) : (
-                <>
-                  <Search className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  Manage Tariffs
-                </>
-              )}
+              <Search className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              Manage Tariffs
             </CardTitle>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              {viewMode === 'create' 
-                ? 'Create a new tariff entry in the database'
-                : 'View and delete existing tariffs'}
+              View, add, and delete tariff entries
             </p>
           </div>
           <Button
-            variant="outline"
-            onClick={() => {
-              if (viewMode === 'create') {
-                handleSearchAllTariffs()
-              } else {
-                setViewMode('create')
-                setSearchResults([])
-              }
-            }}
-            className="border-2"
+            onClick={() => setIsAddDialogOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {viewMode === 'create' ? (
-              <>
-                <Search className="h-4 w-4 mr-2" />
-                Manage Tariffs
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Add New
-              </>
-            )}
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Tariff
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         
-        {viewMode === 'create' ? (
-          // CREATE MODE - Existing form
-          <>
+        {/* Load All Tariffs Button */}
+        <Button
+          onClick={handleSearchAllTariffs}
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          {loading ? (
+            <>
+              <span className="animate-spin mr-2">⏳</span>
+              Loading...
+            </>
+          ) : (
+            <>
+              <Search className="h-4 w-4 mr-2" />
+              Load All Tariffs
+            </>
+          )}
+        </Button>
+
+        {/* Tariff List */}
+        {searchResults.length > 0 && (
+          <div className="space-y-3">
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>Showing {searchResults.length} tariff(s)</strong>
+              </p>
+            </div>
+
+            <div className="max-h-[600px] overflow-y-auto space-y-3">
+              {searchResults.map((tariff) => (
+                <div
+                  key={tariff.tariffId}
+                  className="p-4 border-2 border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">
+                          ID: {tariff.tariffId}
+                        </span>
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                          {tariff.tariffYear}
+                        </span>
+                        {tariff.dutyCategory && (
+                          <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-2 py-1 rounded">
+                            {tariff.dutyCategory === 'A' ? 'Ad Valorem' : 
+                             tariff.dutyCategory === 'S' ? 'Specific' :
+                             tariff.dutyCategory === 'C' ? 'Combined' : 'Other'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm space-y-1 text-slate-700 dark:text-slate-300">
+                        <div><strong>Route:</strong> {tariff.partnerName} ({tariff.partnerCode}) → {tariff.reporterName} ({tariff.reporterCode})</div>
+                        <div><strong>Product:</strong> {tariff.tlCode} - {tariff.productDescription}</div>
+                        <div><strong>Duty Type:</strong> {tariff.dutyType}-{tariff.dutyCode} ({tariff.dutyTypeDescription})</div>
+                        {tariff.adValoremRate !== null && tariff.adValoremRate !== undefined && (
+                          <div><strong>Ad Valorem:</strong> {tariff.adValoremRate}%</div>
+                        )}
+                        {tariff.specificRate !== null && tariff.specificRate !== undefined && (
+                          <div><strong>Specific:</strong> {tariff.specificRate} {tariff.specificRateUnit}</div>
+                        )}
+                        {tariff.compoundRate1 !== null && tariff.compoundRate1 !== undefined && (
+                          <div><strong>Compound:</strong> {tariff.compoundRate1}% + {tariff.compoundRate2} {tariff.specificRateUnit}</div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => confirmDelete(tariff)}
+                      disabled={loading}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Status Messages */}
+        {(error || success) && (
+          <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
+            success
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+          }`}>
+            {success ? (
+              <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-4 w-4 mt-0.5 text-red-600 dark:text-red-400 flex-shrink-0" />
+            )}
+            <span className="flex-1 break-words">{success || error}</span>
+          </div>
+        )}
+        
+      </CardContent>
+
+    </Card>
+
+      {/* Add Tariff Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700">
+          <DialogHeader className="pb-4 border-b border-slate-200 dark:border-slate-700">
+            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Plus className="h-6 w-6 text-green-600 dark:text-green-400" />
+              Add New Tariff
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-400 mt-2">
+              Create a new tariff entry in the database. All fields marked with <span className="text-red-500 font-semibold">*</span> are required.
+              <br />
+              <span className="text-blue-600 dark:text-blue-400 font-medium">💡 Tip: You can enter any HS code - new products will be auto-created. Duty types will also be auto-created if needed.</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
         {/* Required Fields Section */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
@@ -638,7 +741,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 <SelectContent>
                   {dutyTypes.map((dt) => (
                     <SelectItem key={`${dt.dutyType}-${dt.dutyCode}`} value={`${dt.dutyType}-${dt.dutyCode}`}>
-                      {dt.dutyType}-{dt.dutyCode} - {dt.description}
+                      {dt.dutyType}-{dt.dutyCode}: {dt.description}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -651,11 +754,15 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
             <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Product (HS Code) <span className="text-red-500">*</span>
             </Label>
+            <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              You can enter any HS code. New codes will be auto-created.
+            </p>
             <div className="relative w-full">
               <Input
                 value={productSearchQuery}
                 onChange={(e) => handleProductSearchChange(e.target.value)}
-                placeholder="Search by HS Code or description (e.g., 999999)"
+                placeholder="Enter or search HS Code (e.g., 27079940, 999999)"
                 className="border-2 border-slate-300 dark:border-slate-600 w-full"
               />
               {productSearchResults.length > 0 && productSearchQuery && (
@@ -712,80 +819,151 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-amber-500"></span>
-              Duty Rates <span className="text-red-500 text-xs">(Required - select duty type first)</span>
+              Duty Rates <span className="text-red-500 text-xs">(At least one rate required)</span>
             </h3>
+            {currentDutyType && (
+              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
+                Detected: {currentDutyType === 'AD_VALOREM' ? 'Ad Valorem' : 
+                          currentDutyType === 'SPECIFIC' ? 'Specific' :
+                          currentDutyType === 'COMBINED' ? 'Combined' : 'Other'}
+              </span>
+            )}
           </div>
           
-          {!currentDutyType ? (
-            <div className="p-6 bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-center">
-              <AlertCircle className="h-8 w-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
-              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                Please select a Duty Type above to configure duty rates
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800 space-y-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+              <p className="text-xs text-blue-900 dark:text-blue-100">
+                <strong>How it works:</strong> Enter any combination of rates below. The system will automatically determine the duty type:
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                The form will adapt based on your selection (Ad Valorem, Specific, Combined, or Other)
+              <ul className="text-xs text-blue-800 dark:text-blue-200 mt-1 ml-4 list-disc space-y-0.5">
+                <li><strong>Ad Valorem only:</strong> Enter percentage rate only</li>
+                <li><strong>Specific only:</strong> Enter amount and unit only</li>
+                <li><strong>Combined:</strong> Enter both percentage and amount+unit</li>
+              </ul>
+            </div>
+
+            {/* AD VALOREM RATE */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Ad Valorem Rate (%)
+              </Label>
+              <Input
+                type="number"
+                value={adValoremRate}
+                onChange={(e) => setAdValoremRate(e.target.value)}
+                placeholder="e.g., 20 (for 20%)"
+                className="border-2 border-amber-300 dark:border-amber-700 w-full"
+                min="0"
+                max="100"
+                step="0.01"
+              />
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Percentage of goods value (leave empty if not applicable)
               </p>
             </div>
-          ) : (
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
-              {/* AD VALOREM DUTY FORM */}
-              {currentDutyType === 'AD_VALOREM' && (
-                <AdValoremDutyForm
-                  adValoremRate={adValoremRate ? parseFloat(adValoremRate) : undefined}
-                  onChange={(value) => {
-                    setAdValoremRate(value !== undefined ? value.toString() : "")
-                    // Clear other rates
-                    setSpecificRate("")
-                    setCompoundRate1("")
-                    setCompoundRate2("")
-                  }}
-                />
-              )}
 
-              {/* SPECIFIC DUTY FORM */}
-              {currentDutyType === 'SPECIFIC' && (
-                <SpecificDutyForm
-                  specificRate={specificRate ? parseFloat(specificRate) : undefined}
-                  specificRateUnit={specificRateUnit}
-                  onRateChange={(value) => {
-                    setSpecificRate(value !== undefined ? value.toString() : "")
-                    // Clear other rates
-                    setAdValoremRate("")
-                    setCompoundRate1("")
-                    setCompoundRate2("")
-                  }}
-                  onUnitChange={(value) => {
-                    setSpecificRateUnit(value)
-                  }}
-                />
-              )}
-
-              {/* COMBINED DUTY FORM */}
-              {currentDutyType === 'COMBINED' && (
-                <CombinedDutyForm
-                  compoundRate1={compoundRate1 ? parseFloat(compoundRate1) : undefined}
-                  compoundRate2={compoundRate2 ? parseFloat(compoundRate2) : undefined}
-                  specificRateUnit={specificRateUnit}
-                  combinedMode={combinedDutyMode}
-                  onRate1Change={(value) => {
-                    setCompoundRate1(value !== undefined ? value.toString() : "")
-                  }}
-                  onRate2Change={(value) => {
-                    setCompoundRate2(value !== undefined ? value.toString() : "")
-                  }}
-                  onUnitChange={(value) => {
-                    setSpecificRateUnit(value)
-                  }}
-                  onModeChange={(mode) => setCombinedDutyMode(mode)}
-                />
-              )}
-
-              {/* OTHER DUTY FORM */}
-              {currentDutyType === 'OTHER' && (
-                <OtherDutyForm />
-              )}
+            {/* SPECIFIC RATE */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Specific Rate (Amount + Unit)
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Input
+                    type="number"
+                    value={specificRate}
+                    onChange={(e) => setSpecificRate(e.target.value)}
+                    placeholder="e.g., 0.09"
+                    className="border-2 border-amber-300 dark:border-amber-700 w-full"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    Amount (e.g., $0.09)
+                  </p>
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    value={specificRateUnit}
+                    onChange={(e) => setSpecificRateUnit(e.target.value)}
+                    placeholder="e.g., kg"
+                    className="border-2 border-amber-300 dark:border-amber-700 w-full"
+                  />
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    Unit (e.g., kg, L, unit)
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Fixed amount per unit (leave empty if not applicable)
+              </p>
             </div>
-          )}
+
+            {/* COMBINED RATES (Alternative entry method) */}
+            <div className="space-y-2 pt-2 border-t border-amber-300 dark:border-amber-700">
+              <Label className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Alternative: Combined Rates (Compound1 + Compound2)
+              </Label>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                Use these fields if you need to specify combined duty differently (will override Ad Valorem and Specific fields above)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Input
+                    type="number"
+                    value={compoundRate1}
+                    onChange={(e) => setCompoundRate1(e.target.value)}
+                    placeholder="Compound Rate 1 (%)"
+                    className="border-2 border-amber-300 dark:border-amber-700 w-full"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    Percentage component
+                  </p>
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    value={compoundRate2}
+                    onChange={(e) => setCompoundRate2(e.target.value)}
+                    placeholder="Compound Rate 2 (amount)"
+                    className="border-2 border-amber-300 dark:border-amber-700 w-full"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                    Amount component
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Combined Mode Selector */}
+            {currentDutyType === 'COMBINED' && (
+              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded">
+                <Label className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2 block">
+                  Combined Duty Calculation Mode
+                </Label>
+                <Select value={combinedDutyMode} onValueChange={(value: 'M' | 'C') => setCombinedDutyMode(value)}>
+                  <SelectTrigger className="border-2 border-purple-300 dark:border-purple-700">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="M">Mixed (Maximum) - Take the higher value</SelectItem>
+                    <SelectItem value="C">Compound (Sum) - Add both values together</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                  {combinedDutyMode === 'M' 
+                    ? '✓ Will use whichever is higher: percentage OR specific amount' 
+                    : '✓ Will add both: percentage + specific amount'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notes Section */}
@@ -812,133 +990,42 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
             </div>
           </div>
         </div>
-
-        {/* Action Button */}
-        <Button
-          onClick={handleCreateTariff}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg h-12"
-        >
-          {loading ? (
-            <>
-              <span className="animate-spin mr-2">⏳</span>
-              Creating Tariff...
-            </>
-          ) : (
-            <>
-              <Plus className="h-5 w-5 mr-2" />
-              Create New Tariff
-            </>
-          )}
-        </Button>
-
-        {/* Status Messages for Create Mode */}
-        {(error || success) && (
-          <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
-            success
-              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
-              : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-          }`}>
-            {success ? (
-              <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
-            ) : (
-              <XCircle className="h-4 w-4 mt-0.5 text-red-600 dark:text-red-400 flex-shrink-0" />
-            )}
-            <span className="flex-1 break-words">{success || error}</span>
           </div>
-        )}
-          </>
-        ) : (
-          // MANAGE MODE - View and Delete Tariffs
-          <>
-            <div className="space-y-3">
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>Showing {searchResults.length} tariff(s)</strong>
-                </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Click the delete button to remove a tariff. You will be asked to confirm before deletion.
-                </p>
-              </div>
 
-              <div className="max-h-[600px] overflow-y-auto space-y-3">
-                {searchResults.map((tariff) => (
-                  <div
-                    key={tariff.tariffId}
-                    className="p-4 border-2 border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-bold text-blue-600 dark:text-blue-400">
-                            ID: {tariff.tariffId}
-                          </span>
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                            {tariff.tariffYear}
-                          </span>
-                          {tariff.dutyCategory && (
-                            <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-2 py-1 rounded">
-                              {tariff.dutyCategory.replace(/_/g, ' ')}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm space-y-1 text-slate-700 dark:text-slate-300">
-                          <div><strong>Route:</strong> {tariff.partnerName} ({tariff.partnerCode}) → {tariff.reporterName} ({tariff.reporterCode})</div>
-                          <div><strong>Product:</strong> {tariff.tlCode} - {tariff.productDescription}</div>
-                          <div><strong>Duty Type:</strong> {tariff.dutyType}-{tariff.dutyCode} ({tariff.dutyTypeDescription})</div>
-                          {tariff.adValoremRate !== null && tariff.adValoremRate !== undefined && (
-                            <div><strong>Ad Valorem:</strong> {tariff.adValoremRate}%</div>
-                          )}
-                          {tariff.specificRate !== null && tariff.specificRate !== undefined && (
-                            <div><strong>Specific:</strong> {tariff.specificRate} {tariff.specificRateUnit}</div>
-                          )}
-                          {tariff.compoundRate1 !== null && tariff.compoundRate1 !== undefined && (
-                            <div><strong>Compound:</strong> {tariff.compoundRate1}% + {tariff.compoundRate2} {tariff.specificRateUnit}</div>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => confirmDelete(tariff)}
-                        disabled={loading}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-700"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                
-                {searchResults.length === 0 && !loading && (
-                  <div className="text-center p-8 text-slate-500 dark:text-slate-400">
-                    <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No tariffs found. Click "Manage Tariffs" to load all tariffs.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Status Messages for Manage Mode */}
-            {(error || success) && (
-              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm font-medium ${
-                success
-                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
-                  : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-              }`}>
-                {success ? (
-                  <CheckCircle className="h-4 w-4 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                ) : (
-                  <XCircle className="h-4 w-4 mt-0.5 text-red-600 dark:text-red-400 flex-shrink-0" />
-                )}
-                <span className="flex-1 break-words">{success || error}</span>
-              </div>
-            )}
-          </>
-        )}
-        
-      </CardContent>
+          <DialogFooter className="pt-4 border-t border-slate-200 dark:border-slate-700 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsAddDialogOpen(false)
+                resetForm()
+              }}
+              disabled={loading}
+              className="min-w-[120px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateTariff}
+              disabled={loading}
+              className="min-w-[120px] bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold"
+            >
+              {loading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Tariff
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmation.show} onOpenChange={(open: boolean) => !open && cancelDelete()}>
@@ -1095,6 +1182,6 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
           </div>
         </div>
       )}
-    </Card>
+    </>
   )
 }

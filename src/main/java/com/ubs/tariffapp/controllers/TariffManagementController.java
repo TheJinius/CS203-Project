@@ -3,6 +3,7 @@ package com.ubs.tariffapp.controllers;
 import com.ubs.tariffapp.models.duty.AdValoremDuty;
 import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.OtherDuty;
 import com.ubs.tariffapp.models.dto.TariffRequest;
 import com.ubs.tariffapp.models.dto.TariffResponse;
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
@@ -102,19 +103,24 @@ public class TariffManagementController {
                         if (ts.getDuty() != null) {
                             tariffMap.put("dutyCategory", ts.getDuty().getDutyNature());
                             
+                            System.out.println("🔍 DUTY TYPE CHECK - TariffID: " + ts.getTariffId() + ", Duty Nature: " + ts.getDuty().getDutyNature() + ", Class: " + ts.getDuty().getClass().getSimpleName());
+                            
                             // Extract specific duty rates based on type
                             if (ts.getDuty() instanceof AdValoremDuty) {
                                 AdValoremDuty avDuty = (AdValoremDuty) ts.getDuty();
+                                System.out.println("   → Ad Valorem: " + avDuty.getRatePercent() + "%");
                                 // ✅ Convert BigDecimal to Double
                                 tariffMap.put("adValoremRate", avDuty.getRatePercent().doubleValue());
                                 
                             } else if (ts.getDuty() instanceof SpecificDuty) {
                                 SpecificDuty specDuty = (SpecificDuty) ts.getDuty();
+                                System.out.println("   → Specific: " + specDuty.getAmount() + " " + specDuty.getUnit());
                                 tariffMap.put("specificRate", specDuty.getAmount().doubleValue());
                                 tariffMap.put("specificRateUnit", specDuty.getUnit());
                                 
                             } else if (ts.getDuty() instanceof CombinedDuty) {
                                 CombinedDuty combDuty = (CombinedDuty) ts.getDuty();
+                                System.out.println("   → Combined: " + combDuty.getRatePercent() + "% + " + combDuty.getAmount() + " " + combDuty.getUnit());
                                 if (combDuty.getRatePercent() != null) {
                                     tariffMap.put("adValoremRate", combDuty.getRatePercent().doubleValue());
                                     tariffMap.put("compoundRate1", combDuty.getRatePercent().doubleValue());
@@ -124,6 +130,12 @@ public class TariffManagementController {
                                     tariffMap.put("compoundRate2", combDuty.getAmount().doubleValue());
                                 }
                                 tariffMap.put("specificRateUnit", combDuty.getUnit());
+                                
+                            } else if (ts.getDuty() instanceof OtherDuty) {
+                                OtherDuty otherDuty = (OtherDuty) ts.getDuty();
+                                System.out.println("   → Other: rawText=" + otherDuty.getRawText() + ", isComputable=" + otherDuty.getIsComputable());
+                                tariffMap.put("rawText", otherDuty.getRawText());
+                                tariffMap.put("isComputable", otherDuty.getIsComputable());
                             }
                         }
                         

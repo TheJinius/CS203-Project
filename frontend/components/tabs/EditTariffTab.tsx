@@ -43,6 +43,8 @@ interface TariffData {
   specificRate?: number | null
   compoundRate1?: number | null
   compoundRate2?: number | null
+  rawText?: string  // For OtherDuty
+  isComputable?: boolean  // For OtherDuty
 }
 
 interface TariffRequest {
@@ -141,12 +143,18 @@ export default function EditTariffTab() {
     if (!category) return 'OTHER'
     const normalized = category.toUpperCase().trim()
     
+    // Map single-letter codes from Duty.dutyNature field
+    if (normalized === 'A') return 'AD_VALOREM'
+    if (normalized === 'S') return 'SPECIFIC'
+    if (normalized === 'C') return 'COMBINED'
+    if (normalized === 'O') return 'OTHER'
+    
     // Map common variants to standard types
     if (normalized === 'AD_VALOREM' || normalized === 'AV' || normalized === 'ADVALOREM') return 'AD_VALOREM'
     if (normalized === 'SPECIFIC' || normalized === 'SP') return 'SPECIFIC'
     if (normalized === 'COMBINED' || normalized === 'CO' || normalized === 'COMPOUND') return 'COMBINED'
     
-    // Catch all other values (O, OT, OTHER, etc.) as OTHER
+    // Catch all other values as OTHER
     return 'OTHER'
   }
 
@@ -312,6 +320,8 @@ export default function EditTariffTab() {
         specificRate: tariff.specificRate ?? null,
         compoundRate1: tariff.compoundRate1 ?? null,
         compoundRate2: tariff.compoundRate2 ?? null,
+        rawText: tariff.rawText,  // ✅ Include for OtherDuty
+        isComputable: tariff.isComputable,  // ✅ Include for OtherDuty
       }))
 
       console.log("✅ Mapped results:", mappedResults)
@@ -973,7 +983,13 @@ export default function EditTariffTab() {
                 )}
 
                 {/* OTHER DUTY FORM */}
-                {currentDutyType === 'OTHER' && <OtherDutyForm />}
+                {currentDutyType === 'OTHER' && (
+                  <OtherDutyForm 
+                    rawText={(selectedTariff as any)?.rawText}
+                    isComputable={(selectedTariff as any)?.isComputable}
+                    currentValue={(selectedTariff as any)?.amount}
+                  />
+                )}
               </div>
             </div>
 

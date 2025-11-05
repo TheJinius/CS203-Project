@@ -62,12 +62,27 @@ public class TariffManagementService {
         Country partner = countryRepository.findById(request.getPartnerCode())
                 .orElseThrow(() -> new InvalidRequestException("Partner country not found: " + request.getPartnerCode()));
         
+        // ✅ Auto-create product if it doesn't exist (allows admins to add new HS codes)
         Product product = productRepository.findById(request.getTlCode())
-                .orElseThrow(() -> new InvalidRequestException("Product not found: " + request.getTlCode()));
+                .orElseGet(() -> {
+                    Product newProduct = new Product();
+                    newProduct.setTlCode(request.getTlCode());
+                    newProduct.setDescription("Pending classification - Added via admin");
+                    newProduct.setDigits(request.getTlCode().length());
+                    return productRepository.save(newProduct);
+                });
         
+        // ✅ Auto-create duty type if it doesn't exist (allows admins to add new duty types)
         DutyTypeId dutyTypeId = new DutyTypeId(request.getDutyType(), request.getDutyCode());
         DutyType dutyType = dutyTypeRepository.findById(dutyTypeId)
-                .orElseThrow(() -> new InvalidRequestException("Duty type not found: " + request.getDutyType() + "-" + request.getDutyCode()));
+                .orElseGet(() -> {
+                    DutyType newDutyType = new DutyType();
+                    newDutyType.setId(dutyTypeId);
+                    // Generate description based on the codes from frontend
+                    String description = generateDutyTypeDescription(request.getDutyType(), request.getDutyCode());
+                    newDutyType.setDutyTypeDescription(description);
+                    return dutyTypeRepository.save(newDutyType);
+                });
 
         // Validate duty rates are provided
         validateDutyRates(request);
@@ -367,17 +382,22 @@ public class TariffManagementService {
             Duty duty = tariff.getDuty();
             builder.dutyCategory(duty.getDutyNature());
             
+            System.out.println("🔍 DUTY TYPE CHECK - TariffID: " + tariff.getTariffId() + ", Duty Nature: " + duty.getDutyNature() + ", Class: " + duty.getClass().getSimpleName());
+            
             if (duty instanceof AdValoremDuty) {
                 AdValoremDuty adValorem = (AdValoremDuty) duty;
+                System.out.println("   → Ad Valorem: " + adValorem.getRatePercent() + "%");
                 builder.adValoremRate(adValorem.getRatePercent().doubleValue());
                 
             } else if (duty instanceof SpecificDuty) {
                 SpecificDuty specific = (SpecificDuty) duty;
+                System.out.println("   → Specific: " + specific.getAmount() + " " + specific.getUnit());
                 builder.specificRate(specific.getAmount().doubleValue())
                        .specificRateUnit(specific.getUnit());
                        
             } else if (duty instanceof CombinedDuty) {
                 CombinedDuty combined = (CombinedDuty) duty;
+                System.out.println("   → Combined: " + combined.getRatePercent() + "% + " + combined.getAmount() + " " + combined.getUnit());
                 builder.adValoremRate(combined.getRatePercent() != null ? combined.getRatePercent().doubleValue() : null)
                        .specificRate(combined.getAmount() != null ? combined.getAmount().doubleValue() : null)
                        .specificRateUnit(combined.getUnit())
@@ -385,13 +405,42 @@ public class TariffManagementService {
                        .compoundRate2(combined.getAmount() != null ? combined.getAmount().doubleValue() : null);
                        
             } else if (duty instanceof OtherDuty) {
-                // Other duty types - just include the duty nature
-                // No specific rate information to add
+                OtherDuty other = (OtherDuty) duty;
+                System.out.println("   → Other: rawText=" + other.getRawText() + ", isComputable=" + other.getIsComputable());
+                builder.rawText(other.getRawText())
+                       .isComputable(other.getIsComputable());
             }
         } else {
             throw new DutyNotFoundException("Duty information not found for tariff id: " + tariff.getTariffId());
         }
 
         return builder.build();
+    }
+    
+    /**
+     * Generate a human-readable description for a duty type based on codes.
+     * Matches the frontend dutyTypes array descriptions.
+     */
+    private String generateDutyTypeDescription(String dutyType, String dutyCode) {
+        String key = dutyType + "-" + dutyCode;
+        
+        // Match the frontend descriptions from TariffsTab.tsx
+        switch (key) {
+            case "0-0":
+                return "Standard (MFN)";
+            case "0-2":
+                return "Duty-Free";
+            case "1-0":
+                return "Preferential (Trade Agreement)";
+            case "1-1":
+                return "Preferential (Specific)";
+            case "2-0":
+                return "GSP (Developing Countries)";
+            case "3-0":
+                return "Temporary";
+            default:
+                // Fallback for unknown duty types
+                return "Custom duty type " + key + " - Added via admin";
+        }
     }
 }
