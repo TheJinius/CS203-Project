@@ -91,7 +91,28 @@ interface CalculateTabProps {
   onCurrencyChange: (currency: string) => void
 }
 
-export default function CalculateTab({ onCalculationResult, onRouteCalculated, currency, onCurrencyChange }: CalculateTabProps) {
+// Compliance checklist interface based on backend response
+interface ComplianceTask {
+  country: string
+  sector: string
+  task_category: string
+  task_name: string
+  description: string
+  responsible_agency: string
+  compliance_requirement: string
+  timing: string
+  reference: string
+  reference_url: string
+}
+
+const COUNTRY_NAMES: { [key: string]: string } = {
+  "702": "Singapore",
+  "840": "United States",
+  "156": "China",
+  "000": "World (Any Country)"
+}
+
+export default function CalculateTab({ onCalculationResult, currency, onCurrencyChange }: CalculateTabProps) {
   // Search state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
@@ -115,11 +136,17 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
   const [baseTariffAmountUSD, setBaseTariffAmountUSD] = useState<number | null>(null)
   const [calculationDetails, setCalculationDetails] = useState<CalculationDetails | null>(null)
 
+  // Compliance state
+  const [complianceTasks, setComplianceTasks] = useState<ComplianceTask[]>([])
+  const [complianceLoading, setComplianceLoading] = useState(false)
+  const [complianceError, setComplianceError] = useState("")
+
   // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1) // 1 = search, 2 = calculate
+  const [activeDetailsTab, setActiveDetailsTab] = useState<'calculation' | 'compliance'>('calculation') // New state for tabs
 
   // Product search API call with fallback to predefined products - wrapped in useCallback
   const searchProducts = useCallback(async (query: string) => {
@@ -149,7 +176,7 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
         matchType: isNumericQuery && product.code.includes(query) ? 'contains_code' : 'description_match'
       }))
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Product search error:', error)
 
       // Fallback to predefined products on error
@@ -188,18 +215,9 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
         clearTimeout(searchTimeout)
       }
     }
-  }, [productSearchQuery, searchProducts]) // Removed searchTimeout from dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productSearchQuery, searchProducts]) // Intentionally excluding searchTimeout
 
-  // Helper function to get human-readable match type labels
-  const getMatchTypeLabel = (matchType?: string) => {
-    switch (matchType) {
-      case 'exact_code': return '';
-      case 'starts_with_code': return '';
-      case 'contains_code': return '';
-      case 'description_match': return '';
-      default: return '';
-    }
-  }
 
   // Handle product selection from dropdown
   const handleProductSelect = (product: { code: string, description: string, matchType?: string }) => {
@@ -223,6 +241,91 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
     if (targetCurrency === "USD") return amountUSD
     const rate = rates[targetCurrency] || 1
     return Math.round(amountUSD * rate * 100) / 100
+  }
+
+  // Function to reset all calculation and compliance results
+  const resetResults = () => {
+    // Reset calculation results
+    setBaseTariffAmountUSD(null)
+    setCalculationDetails(null)
+    setExchangeRates({})
+    
+    // Reset compliance results  
+    setComplianceTasks([])
+    setComplianceError("")
+    setComplianceLoading(false)
+    
+    // Reset status messages
+    setSuccess("")
+    setError("")
+    
+    // Reset form values
+    setAmountOfProduct("")
+    setProductValueDollars("")
+    setProductQuantity("")
+    setSelectedTariff("")
+    
+    // Reset calculation result in parent
+    onCalculationResult(null)
+    
+    // Reset to calculation tab
+    setActiveDetailsTab('calculation')
+  }
+
+  // Function to fetch compliance data from backend
+  const fetchComplianceData = async (destination: string, productDescription: string) => {
+    setComplianceLoading(true)
+    setComplianceError("")
+    
+    try {
+      const countryName = COUNTRY_NAMES[destination] || destination
+      const query = `${countryName} ${productDescription}`
+      
+      const response = await fetch("http://127.0.0.1:8001/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: query }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      // Parse the response - it should be a JSON array of compliance tasks
+      let tasks: ComplianceTask[] = []
+      try {
+        // Clean the response string by removing markdown code blocks
+        let responseStr = data.response
+        if (typeof responseStr === 'string') {
+          // Remove markdown code block syntax
+          responseStr = responseStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+          
+          const parsedResponse = JSON.parse(responseStr)
+          if (Array.isArray(parsedResponse)) {
+            tasks = parsedResponse
+          } else {
+            console.warn("Backend response is not an array:", parsedResponse)
+          }
+        }
+      } catch (parseError) {
+        console.error("Failed to parse compliance response:", parseError)
+        console.error("Raw response:", data.response)
+        setComplianceError("Failed to parse compliance data")
+      }
+
+      setComplianceTasks(tasks)
+      
+      // REMOVED: Do not auto-switch to compliance tab
+      // Keep user on their current tab
+      
+    } catch (err) {
+      console.error("Compliance fetch error:", err)
+      setComplianceError("Failed to fetch compliance data. Please make sure the Python backend is running on http://127.0.0.1:8001")
+    } finally {
+      setComplianceLoading(false)
+    }
   }
 
   // Step 1: Search for available tariffs
@@ -328,6 +431,11 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
 
         onCalculationResult(finalAmount)
         setSuccess(`Tariff: ${currency} ${finalAmount.toFixed(2)}`)
+
+        // Fetch compliance data after successful calculation
+        if (data.productDescription && selectedDestination) {
+          await fetchComplianceData(selectedDestination, data.productDescription)
+        }
       } else {
         setError(data.error || 'Calculation failed')
       }
@@ -336,6 +444,24 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
       setError(`Connection failed: ${error.message}`)
     }
     setLoading(false)
+  }
+
+  // Handle back to search - reset all results
+  const handleBackToSearch = () => {
+    resetResults()
+    setStep(1)
+  }
+
+  // Helper function to get priority color
+  const getPriorityColor = (category: string) => {
+    const lowerCategory = category.toLowerCase()
+    if (lowerCategory.includes('high') || lowerCategory.includes('critical') || lowerCategory.includes('mandatory')) {
+      return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+    } else if (lowerCategory.includes('medium') || lowerCategory.includes('important')) {
+      return 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+    } else {
+      return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+    }
   }
 
   return (
@@ -438,11 +564,7 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
                       >
                         <div className="flex items-center justify-between">
                           <div className="font-medium text-blue-600 dark:text-blue-400">{product.code}</div>
-                          {product.matchType && (
-                            <div className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                              {getMatchTypeLabel(product.matchType)}
-                            </div>
-                          )}
+                          {product.matchType}
                         </div>
                         <div className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
                           {product.description || "No description available"}
@@ -507,7 +629,7 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
           <CardContent className="space-y-3 px-4 pb-4">
             <Button
               variant="outline"
-              onClick={() => setStep(1)}
+              onClick={handleBackToSearch}
               className="w-full h-9 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -671,8 +793,17 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
               })()}
               className="w-full h-9 mt-4 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Calculator className="h-4 w-4" />
-              {loading ? "Calculating..." : "Calculate Tariff"}
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Calculating...
+                </>
+              ) : (
+                <>
+                  <Calculator className="h-4 w-4" />
+                  Calculate Tariff
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -693,108 +824,231 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
         </div>
       )}
 
-      {/* Calculation Details Card */}
+      {/* Compliance Error Message */}
+      {complianceError && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-sm font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+          <AlertTriangle className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+          <span className="flex-1 break-words">{complianceError}</span>
+        </div>
+      )}
+
+      {/* Tabbed Details Section */}
       {calculationDetails && success && (
         <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 shadow-sm">
-          <CardHeader className="pb-2 px-4 pt-3">
-            <CardTitle className="text-base flex items-center gap-2 text-blue-900 dark:text-blue-100">
-              <Calculator className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              Calculation Logic
-            </CardTitle>
-          </CardHeader>
+          {/* Tab Headers */}
+          <div className="flex border-b border-blue-200 dark:border-blue-800 bg-blue-100/50 dark:bg-blue-900/20">
+            <button
+              onClick={() => setActiveDetailsTab('calculation')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                activeDetailsTab === 'calculation'
+                  ? 'bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-100 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Calculator className="h-4 w-4" />
+                Calculation Logic
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveDetailsTab('compliance')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                activeDetailsTab === 'compliance'
+                  ? 'bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-100 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                Compliance {complianceLoading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
+              </div>
+            </button>
+          </div>
+
+          {/* Tab Content */}
           <CardContent className="space-y-3 px-4 pb-3 text-sm">
-            {/* Product Info */}
-            {calculationDetails.productDescription && (
-              <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
-                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Product</div>
-                <div className="text-slate-600 dark:text-slate-400 text-xs">
-                  {calculationDetails.productCode}: {calculationDetails.productDescription}
-                </div>
-              </div>
-            )}
-
-            {/* Duty Type */}
-            {calculationDetails.dutyType && (
-              <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
-                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Duty Type</div>
-                <div className="text-slate-600 dark:text-slate-400 text-xs">
-                  {calculationDetails.dutyType}
-                  {calculationDetails.combinationType && (
-                    <span className="ml-2 text-purple-600 dark:text-purple-400">
-                      ({calculationDetails.combinationType})
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Formula */}
-            {calculationDetails.formula && (
-              <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
-                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Formula</div>
-                <div className="text-blue-600 dark:text-blue-400 font-mono text-xs">
-                  {calculationDetails.formula}
-                </div>
-                {calculationDetails.specificDutyRateRaw && (
-                  <div className="mt-1 text-slate-600 dark:text-slate-400 text-xs">
-                    <span className="font-medium">Raw Rate:</span> {calculationDetails.specificDutyRateRaw}
+            {activeDetailsTab === 'calculation' ? (
+              // Calculation Logic Tab Content (existing logic)
+              <>
+                {/* Product Info */}
+                {calculationDetails.productDescription && (
+                  <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+                    <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Product</div>
+                    <div className="text-slate-600 dark:text-slate-400 text-xs">
+                      {calculationDetails.productCode}: {calculationDetails.productDescription}
+                    </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Step-by-Step Calculation */}
-            {calculationDetails.steps && calculationDetails.steps.length > 0 && (
-              <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded border border-emerald-200 dark:border-emerald-800">
-                <div className="font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
-                  <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  Step-by-Step Calculation
-                </div>
-                <div className="space-y-2">
-                  {calculationDetails.steps.map((step: CalculationStep, index: number) => (
-                    <div 
-                      key={index} 
-                      className="flex items-start gap-2 p-2 bg-white dark:bg-slate-800 rounded border border-emerald-100 dark:border-emerald-900"
-                    >
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 dark:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center">
-                        {step.step}
+                {/* Duty Type */}
+                {calculationDetails.dutyType && (
+                  <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+                    <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Duty Type</div>
+                    <div className="text-slate-600 dark:text-slate-400 text-xs">
+                      {calculationDetails.dutyType}
+                      {calculationDetails.combinationType && (
+                        <span className="ml-2 text-purple-600 dark:text-purple-400">
+                          ({calculationDetails.combinationType})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Formula */}
+                {calculationDetails.formula && (
+                  <div className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-100 dark:border-blue-900">
+                    <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Formula</div>
+                    <div className="text-blue-600 dark:text-blue-400 font-mono text-xs">
+                      {calculationDetails.formula}
+                    </div>
+                    {calculationDetails.specificDutyRateRaw && (
+                      <div className="mt-1 text-slate-600 dark:text-slate-400 text-xs">
+                        <span className="font-medium">Raw Rate:</span> {calculationDetails.specificDutyRateRaw}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-0.5">
-                          {step.description}
+                    )}
+                  </div>
+                )}
+
+                {/* Step-by-Step Calculation */}
+                {calculationDetails.steps && calculationDetails.steps.length > 0 && (
+                  <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded border border-emerald-200 dark:border-emerald-800">
+                    <div className="font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+                      <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      Step-by-Step Calculation
+                    </div>
+                    <div className="space-y-2">
+                      {calculationDetails.steps.map((step: CalculationStep, index: number) => (
+                        <div 
+                          key={index} 
+                          className="flex items-start gap-2 p-2 bg-white dark:bg-slate-800 rounded border border-emerald-100 dark:border-emerald-900"
+                        >
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 dark:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center">
+                            {step.step}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-0.5">
+                              {step.description}
+                            </div>
+                            <div className="text-xs font-mono text-emerald-700 dark:text-emerald-400 break-all">
+                              {step.value}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs font-mono text-emerald-700 dark:text-emerald-400 break-all">
-                          {step.value}
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary Calculation (one-liner) */}
+                {calculationDetails.calculation && (
+                  <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200 dark:border-blue-800">
+                    <div className="font-medium text-slate-900 dark:text-slate-100 mb-1 text-xs">Full Calculation</div>
+                    <div className="text-blue-700 dark:text-blue-400 font-mono text-xs break-all">
+                      {calculationDetails.calculation}
+                    </div>
+                  </div>
+                )}
+
+                {/* Final Result */}
+                <div className="p-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded border border-blue-300 dark:border-blue-700">
+                  <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Final Tariff</div>
+                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {currency} {baseTariffAmountUSD !== null ? convertFromUSD(baseTariffAmountUSD, currency, exchangeRates).toFixed(2) : '0.00'}
+                  </div>
+                  {currency !== "USD" && baseTariffAmountUSD && (
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      Base: USD ${baseTariffAmountUSD.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+
+              <>
+                {/* Compliance Checklist from Backend */}
+                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded border border-green-200 dark:border-green-800">
+                  <div className="font-medium text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                    <ClipboardCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    Compliance Requirements for {COUNTRY_NAMES[selectedDestination] || selectedDestination}
+                    {complianceLoading && <Loader2 className="h-4 w-4 animate-spin text-green-600 dark:text-green-400" />}
+                  </div>
+                  
+                  {complianceLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-green-600 dark:text-green-400" />
+                      <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
+                        Fetching compliance requirements...
+                      </span>
+                    </div>
+                  ) : complianceTasks.length > 0 ? (
+                    <div className="space-y-3">
+                      {complianceTasks.map((task, index) => (
+                        <div 
+                          key={index} 
+                          className="p-3 bg-white dark:bg-slate-800 rounded border border-green-100 dark:border-green-900"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                {task.task_name}
+                              </div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                {task.description}
+                              </div>
+                            </div>
+                            <div className={`flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.task_category)}`}>
+                              {task.task_category}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400">Agency:</span>
+                              <span className="ml-1 text-slate-700 dark:text-slate-300">{task.responsible_agency}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400">Timing:</span>
+                              <span className="ml-1 text-slate-700 dark:text-slate-300">{task.timing}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-slate-500 dark:text-slate-400">Requirement:</span>
+                              <span className="ml-1 text-slate-700 dark:text-slate-300">{task.compliance_requirement}</span>
+                            </div>
+                            {task.reference && (
+                              <div className="col-span-2">
+                                <span className="text-slate-500 dark:text-slate-400">Reference:</span>
+                                {task.reference_url ? (
+                                  <a 
+                                    href={task.reference_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="ml-1 text-blue-600 dark:text-blue-400 hover:underline"
+                                  >
+                                    {task.reference}
+                                  </a>
+                                ) : (
+                                  <span className="ml-1 text-slate-700 dark:text-slate-300">{task.reference}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="text-sm text-slate-600 dark:text-slate-400">
+                        No specific compliance requirements found for this product and destination.
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                        This could mean standard import procedures apply, or the compliance database may not have specific rules for this combination.
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
+              </>
             )}
-
-            {/* Summary Calculation (one-liner) */}
-            {calculationDetails.calculation && (
-              <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200 dark:border-blue-800">
-                <div className="font-medium text-slate-900 dark:text-slate-100 mb-1 text-xs">Full Calculation</div>
-                <div className="text-blue-700 dark:text-blue-400 font-mono text-xs break-all">
-                  {calculationDetails.calculation}
-                </div>
-              </div>
-            )}
-
-            {/* Final Result */}
-            <div className="p-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded border border-blue-300 dark:border-blue-700">
-              <div className="font-medium text-slate-900 dark:text-slate-100 mb-1">Final Tariff</div>
-              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                {currency} {baseTariffAmountUSD !== null ? convertFromUSD(baseTariffAmountUSD, currency, exchangeRates).toFixed(2) : '0.00'}
-              </div>
-              {currency !== "USD" && baseTariffAmountUSD && (
-                <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Base: USD ${baseTariffAmountUSD.toFixed(2)}
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
       )}
