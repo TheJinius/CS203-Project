@@ -273,7 +273,7 @@ public class TariffManagementService {
             CombinedDuty combined = new CombinedDuty();
             combined.setTariffSchedule(tariff);
             combined.setDutyNature("COMBINED");
-            combined.setMixedOrConditional("M"); // M for mixed (compound)
+            combined.setMixedOrCompound("M"); // M for mixed (compound)
             combined.setRatePercent(BigDecimal.valueOf(request.getCompoundRate1()));
             combined.setAmount(BigDecimal.valueOf(request.getCompoundRate2()));
             combined.setUnit(request.getSpecificRateUnit() != null ? request.getSpecificRateUnit() : "unit");
