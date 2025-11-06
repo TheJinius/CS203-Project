@@ -177,13 +177,8 @@ public class TariffManagementController {
     @PreAuthorize("hasAuthority('Admin')")
     public ResponseEntity<TariffResponse> getTariffForEdit(@PathVariable Integer id) {
         System.out.println("🔍 Fetching tariff for edit - ID: " + id);
-        try {
-            TariffResponse response = tariffManagementService.getTariffById(id);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            System.err.println("❌ Error fetching tariff: " + e.getMessage());
-            return ResponseEntity.status(404).build();
-        }
+        TariffResponse response = tariffManagementService.getTariffById(id);
+        return ResponseEntity.ok(response);
     }
 
     // Create new tariff
@@ -192,14 +187,9 @@ public class TariffManagementController {
     public ResponseEntity<TariffResponse> createTariff(
             @Validated(TariffRequest.Create.class) @RequestBody TariffRequest request) {
         System.out.println("📝 Creating new tariff");
-        try {
-            TariffResponse response = tariffManagementService.createTariff(request);
-            System.out.println("✅ Tariff created with ID: " + response.getTariffId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            System.err.println("❌ Error creating tariff: " + e.getMessage());
-            return ResponseEntity.status(400).build();
-        }
+        TariffResponse response = tariffManagementService.createTariff(request);
+        System.out.println("✅ Tariff created with ID: " + response.getTariffId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // Update existing tariff
