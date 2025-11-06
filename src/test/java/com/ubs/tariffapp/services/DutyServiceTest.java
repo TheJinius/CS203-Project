@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -20,6 +21,7 @@ import com.ubs.tariffapp.models.duty.*;
 import com.ubs.tariffapp.exceptions.DutyNotFoundException;
 import com.ubs.tariffapp.exceptions.InvalidRequestException;
 import com.ubs.tariffapp.exceptions.TariffNotFoundException;
+import com.ubs.tariffapp.extensions.DockerRequiredExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Arrays;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@ExtendWith(DockerRequiredExtension.class)
 public class DutyServiceTest {
 
     @Autowired
@@ -102,9 +105,9 @@ public class DutyServiceTest {
     }
 
     @Test
-    void testCalculateTariffById_CombinedDuty_Mixed() {
+    void testCalculateTariffById_CombinedDuty_Compound() {
         // Arrange
-        TariffSchedule tariffSchedule = createTariffWithCombinedDuty(5.0, 2.0, 1, "M");
+        TariffSchedule tariffSchedule = createTariffWithCombinedDuty(5.0, 2.0, 1, "C");
         tariffSchedule.setTariffId(12347);
 
         when(tariffScheduleService.getTariffScheduleById(12347))
@@ -118,9 +121,9 @@ public class DutyServiceTest {
     }
 
     @Test
-    void testCalculateTariffById_CombinedDuty_Conditional() {
+    void testCalculateTariffById_CombinedDuty_Mixed() {
         // Arrange
-        TariffSchedule tariffSchedule = createTariffWithCombinedDuty(2.0, 10.0, 1, "C");
+        TariffSchedule tariffSchedule = createTariffWithCombinedDuty(2.0, 10.0, 1, "M");
         tariffSchedule.setTariffId(12348);
 
         when(tariffScheduleService.getTariffScheduleById(12348))
