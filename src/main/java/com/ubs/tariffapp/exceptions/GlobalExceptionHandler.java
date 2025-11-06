@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
         response.put("message", "Validation failed");
         response.put("errors", fieldErrors);
         
-        System.err.println("❌ Validation errors: " + fieldErrors);
+        System.err.println("Validation errors: " + fieldErrors);
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -55,7 +55,7 @@ public class GlobalExceptionHandler {
         response.put("status", "error");
         response.put("message", ex.getMessage());
         
-        System.err.println("❌ Invalid request: " + ex.getMessage());
+        System.err.println("Invalid request: " + ex.getMessage());
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
         response.put("status", "error");
         response.put("message", ex.getMessage());
         
-        System.err.println("❌ Tariff not found: " + ex.getMessage());
+        System.err.println("Tariff not found: " + ex.getMessage());
         
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
         response.put("status", "error");
         response.put("message", ex.getMessage());
         
-        System.err.println("❌ Duty not found: " + ex.getMessage());
+        System.err.println("Duty not found: " + ex.getMessage());
         
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
@@ -103,7 +103,7 @@ public class GlobalExceptionHandler {
         response.put("message", "An unexpected error occurred");
         response.put("details", ex.getMessage());
         
-        System.err.println("❌ Unexpected error: " + ex.getMessage());
+        System.err.println("Unexpected error: " + ex.getMessage());
         ex.printStackTrace();
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
