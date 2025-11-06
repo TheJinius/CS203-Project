@@ -4,11 +4,13 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ubs.tariffapp.extensions.DockerRequiredExtension;
 import com.ubs.tariffapp.models.AuditLog;
 import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.DutyType;
@@ -29,6 +31,7 @@ import com.ubs.tariffapp.repositories.duty.DutyRepository;
 @SpringBootTest // Use full Spring Boot context instead of @DataJpaTest
 @ActiveProfiles("test")
 @Transactional // Each test runs in its own transaction (rollback by default)
+@ExtendWith(DockerRequiredExtension.class)
 public class AuditLogServiceTest {
 
         @Autowired

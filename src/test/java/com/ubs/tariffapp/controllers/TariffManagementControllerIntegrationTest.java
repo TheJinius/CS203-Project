@@ -18,6 +18,7 @@ import java.util.Collections;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ubs.tariffapp.exceptions.InvalidRequestException;
 import com.ubs.tariffapp.exceptions.TariffNotFoundException;
+import com.ubs.tariffapp.extensions.DockerRequiredExtension;
 import com.ubs.tariffapp.models.dto.TariffRequest;
 import com.ubs.tariffapp.models.dto.TariffResponse;
 import com.ubs.tariffapp.services.DutyService;
@@ -39,11 +41,15 @@ import com.ubs.tariffapp.services.TariffManagementService;
 /**
  * Integration tests for TariffManagementController with GlobalExceptionHandler.
  * Tests validation, exception handling, and HTTP response formats.
+ * 
+ * NOTE: Even though services are mocked, this test still needs Docker because
+ * the 'test' profile uses TestContainers to initialize the database connection.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@ExtendWith(DockerRequiredExtension.class)
 @DisplayName("TariffManagementController Integration Tests")
 class TariffManagementControllerIntegrationTest {
 

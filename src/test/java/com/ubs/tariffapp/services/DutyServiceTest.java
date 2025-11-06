@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -20,6 +21,7 @@ import com.ubs.tariffapp.models.duty.*;
 import com.ubs.tariffapp.exceptions.DutyNotFoundException;
 import com.ubs.tariffapp.exceptions.InvalidRequestException;
 import com.ubs.tariffapp.exceptions.TariffNotFoundException;
+import com.ubs.tariffapp.extensions.DockerRequiredExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Arrays;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@ExtendWith(DockerRequiredExtension.class)
 public class DutyServiceTest {
 
     @Autowired
