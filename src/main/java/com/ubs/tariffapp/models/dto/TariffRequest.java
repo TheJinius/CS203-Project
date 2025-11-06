@@ -1,26 +1,58 @@
 package com.ubs.tariffapp.models.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 // Lombok removed to avoid dependency errors; explicit getters/setters added
 public class TariffRequest {
-    // ❌ REMOVE @NotNull from immutable fields for UPDATE operations
-    // ❌ Or make them optional with groups
+    // Validation groups for different operations
+    public interface Create {}
+    public interface Update {}
 
-    private Integer tariffYear;        // Optional for updates
-    private String reporterCode;       // Optional for updates
-    private String partnerCode;        // Optional for updates
-    private String tlCode;             // Optional for updates
-    private String dutyType;           // Optional for updates
-    private String dutyCode;           // Optional for updates
+    @NotNull(message = "Tariff year is required", groups = Create.class)
+    @Min(value = 2000, message = "Year must be 2000 or later")
+    @Max(value = 2100, message = "Year must be 2100 or earlier")
+    private Integer tariffYear;
+    
+    @NotBlank(message = "Reporter code is required", groups = Create.class)
+    @Size(min = 3, max = 3, message = "Reporter code must be exactly 3 characters")
+    private String reporterCode;
+    
+    @NotBlank(message = "Partner code is required", groups = Create.class)
+    @Size(min = 3, max = 3, message = "Partner code must be exactly 3 characters")
+    private String partnerCode;
+    
+    @NotBlank(message = "Product code (TL code) is required", groups = Create.class)
+    private String tlCode;
+    
+    @NotBlank(message = "Duty type is required", groups = Create.class)
+    private String dutyType;
+    
+    @NotBlank(message = "Duty code is required", groups = Create.class)
+    private String dutyCode;
 
     // ✅ Editable fields (always allowed)
     private String tlsSuffix;
     private String note;
-    private String specificRateUnit;
+    private String specificRateUnit;  // Liberal - accepts any string value
 
-    // ✅ Optional rate fields
+    // ✅ Optional rate fields with validation
+    @DecimalMin(value = "0.0", message = "Ad valorem rate must be non-negative")
+    @DecimalMax(value = "100.0", message = "Ad valorem rate cannot exceed 100%")
     private Double adValoremRate;
+    
+    @DecimalMin(value = "0.0", message = "Specific rate must be non-negative")
     private Double specificRate;
+    
+    @DecimalMin(value = "0.0", message = "Compound rate 1 must be non-negative")
     private Double compoundRate1;
+    
+    @DecimalMin(value = "0.0", message = "Compound rate 2 must be non-negative")
     private Double compoundRate2;
 
     public Integer getTariffYear() {

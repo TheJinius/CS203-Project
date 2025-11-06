@@ -1,26 +1,34 @@
 package com.ubs.tariffapp.controllers;
 
-import com.ubs.tariffapp.models.duty.AdValoremDuty;
-import com.ubs.tariffapp.models.duty.SpecificDuty;
-import com.ubs.tariffapp.models.duty.CombinedDuty;
-import com.ubs.tariffapp.models.duty.OtherDuty;
-import com.ubs.tariffapp.models.dto.TariffRequest;
-import com.ubs.tariffapp.models.dto.TariffResponse;
-import com.ubs.tariffapp.models.request.TariffSearchRequest;
-import com.ubs.tariffapp.models.TariffSchedule;
-import com.ubs.tariffapp.services.TariffManagementService;
-import com.ubs.tariffapp.services.DutyService;
-import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.stream.Collectors;
+import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.dto.TariffRequest;
+import com.ubs.tariffapp.models.dto.TariffResponse;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.OtherDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.models.request.TariffSearchRequest;
+import com.ubs.tariffapp.services.DutyService;
+import com.ubs.tariffapp.services.TariffManagementService;
 
 @RestController
 @RequestMapping("/api/admin/tariffs")
@@ -181,7 +189,8 @@ public class TariffManagementController {
     // Create new tariff
     @PostMapping
     @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<TariffResponse> createTariff(@Valid @RequestBody TariffRequest request) {
+    public ResponseEntity<TariffResponse> createTariff(
+            @Validated(TariffRequest.Create.class) @RequestBody TariffRequest request) {
         System.out.println("📝 Creating new tariff");
         try {
             TariffResponse response = tariffManagementService.createTariff(request);

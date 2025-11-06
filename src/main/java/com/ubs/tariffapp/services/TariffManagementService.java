@@ -1,21 +1,37 @@
 package com.ubs.tariffapp.services;
 
-import com.ubs.tariffapp.exceptions.TariffNotFoundException;
-import com.ubs.tariffapp.exceptions.InvalidRequestException;
-import com.ubs.tariffapp.exceptions.DutyNotFoundException;
-import com.ubs.tariffapp.models.*;
-import com.ubs.tariffapp.models.dto.TariffRequest;
-import com.ubs.tariffapp.models.dto.TariffResponse;
-import com.ubs.tariffapp.models.duty.*;
-import com.ubs.tariffapp.repositories.*;
-import com.ubs.tariffapp.repositories.duty.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.ubs.tariffapp.exceptions.DutyNotFoundException;
+import com.ubs.tariffapp.exceptions.InvalidRequestException;
+import com.ubs.tariffapp.exceptions.TariffNotFoundException;
+import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.DutyType;
+import com.ubs.tariffapp.models.DutyTypeId;
+import com.ubs.tariffapp.models.Product;
+import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.dto.TariffRequest;
+import com.ubs.tariffapp.models.dto.TariffResponse;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.Duty;
+import com.ubs.tariffapp.models.duty.OtherDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.DutyTypeRepository;
+import com.ubs.tariffapp.repositories.ProductRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
+import com.ubs.tariffapp.repositories.duty.AdValoremDutyRepository;
+import com.ubs.tariffapp.repositories.duty.CombinedDutyRepository;
+import com.ubs.tariffapp.repositories.duty.DutyRepository;
+import com.ubs.tariffapp.repositories.duty.OtherDutyRepository;
+import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
 
 @Service
 public class TariffManagementService {
@@ -198,52 +214,25 @@ public class TariffManagementService {
         tariffRepository.deleteById(id);
     }
 
+    /**
+     * Validates business logic for duty rates.
+     * Basic field validation (non-null, range checks) are now handled by Jakarta Bean Validation annotations.
+     * This method focuses on cross-field validation rules.
+     */
     private void validateDutyRates(TariffRequest request) {
-        boolean hasAdValorem = request.getAdValoremRate() != null;
-        boolean hasSpecific = request.getSpecificRate() != null;
-        boolean hasCompound = request.getCompoundRate1() != null || request.getCompoundRate2() != null;
-
-        // Validate ad valorem rate range
-        if (hasAdValorem) {
-            if (request.getAdValoremRate() < 0 || request.getAdValoremRate() > 100) {
-                throw new InvalidRequestException(
-                    "Ad valorem rate must be between 0 and 100, got: " + request.getAdValoremRate()
-                );
-            }
-        }
-
-        // Validate specific rate
-        if (hasSpecific) {
-            if (request.getSpecificRate() < 0) {
-                throw new InvalidRequestException(
-                    "Specific rate must be non-negative, got: " + request.getSpecificRate()
-                );
-            }
-            // ✅ Require unit ONLY if creating new specific duty (not for updates)
-            // This check is now removed - we'll keep the existing unit if not provided
-        }
-
         // Validate compound rates - both must be provided together
-        if (request.getCompoundRate1() != null && request.getCompoundRate2() == null) {
-            throw new InvalidRequestException("Both compound rates must be specified together");
+        boolean hasCompound1 = request.getCompoundRate1() != null;
+        boolean hasCompound2 = request.getCompoundRate2() != null;
+        
+        if (hasCompound1 != hasCompound2) {
+            throw new InvalidRequestException(
+                "Both compound rates must be specified together. " +
+                "Cannot have only compoundRate1 or only compoundRate2."
+            );
         }
-        if (request.getCompoundRate2() != null && request.getCompoundRate1() == null) {
-            throw new InvalidRequestException("Both compound rates must be specified together");
-        }
-
-        // Validate compound rate values
-        if (hasCompound) {
-            if (request.getCompoundRate1() != null && request.getCompoundRate1() < 0) {
-                throw new InvalidRequestException(
-                    "Compound rate 1 must be non-negative, got: " + request.getCompoundRate1()
-                );
-            }
-            if (request.getCompoundRate2() != null && request.getCompoundRate2() < 0) {
-                throw new InvalidRequestException(
-                    "Compound rate 2 must be non-negative, got: " + request.getCompoundRate2()
-                );
-            }
-        }
+        
+        // Additional business logic validation can be added here
+        // (e.g., checking if at least one rate type is provided, etc.)
     }
 
     private Duty createDutyFromRequest(TariffRequest request, TariffSchedule tariff) {
