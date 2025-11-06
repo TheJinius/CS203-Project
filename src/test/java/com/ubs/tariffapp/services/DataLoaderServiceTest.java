@@ -1,28 +1,47 @@
 package com.ubs.tariffapp.services;
 
-import com.ubs.tariffapp.models.*;
-import com.ubs.tariffapp.models.duty.*;
-import com.ubs.tariffapp.repositories.*;
-import com.ubs.tariffapp.repositories.duty.*;
-
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.MethodOrderer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
+
+import com.ubs.tariffapp.extensions.DockerRequiredExtension;
+import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.DutyType;
+import com.ubs.tariffapp.models.Product;
+import com.ubs.tariffapp.models.TariffSchedule;
+import com.ubs.tariffapp.models.duty.AdValoremDuty;
+import com.ubs.tariffapp.models.duty.CombinedDuty;
+import com.ubs.tariffapp.models.duty.OtherDuty;
+import com.ubs.tariffapp.models.duty.SpecificDuty;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.DutyTypeRepository;
+import com.ubs.tariffapp.repositories.ProductRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
+import com.ubs.tariffapp.repositories.duty.AdValoremDutyRepository;
+import com.ubs.tariffapp.repositories.duty.CombinedDutyRepository;
+import com.ubs.tariffapp.repositories.duty.OtherDutyRepository;
+import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
 
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@ExtendWith(DockerRequiredExtension.class)
 public class DataLoaderServiceTest {
 
     @Autowired
