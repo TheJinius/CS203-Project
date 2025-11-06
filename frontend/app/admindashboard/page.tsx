@@ -60,9 +60,14 @@ export default function DashboardPage() {
                   <li>• System configuration</li>
                   <li>• Analytics dashboard</li>
                 </ul>
-                <Button className="mt-4 w-full" onClick={() => window.location.href = '/admin'}>
-                  Go to Admin Panel
-                </Button>
+                <div className="mt-4 space-y-2">
+                  <Button className="w-full" onClick={() => window.location.href = '/admin'}>
+                    Go to Admin Panel
+                  </Button>
+                  <Button className="w-full" variant="outline" onClick={() => window.location.href = '/edit'}>
+                    Edit Tariffs
+                  </Button>
+                </div>
               </Card>
             )}
           </div>

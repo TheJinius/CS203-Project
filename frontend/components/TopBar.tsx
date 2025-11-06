@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Menu, User, ChevronDown, LogOut, Moon, Sun, AlertTriangle } from 'lucide-react'
+import { Menu, User, ChevronDown, LogOut, Moon, Sun, AlertTriangle, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useRouter } from 'next/navigation'
 
 interface TopBarProps {
   sidebarOpen: boolean
@@ -15,8 +16,9 @@ interface TopBarProps {
 
 export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const { user, signOut, sessionError } = useAuth()
+  const { user, signOut, sessionError, isAdmin } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const router = useRouter()
 
   const handleSignOut = async () => {
     await signOut()
@@ -44,6 +46,19 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Admin Quick Actions */}
+          {isAdmin() && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/edit')}
+              className="hover:bg-accent text-blue-600 dark:text-blue-400"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Tariffs
+            </Button>
+          )}
+
           {/* Session Error Indicator */}
           {sessionError && (
             <Alert variant="destructive" className="w-auto p-2">
