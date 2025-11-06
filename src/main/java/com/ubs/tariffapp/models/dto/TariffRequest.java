@@ -15,16 +15,16 @@ public class TariffRequest {
     public interface Update {}
 
     @NotNull(message = "Tariff year is required", groups = Create.class)
-    @Min(value = 2000, message = "Year must be 2000 or later")
-    @Max(value = 2100, message = "Year must be 2100 or earlier")
+    @Min(value = 2000, message = "Year must be 2000 or later", groups = {Create.class, Update.class})
+    @Max(value = 2100, message = "Year must be 2100 or earlier", groups = {Create.class, Update.class})
     private Integer tariffYear;
     
     @NotBlank(message = "Reporter code is required", groups = Create.class)
-    @Size(min = 3, max = 3, message = "Reporter code must be exactly 3 characters")
+    @Size(min = 3, max = 3, message = "Reporter code must be exactly 3 characters", groups = {Create.class, Update.class})
     private String reporterCode;
     
     @NotBlank(message = "Partner code is required", groups = Create.class)
-    @Size(min = 3, max = 3, message = "Partner code must be exactly 3 characters")
+    @Size(min = 3, max = 3, message = "Partner code must be exactly 3 characters", groups = {Create.class, Update.class})
     private String partnerCode;
     
     @NotBlank(message = "Product code (TL code) is required", groups = Create.class)
@@ -41,18 +41,18 @@ public class TariffRequest {
     private String note;
     private String specificRateUnit;  // Liberal - accepts any string value
 
-    // ✅ Optional rate fields with validation
-    @DecimalMin(value = "0.0", message = "Ad valorem rate must be non-negative")
-    @DecimalMax(value = "100.0", message = "Ad valorem rate cannot exceed 100%")
+    // ✅ Optional rate fields with validation (apply to both Create and Update)
+    @DecimalMin(value = "0.0", message = "Ad valorem rate must be non-negative", groups = {Create.class, Update.class})
+    @DecimalMax(value = "100.0", message = "Ad valorem rate cannot exceed 100%", groups = {Create.class, Update.class})
     private Double adValoremRate;
     
-    @DecimalMin(value = "0.0", message = "Specific rate must be non-negative")
+    @DecimalMin(value = "0.0", message = "Specific rate must be non-negative", groups = {Create.class, Update.class})
     private Double specificRate;
     
-    @DecimalMin(value = "0.0", message = "Compound rate 1 must be non-negative")
+    @DecimalMin(value = "0.0", message = "Compound rate 1 must be non-negative", groups = {Create.class, Update.class})
     private Double compoundRate1;
     
-    @DecimalMin(value = "0.0", message = "Compound rate 2 must be non-negative")
+    @DecimalMin(value = "0.0", message = "Compound rate 2 must be non-negative", groups = {Create.class, Update.class})
     private Double compoundRate2;
 
     public Integer getTariffYear() {
