@@ -99,7 +99,71 @@ public class GlobalExceptionHandler {
         
         System.err.println("Duty not found: " + ex.getMessage());
         
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
+    }
+
+    /**
+     * Handles data loading exceptions.
+     */
+    @ExceptionHandler(DataLoadException.class)
+    public ResponseEntity<Map<String, Object>> handleDataLoadException(
+            DataLoadException ex) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", "Data loading failed");
+        response.put("details", ex.getMessage());
+        
+        System.err.println("Data load error: " + ex.getMessage());
+        
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
+    }
+
+    /**
+     * Handles data cleaning exceptions.
+     */
+    @ExceptionHandler(DataCleaningException.class)
+    public ResponseEntity<Map<String, Object>> handleDataCleaningException(
+            DataCleaningException ex) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", "Data cleaning failed");
+        response.put("details", ex.getMessage());
+        response.put("lineNumber", ex.getLineNumber());
+        
+        System.err.println("Data cleaning error at line " + ex.getLineNumber() + ": " + ex.getMessage());
+        
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
+    }
+
+    /**
+     * Handles duty parsing exceptions.
+     */
+    @ExceptionHandler(DutyParsingException.class)
+    public ResponseEntity<Map<String, Object>> handleDutyParsingException(
+            DutyParsingException ex) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", "Invalid duty rate format");
+        response.put("details", ex.getMessage());
+        
+        System.err.println("Duty parsing error: " + ex.getMessage());
+        
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     /**
