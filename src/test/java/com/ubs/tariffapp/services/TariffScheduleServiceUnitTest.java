@@ -28,6 +28,7 @@ import com.ubs.tariffapp.models.dto.TariffOptionsResponse;
 import com.ubs.tariffapp.models.dto.TariffSearchResult;
 import com.ubs.tariffapp.models.duty.AdValoremDuty;
 import com.ubs.tariffapp.repositories.TariffScheduleRepository;
+import com.ubs.tariffapp.testutils.TestEntityFactory;
 
 /**
  * Unit tests for TariffScheduleService using Mockito.
@@ -50,25 +51,16 @@ class TariffScheduleServiceUnitTest {
 
     @BeforeEach
     void setUp() {
-        // Create sample data
-        usa = new Country();
-        usa.setCountryId("840");
-        usa.setCountryName("United States");
+        // Use TestEntityFactory for consistent test data
+        usa = TestEntityFactory.createReporterCountry();
+        china = TestEntityFactory.createPartnerCountry();
+        product = TestEntityFactory.createProduct();
 
-        china = new Country();
-        china.setCountryId("156");
-        china.setCountryName("China");
-
-        product = new Product();
-        product.setTlCode("01012100");
-        product.setDescription("Pure-bred breeding horses");
-
-        sampleTariff = new TariffSchedule();
+        // Create sample tariff with AdValorem duty for testing
+        AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+        sampleTariff = TestEntityFactory.createTariffSchedule(usa, china, product, 
+            TestEntityFactory.createDutyType(), duty);
         sampleTariff.setTariffId(1);
-        sampleTariff.setReporter(usa);
-        sampleTariff.setPartner(china);
-        sampleTariff.setProduct(product);
-        sampleTariff.setTariffYear(2023);
     }
 
     @Nested
@@ -81,19 +73,19 @@ class TariffScheduleServiceUnitTest {
             // Arrange
             List<TariffSchedule> expectedTariffs = Arrays.asList(sampleTariff);
             when(tariffScheduleRepository.findAllByReporterAndPartnerAndTlAndYear(
-                "840", "156", "01012100", 2023))
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023))
                 .thenReturn(expectedTariffs);
 
             // Act
             List<TariffSchedule> result = tariffScheduleService.searchTariffSchedules(
-                "840", "156", "01012100", 2023);
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result).hasSize(1);
             assertThat(result.get(0)).isEqualTo(sampleTariff);
             verify(tariffScheduleRepository, times(1))
-                .findAllByReporterAndPartnerAndTlAndYear("840", "156", "01012100", 2023);
+                .findAllByReporterAndPartnerAndTlAndYear(usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023);
         }
 
         @Test
@@ -117,21 +109,19 @@ class TariffScheduleServiceUnitTest {
         @DisplayName("Should handle multiple tariffs for same criteria")
         void shouldHandleMultipleTariffs() {
             // Arrange
-            TariffSchedule tariff2 = new TariffSchedule();
+            AdValoremDuty duty2 = TestEntityFactory.createAdValoremDuty();
+            TariffSchedule tariff2 = TestEntityFactory.createTariffSchedule(usa, china, product,
+                TestEntityFactory.createDutyType(), duty2);
             tariff2.setTariffId(2);
-            tariff2.setReporter(usa);
-            tariff2.setPartner(china);
-            tariff2.setProduct(product);
-            tariff2.setTariffYear(2023);
 
             List<TariffSchedule> expectedTariffs = Arrays.asList(sampleTariff, tariff2);
             when(tariffScheduleRepository.findAllByReporterAndPartnerAndTlAndYear(
-                "840", "156", "01012100", 2023))
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023))
                 .thenReturn(expectedTariffs);
 
             // Act
             List<TariffSchedule> result = tariffScheduleService.searchTariffSchedules(
-                "840", "156", "01012100", 2023);
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023);
 
             // Assert
             assertThat(result).hasSize(2);
@@ -237,22 +227,24 @@ class TariffScheduleServiceUnitTest {
         @DisplayName("Should differentiate between different years")
         void shouldDifferentiateBetweenYears() {
             // Arrange
-            TariffSchedule tariff2024 = new TariffSchedule();
+            AdValoremDuty duty2024 = TestEntityFactory.createAdValoremDuty();
+            TariffSchedule tariff2024 = TestEntityFactory.createTariffSchedule(usa, china, product,
+                TestEntityFactory.createDutyType(), duty2024);
             tariff2024.setTariffYear(2024);
             
             when(tariffScheduleRepository.findByReporterAndPartnerAndTlAndYear(
-                "840", "156", "01012100", 2023))
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023))
                 .thenReturn(Optional.of(sampleTariff));
             
             when(tariffScheduleRepository.findByReporterAndPartnerAndTlAndYear(
-                "840", "156", "01012100", 2024))
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2024))
                 .thenReturn(Optional.of(tariff2024));
 
             // Act
             TariffSchedule result2023 = tariffScheduleService.getTariffSchedule(
-                "840", "156", "01012100", 2023);
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2023);
             TariffSchedule result2024 = tariffScheduleService.getTariffSchedule(
-                "840", "156", "01012100", 2024);
+                usa.getCountryId(), china.getCountryId(), product.getTlCode(), 2024);
 
             // Assert
             assertThat(result2023.getTariffYear()).isEqualTo(2023);
