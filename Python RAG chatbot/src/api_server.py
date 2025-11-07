@@ -25,6 +25,15 @@ class QueryRequest(BaseModel):
 
 import re
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint to verify API is running"""
+    return {
+        "status": "healthy",
+        "service": "Tariff RAG Chatbot API",
+        "version": "1.0.0"
+    }
+
 @app.post("/query")
 def query_rag(req: QueryRequest):
     try:
