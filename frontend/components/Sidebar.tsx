@@ -38,8 +38,8 @@ export default function Sidebar({
 
   // Build sidebar items dynamically based on user role
   const sidebarItems = [
-    // Admin-only: Manage Documents tab
-    ...(isAdmin() ? [{ id: "manage-docs", label: "Manage Documents", icon: FolderUp }] : []),
+    // Admin-only: Manage Chatbot Documents tab
+    ...(isAdmin() ? [{ id: "manage-docs", label: "Manage Chatbot Documents", icon: FolderUp }] : []),
     { id: "calculate", label: "Calculate Tariff", icon: Calculator },
     // { id: "products", label: "Products", icon: Package },
     // { id: "countries", label: "Countries", icon: MapPin },
