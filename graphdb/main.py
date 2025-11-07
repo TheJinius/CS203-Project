@@ -23,6 +23,59 @@ print(NEO4J_USER, NEO4J_PASS, NEO4J_URI)
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 
 # ========================
+# Graph Projection Setup
+# ========================
+def ensure_graph_projection():
+    """
+    Ensure the shippingGraph projection exists.
+    Creates it if it doesn't exist.
+    This should be called on application startup.
+    """
+    session = None
+    try:
+        session = driver.session()
+        
+        # Check if projection exists
+        result = session.run(
+            "CALL gds.graph.exists('shippingGraph') YIELD exists RETURN exists"
+        )
+        record = result.single()
+        
+        if record and record["exists"]:
+            print("✅ Graph projection 'shippingGraph' already exists")
+            return True
+        
+        # Create projection if it doesn't exist
+        print("Creating graph projection 'shippingGraph'...")
+        session.run("""
+            CALL gds.graph.project(
+                'shippingGraph',
+                ['ShippingNode'],
+                {
+                    ShippingLane: {
+                        type: 'ShippingLane',
+                        orientation: 'NATURAL',
+                        properties: {
+                            distance_km: {
+                                property: 'distance_km',
+                                defaultValue: 0.0
+                            }
+                        }
+                    }
+                }
+            )
+        """)
+        print("✅ Graph projection 'shippingGraph' created successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error ensuring graph projection: {e}")
+        return False
+    finally:
+        if session:
+            session.close()
+
+# ========================
 # Transport Configuration
 # ========================
 # Shipping costs and speeds
@@ -213,6 +266,8 @@ def create_geojson_feature(coordinates: List[Tuple[float, float]],
 # ========================
 # FastAPI App
 # ========================
+# FastAPI App
+# ========================
 app = FastAPI(title="Multi-Modal Transport Route API", version="2.0")
 app.add_middleware(
     CORSMiddleware,
@@ -221,6 +276,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Startup event to ensure graph projection exists
+@app.on_event("startup")
+async def startup_event():
+    """Initialize graph projection on application startup."""
+    print("=" * 60)
+    print("Application Starting - Checking Graph Projection")
+    print("=" * 60)
+    ensure_graph_projection()
+    print("=" * 60)
 
 # ========================
 # Neo4j Queries
@@ -503,16 +568,36 @@ def root():
 @app.get("/health")
 def health():
     """Health check endpoint."""
+    session = None
     try:
         # Test Neo4j connection
-        with driver.session() as session:
-            session.run("RETURN 1")
+        session = driver.session()
+        session.run("RETURN 1")
+        
+        # Check if graph projection exists
+        result = session.run(
+            "CALL gds.graph.exists('shippingGraph') YIELD exists RETURN exists"
+        )
+        record = result.single()
+        graph_exists = record["exists"] if record else False
+        
+        # If projection doesn't exist, try to create it
+        if not graph_exists:
+            print("⚠️ Graph projection missing during health check - attempting to recreate...")
+            ensure_graph_projection()
+            # Check again
+            result = session.run(
+                "CALL gds.graph.exists('shippingGraph') YIELD exists RETURN exists"
+            )
+            record = result.single()
+            graph_exists = record["exists"] if record else False
         
         return {
             "status": "healthy",
             "neo4j": "connected",
             "risk_grid_loaded": len(risk_manager.risk_grid) > 0,
-            "risk_grid_cells": len(risk_manager.risk_grid)
+            "risk_grid_cells": len(risk_manager.risk_grid),
+            "shipping_graph_exists": graph_exists
         }
     except Exception as e:
         return JSONResponse(
@@ -522,3 +607,7 @@ def health():
             },
             status_code=503
         )
+    finally:
+        if session:
+            session.close()
+

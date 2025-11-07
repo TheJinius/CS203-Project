@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Calculator, CheckCircle, XCircle, Loader2, ClipboardCheck, AlertTriangle} from "lucide-react"
+import { ArrowLeft, Search, Calculator, CheckCircle, XCircle, Loader2, AlertTriangle, ClipboardCheck,  } from "lucide-react"
 import { searchTariffs, calculateTariff, getExchangeRate, searchProducts as apiSearchProducts, getShippingRoute, getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
 
 // Move predefined products outside component to prevent recreating on every render
@@ -112,7 +112,7 @@ const COUNTRY_NAMES: { [key: string]: string } = {
   "000": "World (Any Country)"
 }
 
-export default function CalculateTab({ onCalculationResult, currency, onCurrencyChange }: CalculateTabProps) {
+export default function CalculateTab({ onCalculationResult, onRouteCalculated, currency, onCurrencyChange }: CalculateTabProps) {
   // Search state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")

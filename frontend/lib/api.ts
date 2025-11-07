@@ -60,6 +60,7 @@ export async function calculateTariff(params: {
   productCode: string;
   tariffId: number;
   amountOfProduct: number;
+  productValueDollars?: number;
   currency: string;
 }) {
   console.log('🧮 Calculating tariff with data:', params);
