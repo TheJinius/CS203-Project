@@ -133,7 +133,7 @@ public class HSDataCleaner {
             return;
         }
 
-        String outputFileName = "testclean_" + inputFileName;
+        String outputFileName = "clean_" + inputFileName;
         String outputFile = "src/main/resources/data/clean_data/" + outputFileName;
         
         // Initialize readers and writers
