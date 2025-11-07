@@ -1,15 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { X, Calculator, Package, MapPin, FileText, TrendingUp } from "lucide-react"
+import { X, Calculator, TrendingUp, FolderUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-// import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 import CalculateTab from "./tabs/CalculateTab"
-import ProductsTab from "./tabs/ProductsTab"
-import CountriesTab from "./tabs/CountriesTab"
-import TariffsTab from "./tabs/TariffsTab"
 import ResultsTab from "./tabs/ResultsTab"
+import ManageRAGChatbotDocumentsTab from "./tabs/ManageRAGChatbotDocumentsTab"
 import { useAuth } from "../contexts/AuthContext"
 import { useTheme } from "../contexts/ThemeContext"
 
@@ -39,7 +36,10 @@ export default function Sidebar({
 
   const [currency, setCurrency] = useState<string>("USD")
 
+  // Build sidebar items dynamically based on user role
   const sidebarItems = [
+    // Admin-only: Manage Documents tab
+    ...(isAdmin() ? [{ id: "manage-docs", label: "Manage Documents", icon: FolderUp }] : []),
     { id: "calculate", label: "Calculate Tariff", icon: Calculator },
     // { id: "products", label: "Products", icon: Package },
     // { id: "countries", label: "Countries", icon: MapPin },
@@ -109,6 +109,13 @@ export default function Sidebar({
       {/* Tab Content Container with proper overflow handling */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {/* Manage Documents Tab - Admin only */}
+          {activeTab === "manage-docs" && (
+            <div className="h-full">
+              <ManageRAGChatbotDocumentsTab />
+            </div>
+          )}
+
           {/* Calculate Tab - Full height container */}
           {activeTab === "calculate" && (
             <div className="h-full">
