@@ -1,6 +1,5 @@
 # CS203-Project
 
-
 ## Project Setup Instructions
 
 Welcome to our CS203 tariff project! Follow these steps to set up and run the application:
@@ -23,16 +22,12 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	```
 	npm install
 	```
-3. Additionally, install a required dependency:
-    ```
-	npm install @radix-ui/react-dialog
-	```
 
 ## 3. Chatbot Setup
 
 1. Navigate to the `Python RAG chatbot` directory:
     ```
-	cd "Python RAG chatbot`
+	cd "Python RAG chatbot"
 	```
 
 2. Create the virtual environment, if it does not yet exist:
@@ -40,7 +35,7 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	python -m venv .venv
 	```
 
-3. In PowerShell (and NOT the Command Prompt), run this command. You should see `( venv)` in the PowerShell prompt:
+3. In PowerShell (and NOT the Command Prompt), run this command. You should see `(.venv)` in the PowerShell prompt:
     ```
     .\.venv\Scripts\Activate.ps1
     ```
@@ -54,6 +49,46 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
     ```
     pip install -r requirements.txt
     ```
+
+## 4. Running Tests
+
+We use **Testcontainers** for integration testing with PostgreSQL. Docker is required.
+
+### Quick Start (Windows)
+```bash
+run-tests.bat                    # Run all tests
+run-tests.bat --coverage         # Run tests with coverage report
+run-tests.bat --controller       # Run controller tests only
+```
+
+### Quick Start (Mac/Linux)
+```bash
+./run-tests.sh                   # Run all tests
+./run-tests.sh --coverage        # Run tests with coverage report
+./run-tests.sh --controller      # Run controller tests only
+```
+
+### Manual Testing
+```bash
+# Run all tests
+mvn clean test
+
+# Run specific test class
+mvn test -Dtest=TariffManagementControllerIntegrationTest
+
+# Generate coverage report
+mvn jacoco:report
+```
+
+For detailed testing documentation, see [TEST_SETUP_GUIDE.md](TEST_SETUP_GUIDE.md).
+
+## 5. CI/CD Pipeline
+
+All tests run automatically on:
+- Push to `main`, `develop`, or `backend` branches
+- Pull requests to `main`
+
+View results in the **Actions** tab on GitHub.
 
 ### 3. Running the Application
 
