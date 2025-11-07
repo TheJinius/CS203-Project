@@ -2,6 +2,7 @@ import os, glob, uuid, time
 from dotenv import load_dotenv
 from openai import OpenAI
 from pinecone import Pinecone
+from pypdf import PdfReader
 
 load_dotenv()
 
@@ -18,26 +19,51 @@ def chunk(text, size=1800):
     return [text[i:i+size] for i in range(0, len(text), size)]
 
 def embed(text):
-    return client.embeddings.create(model=EMBED_MODEL, input=text).data[0].embedding
+    # Use dimensions=1024 to match Pinecone index dimension
+    return client.embeddings.create(
+        model=EMBED_MODEL, 
+        input=text,
+        dimensions=1024
+    ).data[0].embedding
+
+def read_file(path):
+    """Read content from either txt or pdf file"""
+    ext = os.path.splitext(path)[1].lower()
+    if ext == '.pdf':
+        reader = PdfReader(path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        return text
+    else:  # assume text file
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
 
 def upsert_doc(path):
-    with open(path, "r", encoding="utf-8") as f:
-        raw = f.read()
+    raw = read_file(path)
     pieces = chunk(raw)
     vectors = []
     base = os.path.basename(path)
     for i, p in enumerate(pieces):
-        vid = f"{base}-{i}-{uuid.uuid4().hex[:8]}"
+        # Sanitize the ID to only ASCII characters
+        safe_base = base.encode('ascii', 'ignore').decode('ascii')
+        vid = f"{safe_base}-{i}-{uuid.uuid4().hex[:8]}"
         vectors.append(
             (vid, embed(p), {"text": p, "source": base, "chunk": i})
         )
-    index.upsert(vectors=vectors, namespace=NAMESPACE)
+    # Only pass namespace if it's not empty
+    if NAMESPACE:
+        index.upsert(vectors=vectors, namespace=NAMESPACE)
+    else:
+        index.upsert(vectors=vectors)
     return len(vectors)
 
 def main(folder="data"):
-    files = sorted(glob.glob(os.path.join(folder, "*.txt")))
+    txt_files = sorted(glob.glob(os.path.join(folder, "*.txt")))
+    pdf_files = sorted(glob.glob(os.path.join(folder, "*.pdf")))
+    files = txt_files + pdf_files
     if not files:
-        print(f"No .txt files in {folder}")
+        print(f"No .txt or .pdf files in {folder}")
         return
     total = 0
     for p in files:
@@ -52,5 +78,8 @@ def main(folder="data"):
 
 if __name__ == "__main__":
     import sys
-    folder = sys.argv[1] if len(sys.argv) > 1 else "data"
+    # Default to data folder relative to script location (one level up)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_data = os.path.join(os.path.dirname(script_dir), "data")
+    folder = sys.argv[1] if len(sys.argv) > 1 else default_data
     main(folder)

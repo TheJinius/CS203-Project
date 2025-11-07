@@ -1,8 +1,0 @@
-Raichu
-Species: Mouse Pokémon
-Type: Electric
-Height: 0.8 m
-Weight: 30.0 kg
-Abilities: Static (Hidden Ability: Lightning Rod)
-Evolution: Evolves from Pikachu when exposed to a Thunder Stone (can become Alolan Raichu in certain regions)
-Description: Raichu’s body stores strong electrical energy. It can glow in the dark from electric charge and can deliver high-voltage shocks.

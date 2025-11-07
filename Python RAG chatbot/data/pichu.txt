@@ -1,8 +1,0 @@
-Pichu
-Species: Tiny Mouse Pokémon
-Type: Electric
-Height: 0.3 m
-Weight: 2.0 kg
-Abilities: Static (Hidden Ability: Lightning Rod)
-Evolution: Evolves into Pikachu when it gains enough friendship
-Description: Pichu stores small amounts of electricity. It shocks itself when careless. It’s playful and bonds easily with others.

@@ -1,8 +1,0 @@
-Pikachu
-Species: Mouse Pokémon
-Type: Electric
-Height: 0.4 m
-Weight: 6.0 kg
-Abilities: Static (Hidden Ability: Lightning Rod)
-Evolution: Evolves from Pichu with high friendship, and into Raichu when exposed to a Thunder Stone
-Description: Pikachu stores electricity in its cheeks and releases it when threatened. It is intelligent, loyal, and often lives near humans or forests.
