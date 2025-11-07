@@ -2,18 +2,13 @@ name: Run Tests
 
 on:
   push:
-    branches: [ main, develop, calculationtesting ]
+    branches: [ main, develop, backend ]
   pull_request:
     branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    services:
-      docker:
-        image: docker:dind
-        options: --privileged
     
     steps:
     - name: Checkout code
@@ -24,6 +19,7 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
+        cache: 'maven'
         
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -32,39 +28,56 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Run DutyService tests
-      run: mvn test -Dtest=DutyServiceTest
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Start Docker (for Testcontainers)
+      run: |
+        echo "Docker is available for Testcontainers"
+        docker --version
+
+    - name: Run all tests with Testcontainers
+      run: mvn clean test -Dspring.profiles.active=test
       env:
+        # Redis configuration (dummy values for tests that don't use Redis)
         REDIS_URL: localhost
         REDIS_PORT: 6379
         REDIS_USERNAME: ""
         REDIS_PASSWORD: ""
+        # Cognito OAuth2 configuration (dummy values for tests)
         COGNITO_ISSUER: https://dummy-issuer.com
         COGNITO_TOKEN_SIGNING_KEY_URL: https://dummy-issuer.com/.well-known/jwks.json
+        COGNITO_DOMAIN: dummy-domain
+        AWS_REGION: us-east-1
+        COGNITO_CLIENT_ID: dummy-client-id
+        # Database configuration (Testcontainers will handle this)
+        # The test profile uses Testcontainers with PostgreSQL
+        SPRING_PROFILES_ACTIVE: test
       
-    - name: Run AuditLogService tests  
-      run: mvn test -Dtest=AuditLogServiceTest
-      env:
-        REDIS_URL: localhost
-        REDIS_PORT: 6379
-        REDIS_USERNAME: ""
-        REDIS_PASSWORD: ""
-        COGNITO_ISSUER: https://dummy-issuer.com
-        COGNITO_TOKEN_SIGNING_KEY_URL: https://dummy-issuer.com/.well-known/jwks.json
-      
-    - name: Run all tests
-      run: mvn clean test
-      env:
-        REDIS_URL: localhost
-        REDIS_PORT: 6379
-        REDIS_USERNAME: ""
-        REDIS_PASSWORD: ""
-        COGNITO_ISSUER: https://dummy-issuer.com
-        COGNITO_TOKEN_SIGNING_KEY_URL: https://dummy-issuer.com/.well-known/jwks.json
+    - name: Generate test coverage report
+      run: mvn jacoco:report
+      continue-on-error: true
       
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
-        path: target/surefire-reports/
+        path: |
+          target/surefire-reports/
+          target/site/jacoco/
+        retention-days: 30
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: coverage-report
+        path: target/site/jacoco/
+        retention-days: 30
+
+    - name: Test Summary
+      uses: test-summary/action@v2
+      if: always()
+      with:
+        paths: target/surefire-reports/*.xml
