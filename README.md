@@ -23,6 +23,10 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	```
 	npm install
 	```
+3. Additionally, install a required dependency:
+    ```
+	npm install @radix-ui/react-dialog
+	```
 
 ## 3. Chatbot Setup
 
