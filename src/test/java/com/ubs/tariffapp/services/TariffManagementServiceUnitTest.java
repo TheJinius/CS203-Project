@@ -44,6 +44,7 @@ import com.ubs.tariffapp.repositories.duty.CombinedDutyRepository;
 import com.ubs.tariffapp.repositories.duty.DutyRepository;
 import com.ubs.tariffapp.repositories.duty.OtherDutyRepository;
 import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
+import com.ubs.tariffapp.testutils.TestEntityFactory;
 
 /**
  * Unit tests for TariffManagementService calculation and validation logic.
@@ -91,31 +92,19 @@ class TariffManagementServiceUnitTest {
 
     @BeforeEach
     void setUp() {
-        // Setup common test data
-        usa = new Country();
-        usa.setCountryId("840");
-        usa.setCountryName("United States");
-
-        china = new Country();
-        china.setCountryId("156");
-        china.setCountryName("China");
-
-        product = new Product();
-        product.setTlCode("01012100");
-        product.setDescription("Pure-bred breeding horses");
-
-        dutyType = new DutyType();
-        DutyTypeId dutyTypeId = new DutyTypeId("0", "0");
-        dutyType.setId(dutyTypeId);
-        dutyType.setDutyTypeDescription("Standard (MFN)");
+        // Use TestEntityFactory for common test data
+        usa = TestEntityFactory.createReporterCountry();
+        china = TestEntityFactory.createPartnerCountry();
+        product = TestEntityFactory.createProduct();
+        dutyType = TestEntityFactory.createDutyType();
 
         validRequest = new TariffRequest();
         validRequest.setTariffYear(2023);
-        validRequest.setReporterCode("840");
-        validRequest.setPartnerCode("156");
-        validRequest.setTlCode("01012100");
-        validRequest.setDutyType("0");
-        validRequest.setDutyCode("0");
+        validRequest.setReporterCode(usa.getCountryId());
+        validRequest.setPartnerCode(china.getCountryId());
+        validRequest.setTlCode(product.getTlCode());
+        validRequest.setDutyType(dutyType.getId().getDutyType());
+        validRequest.setDutyCode(dutyType.getId().getDutyCode());
         validRequest.setAdValoremRate(10.0);
     }
 
@@ -127,18 +116,18 @@ class TariffManagementServiceUnitTest {
         @DisplayName("Should create tariff with Ad Valorem duty successfully")
         void shouldCreateTariffWithAdValoremDuty() {
             // Arrange
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.of(china));
-            when(productRepository.findById("01012100")).thenReturn(Optional.of(product));
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
             when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.of(dutyType));
             
-            TariffSchedule savedTariff = new TariffSchedule();
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));  // Override for this test
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
             savedTariff.setTariffId(1);
             when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
-            
-            AdValoremDuty duty = new AdValoremDuty();
-            duty.setRatePercent(BigDecimal.valueOf(10.0));
-            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
 
             // Act
             TariffResponse response = tariffManagementService.createTariff(validRequest);
@@ -146,7 +135,7 @@ class TariffManagementServiceUnitTest {
             // Assert
             assertThat(response).isNotNull();
             assertThat(response.getTariffId()).isEqualTo(1);
-            verify(tariffRepository, times(1)).save(any(TariffSchedule.class));
+            verify(tariffRepository, times(2)).save(any(TariffSchedule.class));  // Called twice in createTariff
             verify(adValoremDutyRepository, times(1)).save(any(AdValoremDuty.class));
         }
 
@@ -158,18 +147,19 @@ class TariffManagementServiceUnitTest {
             validRequest.setSpecificRate(5.0);
             validRequest.setSpecificRateUnit("kg");
             
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.of(china));
-            when(productRepository.findById("01012100")).thenReturn(Optional.of(product));
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
             when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.of(dutyType));
             
-            TariffSchedule savedTariff = new TariffSchedule();
+            SpecificDuty duty = TestEntityFactory.createSpecificDuty();
+            duty.setAmount(BigDecimal.valueOf(5.0));  // Override for this test
+            duty.setUnit("kg");  // Override for this test
+            when(specificDutyRepository.save(any(SpecificDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
             savedTariff.setTariffId(2);
             when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
-            
-            SpecificDuty duty = new SpecificDuty();
-            duty.setAmount(BigDecimal.valueOf(5.0));
-            when(specificDutyRepository.save(any(SpecificDuty.class))).thenReturn(duty);
 
             // Act
             TariffResponse response = tariffManagementService.createTariff(validRequest);
@@ -189,19 +179,20 @@ class TariffManagementServiceUnitTest {
             validRequest.setCompoundRate2(5.0);  // Specific component
             validRequest.setSpecificRateUnit("kg");
             
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.of(china));
-            when(productRepository.findById("01012100")).thenReturn(Optional.of(product));
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
             when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.of(dutyType));
             
-            TariffSchedule savedTariff = new TariffSchedule();
+            CombinedDuty duty = TestEntityFactory.createCombinedDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));  // Override for this test
+            duty.setAmount(BigDecimal.valueOf(5.0));  // Override for this test
+            duty.setUnit("kg");  // Override for this test
+            when(combinedDutyRepository.save(any(CombinedDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
             savedTariff.setTariffId(3);
             when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
-            
-            CombinedDuty duty = new CombinedDuty();
-            duty.setRatePercent(BigDecimal.valueOf(10.0));
-            duty.setAmount(BigDecimal.valueOf(5.0));
-            when(combinedDutyRepository.save(any(CombinedDuty.class))).thenReturn(duty);
 
             // Act
             TariffResponse response = tariffManagementService.createTariff(validRequest);
@@ -218,8 +209,8 @@ class TariffManagementServiceUnitTest {
             String newHsCode = "99999999";
             validRequest.setTlCode(newHsCode);
             
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.of(china));
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
             when(productRepository.findById(newHsCode)).thenReturn(Optional.empty());
             when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.of(dutyType));
             
@@ -228,12 +219,13 @@ class TariffManagementServiceUnitTest {
             newProduct.setDescription("Pending classification - Added via admin");
             when(productRepository.save(any(Product.class))).thenReturn(newProduct);
             
-            TariffSchedule savedTariff = new TariffSchedule();
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, newProduct, dutyType, duty);
             savedTariff.setTariffId(1);
             when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
-            
-            AdValoremDuty duty = new AdValoremDuty();
-            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
 
             // Act
             TariffResponse response = tariffManagementService.createTariff(validRequest);
@@ -247,20 +239,22 @@ class TariffManagementServiceUnitTest {
         @DisplayName("Should auto-create duty type if not exists")
         void shouldAutoCreateDutyTypeIfNotExists() {
             // Arrange
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.of(china));
-            when(productRepository.findById("01012100")).thenReturn(Optional.of(product));
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
             when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
             
             DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("1", "1"));
             when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
             
-            TariffSchedule savedTariff = new TariffSchedule();
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
             savedTariff.setTariffId(1);
             when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
-            
-            AdValoremDuty duty = new AdValoremDuty();
-            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
 
             // Act
             TariffResponse response = tariffManagementService.createTariff(validRequest);
@@ -274,25 +268,25 @@ class TariffManagementServiceUnitTest {
         @DisplayName("Should throw exception when reporter country not found")
         void shouldThrowExceptionWhenReporterNotFound() {
             // Arrange
-            when(countryRepository.findById("840")).thenReturn(Optional.empty());
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() -> tariffManagementService.createTariff(validRequest))
                 .isInstanceOf(InvalidRequestException.class)
-                .hasMessageContaining("Reporter country not found: 840");
+                .hasMessageContaining("Reporter country not found: " + usa.getCountryId());
         }
 
         @Test
         @DisplayName("Should throw exception when partner country not found")
         void shouldThrowExceptionWhenPartnerNotFound() {
             // Arrange
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.empty());
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() -> tariffManagementService.createTariff(validRequest))
                 .isInstanceOf(InvalidRequestException.class)
-                .hasMessageContaining("Partner country not found: 156");
+                .hasMessageContaining("Partner country not found: " + china.getCountryId());
         }
 
         @Test
@@ -303,9 +297,9 @@ class TariffManagementServiceUnitTest {
             validRequest.setCompoundRate1(10.0);
             validRequest.setCompoundRate2(null); // Missing second rate
             
-            when(countryRepository.findById("840")).thenReturn(Optional.of(usa));
-            when(countryRepository.findById("156")).thenReturn(Optional.of(china));
-            when(productRepository.findById("01012100")).thenReturn(Optional.of(product));
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
             when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.of(dutyType));
 
             // Act & Assert
@@ -323,12 +317,11 @@ class TariffManagementServiceUnitTest {
         @DisplayName("Should get tariff by ID successfully")
         void shouldGetTariffById() {
             // Arrange
-            TariffSchedule tariff = new TariffSchedule();
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            
+            TariffSchedule tariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
             tariff.setTariffId(1);
-            tariff.setReporter(usa);
-            tariff.setPartner(china);
-            tariff.setProduct(product);
-            tariff.setDutyType(dutyType);
             
             when(tariffRepository.findById(1)).thenReturn(Optional.of(tariff));
 
@@ -356,19 +349,17 @@ class TariffManagementServiceUnitTest {
         @DisplayName("Should get all tariffs successfully")
         void shouldGetAllTariffs() {
             // Arrange
-            TariffSchedule tariff1 = new TariffSchedule();
-            tariff1.setTariffId(1);
-            tariff1.setReporter(usa);
-            tariff1.setPartner(china);
-            tariff1.setProduct(product);
-            tariff1.setDutyType(dutyType);
+            AdValoremDuty duty1 = TestEntityFactory.createAdValoremDuty();
+            duty1.setRatePercent(BigDecimal.valueOf(10.0));
             
-            TariffSchedule tariff2 = new TariffSchedule();
+            AdValoremDuty duty2 = TestEntityFactory.createAdValoremDuty();
+            duty2.setRatePercent(BigDecimal.valueOf(15.0));
+            
+            TariffSchedule tariff1 = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty1);
+            tariff1.setTariffId(1);
+            
+            TariffSchedule tariff2 = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty2);
             tariff2.setTariffId(2);
-            tariff2.setReporter(usa);
-            tariff2.setPartner(china);
-            tariff2.setProduct(product);
-            tariff2.setDutyType(dutyType);
             
             when(tariffRepository.findAll()).thenReturn(Arrays.asList(tariff1, tariff2));
 

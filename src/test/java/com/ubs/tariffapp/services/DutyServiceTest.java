@@ -22,6 +22,7 @@ import com.ubs.tariffapp.exceptions.DutyNotFoundException;
 import com.ubs.tariffapp.exceptions.InvalidRequestException;
 import com.ubs.tariffapp.exceptions.TariffNotFoundException;
 import com.ubs.tariffapp.extensions.DockerRequiredExtension;
+import com.ubs.tariffapp.testutils.TestEntityFactory;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -258,65 +259,68 @@ public class DutyServiceTest {
     }
 
     // =================== HELPER METHODS ===================
+    // Now using TestEntityFactory for consistent test data creation
 
     private TariffSchedule createBasicTariffSchedule(String reporterCode, String partnerCode, String productCode) {
-        Country reporter = new Country();
+        Country reporter = TestEntityFactory.createReporterCountry();
         reporter.setCountryId(reporterCode);
-        reporter.setCountryName("Test Reporter");
-        reporter.setIsoCode(reporterCode.substring(0, 2));
         
-        Country partner = new Country();
+        Country partner = TestEntityFactory.createPartnerCountry();
         partner.setCountryId(partnerCode);
-        partner.setCountryName("Test Partner");
-        partner.setIsoCode(partnerCode.substring(0, 2));
         
-        Product product = new Product();
+        Product product = TestEntityFactory.createProduct();
         product.setTlCode(productCode);
-        product.setDescription("Test Product");
-        product.setDigits(6);
         
-        TariffSchedule tariffSchedule = new TariffSchedule();
-        tariffSchedule.setReporter(reporter);
-        tariffSchedule.setPartner(partner);
-        tariffSchedule.setProduct(product);
+        AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+        TariffSchedule tariffSchedule = TestEntityFactory.createTariffSchedule(
+            reporter, partner, product, TestEntityFactory.createDutyType(), duty);
         
         return tariffSchedule;
     }
 
     private TariffSchedule createTariffWithAdValoremDuty(double ratePercent) {
-        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "CHN", "010121");
+        Country reporter = TestEntityFactory.createReporterCountry();
+        Country partner = TestEntityFactory.createPartnerCountry();
+        Product product = TestEntityFactory.createProduct();
         
-        AdValoremDuty adValoremDuty = new AdValoremDuty();
+        AdValoremDuty adValoremDuty = TestEntityFactory.createAdValoremDuty();
         adValoremDuty.setRatePercent(BigDecimal.valueOf(ratePercent));
-        adValoremDuty.setTariffSchedule(tariffSchedule);
         
-        tariffSchedule.setDuty(adValoremDuty);
+        TariffSchedule tariffSchedule = TestEntityFactory.createTariffSchedule(
+            reporter, partner, product, TestEntityFactory.createDutyType(), adValoremDuty);
+        
         return tariffSchedule;
     }
 
     private TariffSchedule createTariffWithSpecificDuty(double amount, int multiplier) {
-        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "DEU", "010129");
+        Country reporter = TestEntityFactory.createReporterCountry();
+        Country partner = TestEntityFactory.createPartnerCountry();
+        Product product = TestEntityFactory.createProduct();
         
-        SpecificDuty specificDuty = new SpecificDuty();
+        SpecificDuty specificDuty = TestEntityFactory.createSpecificDuty();
         specificDuty.setAmount(BigDecimal.valueOf(amount));
         specificDuty.setMultiplier(multiplier);
-        specificDuty.setTariffSchedule(tariffSchedule);
         
-        tariffSchedule.setDuty(specificDuty);
+        TariffSchedule tariffSchedule = TestEntityFactory.createTariffSchedule(
+            reporter, partner, product, TestEntityFactory.createDutyType(), specificDuty);
+        
         return tariffSchedule;
     }
 
     private TariffSchedule createTariffWithCombinedDuty(double ratePercent, double amount, int multiplier, String mixedOrConditional) {
-        TariffSchedule tariffSchedule = createBasicTariffSchedule("USA", "FRA", "010130");
+        Country reporter = TestEntityFactory.createReporterCountry();
+        Country partner = TestEntityFactory.createPartnerCountry();
+        Product product = TestEntityFactory.createProduct();
         
-        CombinedDuty combinedDuty = new CombinedDuty();
+        CombinedDuty combinedDuty = TestEntityFactory.createCombinedDuty();
         combinedDuty.setRatePercent(BigDecimal.valueOf(ratePercent));
         combinedDuty.setAmount(BigDecimal.valueOf(amount));
         combinedDuty.setMultiplier(multiplier);
         combinedDuty.setMixedOrCompound(mixedOrConditional);
-        combinedDuty.setTariffSchedule(tariffSchedule);
         
-        tariffSchedule.setDuty(combinedDuty);
+        TariffSchedule tariffSchedule = TestEntityFactory.createTariffSchedule(
+            reporter, partner, product, TestEntityFactory.createDutyType(), combinedDuty);
+        
         return tariffSchedule;
     }
 }

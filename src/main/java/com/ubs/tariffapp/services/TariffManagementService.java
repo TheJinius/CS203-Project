@@ -241,7 +241,7 @@ public class TariffManagementService {
         if (request.getAdValoremRate() != null) {
             AdValoremDuty adValorem = new AdValoremDuty();
             adValorem.setTariffSchedule(tariff);
-            adValorem.setDutyNature("AD_VALOREM");
+            adValorem.setDutyNature("A");  // A for Ad Valorem
             adValorem.setRatePercent(BigDecimal.valueOf(request.getAdValoremRate()));
             adValorem.setMathExpression(request.getAdValoremRate() + "%");
             duty = adValoremDutyRepository.save(adValorem);
@@ -249,7 +249,7 @@ public class TariffManagementService {
         } else if (request.getSpecificRate() != null) {
             SpecificDuty specific = new SpecificDuty();
             specific.setTariffSchedule(tariff);
-            specific.setDutyNature("SPECIFIC");
+            specific.setDutyNature("S");  // S for Specific
             specific.setAmount(BigDecimal.valueOf(request.getSpecificRate()));
             specific.setUnit(request.getSpecificRateUnit());
             specific.setMultiplier(1); // Default multiplier
@@ -261,7 +261,7 @@ public class TariffManagementService {
             // Use CombinedDuty for compound rates
             CombinedDuty combined = new CombinedDuty();
             combined.setTariffSchedule(tariff);
-            combined.setDutyNature("COMBINED");
+            combined.setDutyNature("C");  // C for Compound
             combined.setMixedOrCompound("M"); // M for mixed (compound)
             combined.setRatePercent(BigDecimal.valueOf(request.getCompoundRate1()));
             combined.setAmount(BigDecimal.valueOf(request.getCompoundRate2()));
