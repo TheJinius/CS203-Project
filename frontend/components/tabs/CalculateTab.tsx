@@ -31,6 +31,8 @@ interface Tariff {
   dutyType?: string
   dutyClass?: string  // Add this: Java class name like "AdValoremDuty", "SpecificDuty", etc.
   unit?: string
+  rate?: number  // For ad valorem duties
+  amountPerUnit?: number  // For specific duties
 }
 
 interface CalculationStep {
@@ -241,6 +243,34 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
     if (targetCurrency === "USD") return amountUSD
     const rate = rates[targetCurrency] || 1
     return Math.round(amountUSD * rate * 100) / 100
+  }
+
+  // Helper function to determine if a tariff is the lowest or a free trade agreement
+  const getLowestTariffId = (): number | null => {
+    if (availableTariffs.length === 0) return null
+    
+    // Check for free trade agreements (rate = 0 or description contains "free")
+    const freeTradeTariff = availableTariffs.find(tariff => {
+      const desc = tariff.description?.toLowerCase() || ''
+      return desc.includes('0%') || desc.includes('free') || tariff.rate === 0
+    })
+    
+    if (freeTradeTariff) return freeTradeTariff.tariffId
+    
+    // Otherwise, find the tariff with the lowest rate
+    // For ad valorem duties, compare rates directly
+    // For specific duties, we can't compare without quantity, so we'll prioritize ad valorem with lowest rate
+    const adValoremTariffs = availableTariffs.filter(t => t.dutyClass === 'AdValoremDuty' && t.rate !== undefined)
+    
+    if (adValoremTariffs.length > 0) {
+      const lowestAdValorem = adValoremTariffs.reduce((lowest, current) => {
+        return (current.rate || Infinity) < (lowest.rate || Infinity) ? current : lowest
+      })
+      return lowestAdValorem.tariffId
+    }
+    
+    // If no ad valorem tariffs, return the first tariff (we can't determine lowest for specific duties without quantity)
+    return availableTariffs[0]?.tariffId || null
   }
 
   // Function to reset all calculation and compliance results
@@ -646,21 +676,42 @@ export default function CalculateTab({ onCalculationResult, onRouteCalculated, c
                   <SelectValue placeholder="Choose a tariff" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 max-h-60 overflow-y-auto [width:var(--radix-select-trigger-width)]">
-                  {availableTariffs.map(tariff => (
-                    <SelectItem
-                      key={tariff.tariffId}
-                      value={tariff.tariffId.toString()}
-                      className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm">
-                      <div className="flex flex-col gap-0.5 py-1">
-                        <span className="font-medium">Tariff ID: {tariff.tariffId}</span>
-                        {tariff.description && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-normal">
-                            {tariff.description}
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {availableTariffs.map(tariff => {
+                    const lowestTariffId = getLowestTariffId()
+                    const isLowest = tariff.tariffId === lowestTariffId
+                    const desc = tariff.description?.toLowerCase() || ''
+                    const isFTA = desc.includes('0%') || desc.includes('free') || tariff.rate === 0
+                    
+                    return (
+                      <SelectItem
+                        key={tariff.tariffId}
+                        value={tariff.tariffId.toString()}
+                        className={`!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20 text-sm ${
+                          isLowest ? 'border-2 border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-900/20 hover:!bg-green-100 dark:hover:!bg-green-900/30' : ''
+                        }`}>
+                        <div className="flex flex-col gap-0.5 py-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Tariff ID: {tariff.tariffId}</span>
+                            {isLowest && isFTA && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-600 dark:bg-green-500 text-white">
+                                FREE TRADE
+                              </span>
+                            )}
+                            {isLowest && !isFTA && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-600 dark:bg-emerald-500 text-white">
+                                LOWEST RATE
+                              </span>
+                            )}
+                          </div>
+                          {tariff.description && (
+                            <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-normal">
+                              {tariff.description}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
             </div>
