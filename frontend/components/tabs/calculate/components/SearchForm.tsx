@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search } from "lucide-react"
+import { CountrySearchSelect } from './CountrySearchSelect'
 
 interface SearchFormProps {
   selectedSource: string
@@ -41,52 +42,23 @@ export function SearchForm({
 }: SearchFormProps) {
   return (
     <>
-      <div className="space-y-1.5">
-        <Label htmlFor="source" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Source Country (Partner)
-        </Label>
-        <Select onValueChange={setSelectedSource}>
-          <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
-            <SelectItem value="702" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              702 - Singapore
-            </SelectItem>
-            <SelectItem value="840" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              840 - United States
-            </SelectItem>
-            <SelectItem value="156" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              156 - China
-            </SelectItem>
-            <SelectItem value="000" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              000 - World (Any Country)
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <CountrySearchSelect
+        label="Source Country (Partner)"
+        value={selectedSource}
+        onValueChange={setSelectedSource}
+        placeholder="Search source country..."
+        id="source"
+        excludeValue={selectedDestination}
+      />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="destination" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Destination Country (Reporter)
-        </Label>
-        <Select onValueChange={setSelectedDestination}>
-          <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
-            <SelectValue placeholder="Select destination" />
-          </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
-            <SelectItem value="702" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              702 - Singapore
-            </SelectItem>
-            <SelectItem value="840" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              840 - United States
-            </SelectItem>
-            <SelectItem value="156" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              156 - China
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <CountrySearchSelect
+        label="Destination Country (Reporter)"
+        value={selectedDestination}
+        onValueChange={setSelectedDestination}
+        placeholder="Search destination country..."
+        id="destination"
+        excludeValue={selectedSource}
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="product" className="text-sm font-medium text-slate-700 dark:text-slate-300">

@@ -188,7 +188,8 @@ export const COUNTRY_COORDINATES: { [key: string]: { lat: number, lon: number, n
   "608": { lat: 14.60, lon: 120.98, name: "Manila, Philippines" },
   "554": { lat: -36.84, lon: 174.76, name: "Auckland, New Zealand" },
   "784": { lat: 25.27, lon: 55.30, name: "Dubai, UAE" },
-  "410": { lat: 35.18, lon: 129.08, name: "Busan, South Korea" },
-  "344": { lat: 22.32, lon: 114.17, name: "Hong Kong" },
-  "000": { lat: 22.32, lon: 114.17, name: "World" }, // Generic/any country
+  "634": { lat: 25.29, lon: 51.53, name: "Doha, Qatar" },
+  "792": { lat: 39.93, lon: 32.85, name: "Ankara, Turkey" },
+  "410": { lat: 37.58, lon: 126.98, name: "Seoul, South Korea" },
+  "000": { lat: 22.32, lon: 114.17, name: "World (Any Country)" }, // Generic/any country
 }
