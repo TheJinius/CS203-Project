@@ -36,7 +36,7 @@ public class CorsConfig implements WebMvcConfigurer {
         configuration.addAllowedOrigin("http://localhost:8080");
         configuration.addAllowedOrigin("http://127.0.0.1:8080");
         configuration.addAllowedOrigin("https://cs203tariffproject.duckdns.org/api");
-        configuration.addAllowedOrigin("https://cs203chatbot.duckdns.org");
+        configuration.addAllowedOrigin("https://cs203chatbot.duckdns.org/query");
         configuration.addAllowedOrigin("https://trade-optimisation-pathfinder.vercel.app");
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
