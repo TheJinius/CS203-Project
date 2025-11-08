@@ -33,7 +33,7 @@ interface SidebarProps {
   onClose: () => void
   calculationResult: number | null
   onCalculationResult: (result: number | null) => void
-  onRouteCalculated?: (geojson: any) => void
+  onRouteCalculated?: (geojson: Record<string, unknown>) => void
   width: number 
 }
 

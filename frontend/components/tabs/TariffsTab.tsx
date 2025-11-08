@@ -10,10 +10,6 @@ import { Plus, CheckCircle, XCircle, AlertCircle, Trash2, Search } from "lucide-
 import { getSession, signOut } from "next-auth/react"
 import { searchProducts as apiSearchProducts } from "@/lib/api"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
-import AdValoremDutyForm from "./duty-forms/AdValoremDutyForm"
-import SpecificDutyForm from "./duty-forms/SpecificDutyForm"
-import CombinedDutyForm from "./duty-forms/CombinedDutyForm"
-import OtherDutyForm from "./duty-forms/OtherDutyForm"
 
 interface Product {
   code: string
@@ -116,9 +112,8 @@ export default function TariffsTab() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   // Search/View tariffs
-  const [viewMode, setViewMode] = useState<'create' | 'manage'>('create')
+  const [step, setStep] = useState(1)
   const [searchResults, setSearchResults] = useState<TariffData[]>([])
-  const [searchQuery, setSearchQuery] = useState<string>("")
 
   const predefinedProducts = [
     { code: "27079940", description: "Carbazole, Energy" },
@@ -308,7 +303,7 @@ export default function TariffsTab() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
       // Build request body
-      const requestBody: Record<string, any> = {
+      const requestBody: Record<string, unknown> = {
         tariffYear: parseInt(tariffYear),
         reporterCode: reporterCode,
         partnerCode: partnerCode,
@@ -441,7 +436,6 @@ export default function TariffsTab() {
       
       setSearchResults(tariffs)
       setSuccess(`Found ${tariffs.length} tariff(s)`)
-      setViewMode('manage')
     } catch (e) {
       const err = e as Error
       console.error("❌ Search failed:", err)

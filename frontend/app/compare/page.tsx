@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import WorldMap from "@/components/WorldMap"
+import WorldMap, { type OptimalRoutesData } from "@/components/WorldMap"
 import TopBar from "@/components/TopBar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { ArrowLeft, Route, MapPin, DollarSign, Clock, Leaf, AlertTriangle, GripVertical, X, BarChart3, TrendingUp, Award, Map } from "lucide-react"
@@ -62,7 +62,7 @@ export default function ComparePage() {
   const [selectedForComparison, setSelectedForComparison] = useState<ComparisonRoute[]>([])
   const [draggedItem, setDraggedItem] = useState<ComparisonRoute | null>(null)
   const [dropTarget, setDropTarget] = useState<boolean>(false)
-  const [optimalRoutesData, setOptimalRoutesData] = useState<any>(null)
+  const [optimalRoutesData, setOptimalRoutesData] = useState<OptimalRoutesData | null>(null)
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cost')
   const [showMap, setShowMap] = useState<boolean>(false)
 
@@ -532,7 +532,7 @@ export default function ComparePage() {
                             <Card className="bg-white dark:bg-slate-800">
                               <CardContent className="p-4">
                                 <div className="space-y-3">
-                                  {selectedForComparison.map((route, index) => {
+                                  {selectedForComparison.map((route) => {
                                     const value = getMetricValue(route, selectedMetric)
                                     const maxValue = Math.max(...selectedForComparison.map(r => getMetricValue(r, selectedMetric)))
                                     const percentage = (value / maxValue) * 100

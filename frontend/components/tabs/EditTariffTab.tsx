@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Edit, Plus, CheckCircle, XCircle, Trash2, X } from "lucide-react"
+import { ArrowLeft, Search, Edit, CheckCircle, XCircle, Trash2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { getSession, signOut } from "next-auth/react"
-import { searchTariffs, searchProducts as apiSearchProducts } from "@/lib/api"
+import { searchProducts as apiSearchProducts } from "@/lib/api"
 import AdValoremDutyForm from "./duty-forms/AdValoremDutyForm"
 import SpecificDutyForm from "./duty-forms/SpecificDutyForm"
 import CombinedDutyForm from "./duty-forms/CombinedDutyForm"
@@ -80,15 +80,6 @@ export default function EditTariffTab() {
   const [productSearchQuery, setProductSearchQuery] = useState<string>("")
   const [productSearchResults, setProductSearchResults] = useState<Array<{ code: string, description: string, matchType?: string }>>([])
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
-
-  // ✅ ADD THESE MISSING STATE VARIABLES
-  const [searchResults, setSearchResults] = useState<TariffData[]>([])
-  const [searchParams, setSearchParams] = useState({
-    reporterCountry: "",
-    partnerCountry: "",
-    productCode: "",
-    year: 2023,
-  })
 
   const [availableTariffs, setAvailableTariffs] = useState<TariffData[]>([])
   const [selectedTariff, setSelectedTariff] = useState<TariffData | null>(null)
@@ -269,11 +260,10 @@ export default function EditTariffTab() {
     setLoading(true)
     setError("")
     setSuccess("")
-    setSearchResults([])
 
     try {
       const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
 
       // ✅ Build search parameters from selected values
       const searchRequest = {
@@ -285,7 +275,7 @@ export default function EditTariffTab() {
 
       console.log("🔍 Searching tariffs with:", searchRequest)
 
-      const response = await fetch(`${apiUrl}/api/admin/tariffs/search`, {
+      const response = await fetch(`${API_BASE_ROUTE}/admin/tariffs/search`, {
         method: "POST",
         headers,
         body: JSON.stringify(searchRequest),
@@ -300,7 +290,7 @@ export default function EditTariffTab() {
       console.log("📦 Received search results:", data)
 
       // ✅ MAP BACKEND FIELDS TO FRONTEND INTERFACE
-      const mappedResults: TariffData[] = (data.tariffs || []).map((tariff: any) => ({
+      const mappedResults: TariffData[] = (data.tariffs || []).map((tariff: Record<string, unknown>) => ({
         tariffId: tariff.tariffId,
         tariffYear: tariff.tariffYear || tariff.year,  // ✅ Handle both field names
         reporterCode: tariff.reporterCode,
@@ -326,8 +316,7 @@ export default function EditTariffTab() {
 
       console.log("✅ Mapped results:", mappedResults)
 
-      setSearchResults(mappedResults)
-      setAvailableTariffs(mappedResults) // ✅ Also update availableTariffs for step 2
+      setAvailableTariffs(mappedResults) // ✅ Update availableTariffs for step 2
       setStep(2) // ✅ Move to step 2 to show results
 
       if (mappedResults.length === 0) {
@@ -443,11 +432,11 @@ export default function EditTariffTab() {
       
       console.log("💾 Updating tariff:", selectedTariff.tariffId)
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-      const endpoint = `${apiUrl}/api/admin/tariffs/${selectedTariff.tariffId}`
+      const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
+      const endpoint = `${API_BASE_ROUTE}/admin/tariffs/${selectedTariff.tariffId}`
       
       // ✅ BUILD REQUEST BODY - ONLY include the fields that can be updated
-      const requestBody: Record<string, any> = {
+      const requestBody: Record<string, unknown> = {
         tlsSuffix: editFormData.tlsSuffix || selectedTariff.tlsSuffix || "",
         note: editFormData.note || selectedTariff.note || "",
         specificRateUnit: editFormData.specificRateUnit || selectedTariff.specificRateUnit || "",
@@ -547,8 +536,9 @@ export default function EditTariffTab() {
       
       console.log("🗑️ Deleting tariff:", tariff.tariffId)
       
+      const API_BASE_ROUTE = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080/api"
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/tariffs/${tariff.tariffId}`,
+        `${API_BASE_ROUTE}/admin/tariffs/${tariff.tariffId}`,
         {
           method: 'DELETE',
           headers,
@@ -985,9 +975,9 @@ export default function EditTariffTab() {
                 {/* OTHER DUTY FORM */}
                 {currentDutyType === 'OTHER' && (
                   <OtherDutyForm 
-                    rawText={(selectedTariff as any)?.rawText}
-                    isComputable={(selectedTariff as any)?.isComputable}
-                    currentValue={(selectedTariff as any)?.amount}
+                    rawText={(selectedTariff as TariffData & { rawText?: string })?.rawText}
+                    isComputable={(selectedTariff as TariffData & { isComputable?: boolean })?.isComputable}
+                    currentValue={(selectedTariff as TariffData & { amount?: number })?.amount}
                   />
                 )}
               </div>

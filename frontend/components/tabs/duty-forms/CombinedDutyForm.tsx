@@ -25,7 +25,6 @@ export default function CombinedDutyForm({
   combinedMode,
   currentRate1,
   currentRate2,
-  currentUnit,
   onRate1Change,
   onRate2Change,
   onUnitChange,
