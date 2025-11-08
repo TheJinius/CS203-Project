@@ -1,14 +1,30 @@
 "use client"
 
-import { useState } from "react"
-import { X, Calculator, TrendingUp, FolderUp } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, Calculator, TrendingUp, FolderUp, GitCompare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import CalculateTab from "./tabs/CalculateTab"
 import ResultsTab from "./tabs/ResultsTab"
 import ManageRAGChatbotDocumentsTab from "./tabs/ManageRAGChatbotDocumentsTab"
 import { useAuth } from "../contexts/AuthContext"
 import { useTheme } from "../contexts/ThemeContext"
+
+export interface CalculationHistory {
+  id: string
+  timestamp: Date
+  sourceCountry: string
+  destinationCountry: string
+  productCode: string
+  productDescription: string
+  tariffAmount: number
+  currency: string
+  tariffId: number
+  dutyType?: string
+  rate?: number
+  year: string
+}
 
 interface SidebarProps {
   isOpen: boolean
@@ -33,18 +49,42 @@ export default function Sidebar({
 }: SidebarProps) {
   const { isAdmin } = useAuth();
   const { theme } = useTheme();
+  const router = useRouter();
 
   const [currency, setCurrency] = useState<string>("USD")
+  const [calculationHistory, setCalculationHistory] = useState<CalculationHistory[]>([])
+
+  // Load calculation history from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('calculationHistory')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setCalculationHistory(parsed)
+      } catch (e) {
+        console.error('Failed to load calculation history', e)
+      }
+    }
+  }, [])
+
+  // Save calculation history to localStorage whenever it changes
+  useEffect(() => {
+    if (calculationHistory.length > 0) {
+      localStorage.setItem('calculationHistory', JSON.stringify(calculationHistory))
+    }
+  }, [calculationHistory])
+
+  const handleSaveCalculation = (calculation: CalculationHistory) => {
+    setCalculationHistory(prev => [calculation, ...prev])
+  }
 
   // Build sidebar items dynamically based on user role
   const sidebarItems = [
     // Admin-only: Manage Chatbot Documents tab
     ...(isAdmin() ? [{ id: "manage-docs", label: "Manage Chatbot Documents", icon: FolderUp }] : []),
     { id: "calculate", label: "Calculate Tariff", icon: Calculator },
-    // { id: "products", label: "Products", icon: Package },
-    // { id: "countries", label: "Countries", icon: MapPin },
-    // { id: "tariffs", label: "Tariffs", icon: FileText },
     { id: "results", label: "Results", icon: TrendingUp },
+    { id: "compare", label: "Compare Tariffs", icon: GitCompare },
   ]
 
   if (!isOpen) return null
@@ -94,7 +134,13 @@ export default function Sidebar({
                     ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
                     : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
                 }`}
-                onClick={() => onTabChange(item.id)}
+                onClick={() => {
+                  if (item.id === "compare") {
+                    router.push('/compare')
+                  } else {
+                    onTabChange(item.id)
+                  }
+                }}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
                 <span className={`truncate ${width < 350 ? 'text-xs' : 'text-sm'}`}>
@@ -124,6 +170,7 @@ export default function Sidebar({
                 onRouteCalculated={onRouteCalculated}
                 currency={currency}
                 onCurrencyChange={setCurrency}
+                onSaveCalculation={handleSaveCalculation}
               />
             </div>
           )}
@@ -149,7 +196,11 @@ export default function Sidebar({
           
           {activeTab === "results" && (
             <div className="p-4">
-              <ResultsTab calculationResult={calculationResult} />
+              <ResultsTab 
+                calculationResult={calculationResult} 
+                calculationHistory={calculationHistory}
+                currency={currency}
+              />
             </div>
           )}
         </div>

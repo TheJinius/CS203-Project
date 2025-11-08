@@ -41,6 +41,7 @@ export default withAuth(
 export const config = {
   matcher: [
     '/',                // Protect base route - MUST be authenticated
+    '/compare',         // Protect compare route
     '/dashboard/:path*',
     '/admin/:path*',
     '/profile/:path*',

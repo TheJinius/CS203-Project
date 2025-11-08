@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Search, Calculator, Loader2, ClipboardCheck } from "lucide-react"
 import { searchTariffs, calculateTariff, getExchangeRate, getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
 
-import { Tariff, CalculationDetails, ComplianceTask } from './types'
+import { Tariff, CalculationDetails, ComplianceTask, COUNTRY_NAMES } from './types'
 import { useProductSearch } from './hooks/useProductSearch'
 import { useTariffHelpers } from './hooks/useTariffHelpers'
 import { fetchComplianceData } from './utils/complianceService'
@@ -19,18 +19,35 @@ import { StatusMessages } from './components/StatusMessages'
 import { CalculationDetailsTab } from './components/CalculationDetailsTab'
 import { ComplianceTab } from './components/ComplianceTab'
 
+export interface CalculationHistory {
+  id: string
+  timestamp: Date
+  sourceCountry: string
+  destinationCountry: string
+  productCode: string
+  productDescription: string
+  tariffAmount: number
+  currency: string
+  tariffId: number
+  dutyType?: string
+  rate?: number
+  year: string
+}
+
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
   onRouteCalculated?: (geojson: any) => void
   currency: string
   onCurrencyChange: (currency: string) => void
+  onSaveCalculation: (calculation: CalculationHistory) => void
 }
 
 export default function CalculateTab({ 
   onCalculationResult, 
   onRouteCalculated, 
   currency, 
-  onCurrencyChange 
+  onCurrencyChange,
+  onSaveCalculation
 }: CalculateTabProps) {
   // Search state
   const [selectedSource, setSelectedSource] = useState<string>("")
@@ -195,6 +212,23 @@ export default function CalculateTab({
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
         onCalculationResult(finalAmount)
         setSuccess(`Tariff: ${currency} ${finalAmount.toFixed(2)}`)
+
+        // Save calculation to history
+        const calculation: CalculationHistory = {
+          id: `calc-${Date.now()}`,
+          timestamp: new Date(),
+          sourceCountry: COUNTRY_NAMES[selectedSource] || selectedSource,
+          destinationCountry: COUNTRY_NAMES[selectedDestination] || selectedDestination,
+          productCode: selectedProduct,
+          productDescription: data.productDescription || 'N/A',
+          tariffAmount: finalAmount,
+          currency: currency,
+          tariffId: parseInt(selectedTariff),
+          dutyType: data.dutyType,
+          rate: data.rate,
+          year: selectedYear
+        }
+        onSaveCalculation(calculation)
 
         if (data.productDescription && selectedDestination) {
           await fetchComplianceData(
