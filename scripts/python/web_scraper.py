@@ -874,11 +874,17 @@ if __name__ == "__main__":
     # Configure your parameters
     download_directory = "~/Downloads"
     
-
+    # Your login credentials from environment variables
+    username = os.getenv('WITS_USERNAME')
+    password = os.getenv('WITS_PASSWORD')
     
-    # Your login credentials
-    username = "alisterchongyongxi@gmail.com"
-    password = "LOLaugh!123"
+    # Check if credentials are provided
+    if not username or not password:
+        print("Error: WITS_USERNAME and WITS_PASSWORD environment variables must be set")
+        print("Please set them using:")
+        print("export WITS_USERNAME='your_username'")
+        print("export WITS_PASSWORD='your_password'")
+        exit(1)
     
     # Query parameters (you'll need to inspect the page for actual values)
     query_params = {
