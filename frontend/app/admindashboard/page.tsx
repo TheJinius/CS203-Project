@@ -65,7 +65,7 @@ export default function DashboardPage() {
                     Go to Admin Panel
                   </Button>
                   <Button className="w-full" variant="outline" onClick={() => window.location.href = '/edit'}>
-                    Edit Tariffs
+                    Tariff Management
                   </Button>
                 </div>
               </Card>

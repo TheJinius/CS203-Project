@@ -2,7 +2,7 @@
 
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { useAuth } from '../../contexts/AuthContext';
-import EditTariffTab from '../../components/tabs/EditTariffTab';
+import TariffManagementTab from '../../components/tabs/TariffManagementTab';
 import TopBar from '../../components/TopBar';
 import { Button } from '../../components/ui/button';
 import { ArrowLeft, Home } from 'lucide-react';
@@ -54,14 +54,14 @@ export default function EditTariffPage() {
               </Button>
             </div>
             
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Edit Tariffs</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Tariff Management</h1>
             <p className="text-slate-600 dark:text-slate-400 mt-2">
-              Search and modify existing tariff entries
+              Search, edit, add, and manage all tariff entries (Admin Only)
             </p>
           </div>
 
           <div className="max-w-7xl">
-            <EditTariffTab />
+            <TariffManagementTab />
           </div>
         </div>
       </div>
