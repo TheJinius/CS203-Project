@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ubs.tariffapp.exceptions.TariffNotFoundException;
 import com.ubs.tariffapp.models.ExchangeRates;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.duty.AdValoremDuty;
@@ -42,54 +43,98 @@ public class DutyController {
     // NEW ENDPOINT 1: Search for available tariffs
     @PostMapping("/search")
     public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
-        // Use real DutyService method instead of fake data
-        List<TariffSchedule> tariffs = dutyService.searchAvailableTariffs(
-            request.getReporterCode(),
-            request.getPartnerCode(),
-            request.getProductCode(),
-            request.getYear()
-        );
+        List<TariffSchedule> tariffs = null;
+        boolean usedFallback = false;
+        String effectivePartnerCode = request.getPartnerCode();
+        
+        // First try with the requested partner country
+        try {
+            tariffs = dutyService.searchAvailableTariffs(
+                request.getReporterCode(),
+                request.getPartnerCode(),
+                request.getProductCode(),
+                request.getYear()
+            );
+        } catch (TariffNotFoundException e) {
+            // If no results found and partner is not already "000" (World), try with World
+            if (!"000".equals(request.getPartnerCode())) {
+                System.out.println("No tariffs found for partner " + request.getPartnerCode() + 
+                                 ", falling back to World (000)");
+                
+                try {
+                    tariffs = dutyService.searchAvailableTariffs(
+                        request.getReporterCode(),
+                        "000",  // World
+                        request.getProductCode(),
+                        request.getYear()
+                    );
+                    
+                    if (tariffs != null && !tariffs.isEmpty()) {
+                        usedFallback = true;
+                        effectivePartnerCode = "000";
+                    }
+                } catch (TariffNotFoundException e2) {
+                    // Even World tariffs not found - return empty result
+                    System.out.println("No tariffs found even for World (000)");
+                    tariffs = new ArrayList<>();
+                }
+            } else {
+                // Partner was already "000" and no results found
+                System.out.println("No tariffs found for World (000)");
+                tariffs = new ArrayList<>();
+            }
+        }
+        
+        System.out.println("Tariffs found: " + (tariffs != null ? tariffs.size() : 0));
         
         // Convert TariffSchedule entities to response format
-        List<Map<String, Object>> tariffList = tariffs.stream()
-                .map(ts -> {
-                    Map<String, Object> tariffMap = new HashMap<>();
-                    tariffMap.put("tariffId", ts.getTariffId());
-                    tariffMap.put("description", buildTariffDescription(ts));
-                    tariffMap.put("dutyType", ts.getDutyType() != null ? ts.getDutyType().getDutyTypeDescription() : "Unknown");
-                    tariffMap.put("tlsSuffix", ts.getTlsSuffix() != null ? ts.getTlsSuffix() : "");
-                    tariffMap.put("year", ts.getTariffYear());
-                    
-                    // Add additional useful information
-                    if (ts.getProduct() != null) {
-                        tariffMap.put("productCode", ts.getProduct().getTlCode());
-                        tariffMap.put("productDescription", ts.getProduct().getDescription());
-                    }
-                    
-                    // Add duty class name and unit information
-                    if (ts.getDuty() != null) {
-                        Duty duty = ts.getDuty();
-                        // Add the Java class name (e.g., "AdValoremDuty", "SpecificDuty", "CombinedDuty")
-                        tariffMap.put("dutyClass", duty.getClass().getSimpleName());
+        List<Map<String, Object>> tariffList = new ArrayList<>();
+        if (tariffs != null) {
+            tariffList = tariffs.stream()
+                    .map(ts -> {
+                        Map<String, Object> tariffMap = new HashMap<>();
+                        tariffMap.put("tariffId", ts.getTariffId());
+                        tariffMap.put("description", buildTariffDescription(ts));
+                        tariffMap.put("dutyType", ts.getDutyType() != null ? ts.getDutyType().getDutyTypeDescription() : "Unknown");
+                        tariffMap.put("tlsSuffix", ts.getTlsSuffix() != null ? ts.getTlsSuffix() : "");
+                        tariffMap.put("year", ts.getTariffYear());
                         
-                        if (duty instanceof SpecificDuty) {
-                            SpecificDuty specificDuty = (SpecificDuty) duty;
-                            tariffMap.put("unit", specificDuty.getUnit());
-                        } else if (duty instanceof CombinedDuty) {
-                            CombinedDuty combinedDuty = (CombinedDuty) duty;
-                            tariffMap.put("unit", combinedDuty.getUnit());
+                        // Add additional useful information
+                        if (ts.getProduct() != null) {
+                            tariffMap.put("productCode", ts.getProduct().getTlCode());
+                            tariffMap.put("productDescription", ts.getProduct().getDescription());
                         }
-                    }
-                    
-                    return tariffMap;
-                })
-                .collect(Collectors.toList());
+                        
+                        // Add duty class name and unit information
+                        if (ts.getDuty() != null) {
+                            Duty duty = ts.getDuty();
+                            tariffMap.put("dutyClass", duty.getClass().getSimpleName());
+                            
+                            if (duty instanceof SpecificDuty) {
+                                SpecificDuty specificDuty = (SpecificDuty) duty;
+                                tariffMap.put("unit", specificDuty.getUnit());
+                            } else if (duty instanceof CombinedDuty) {
+                                CombinedDuty combinedDuty = (CombinedDuty) duty;
+                                tariffMap.put("unit", combinedDuty.getUnit());
+                            }
+                        }
+                        
+                        return tariffMap;
+                    })
+                    .collect(Collectors.toList());
+        }
         
         Map<String, Object> response = new HashMap<>();
         response.put("tariffs", tariffList);
-        response.put("count", tariffs.size());
+        response.put("count", tariffList.size());
         response.put("year", request.getYear());
         response.put("status", "success");
+        response.put("usedFallback", usedFallback);
+        response.put("effectivePartnerCode", effectivePartnerCode);
+        
+        if (usedFallback) {
+            response.put("message", "No tariffs found for specified partner. Showing World (000) tariffs.");
+        }
         
         return ResponseEntity.ok(response);
     }
