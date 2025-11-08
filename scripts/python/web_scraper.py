@@ -15,6 +15,8 @@ import zipfile
 import shutil
 import subprocess
 import signal
+import sys
+import argparse
 
 class QuietService(Service):
     """Custom service class that suppresses permission errors during cleanup"""
@@ -869,10 +871,15 @@ class WITSTariffScraper:
         
         print("Cleanup process completed")
 
-# Usage example
-if __name__ == "__main__":
-    # Configure your parameters
-    download_directory = "~/Downloads"
+def main():
+    """Main function that can be called from Java service with command line arguments"""
+    parser = argparse.ArgumentParser(description='WITS Tariff Data Scraper')
+    parser.add_argument('country_code', help='ISO country code (e.g., USA, CHN, SGP)')
+    parser.add_argument('year', help='Year to scrape data for')
+    parser.add_argument('--download-dir', default=None, help='Download directory path')
+    parser.add_argument('--headless', action='store_true', default=True, help='Run in headless mode')
+    
+    args = parser.parse_args()
     
     # Your login credentials from environment variables
     username = os.getenv('WITS_USERNAME')
@@ -880,37 +887,107 @@ if __name__ == "__main__":
     
     # Check if credentials are provided
     if not username or not password:
-        print("Error: WITS_USERNAME and WITS_PASSWORD environment variables must be set")
-        print("Please set them using:")
-        print("export WITS_USERNAME='your_username'")
-        print("export WITS_PASSWORD='your_password'")
-        exit(1)
+        print("ERROR: WITS_USERNAME and WITS_PASSWORD environment variables must be set")
+        sys.exit(1)
     
-    # Query parameters (you'll need to inspect the page for actual values)
+    # Configure download directory
+    download_directory = args.download_dir or os.path.dirname(os.path.abspath(__file__))
+    
+    # Map country code to market name (expand this mapping as needed)
+    country_mapping = {
+        'USA': 'United States',
+        'CHN': 'China',
+        'SGP': 'Singapore', 
+        'JPN': 'Japan',
+        'GBR': 'United Kingdom',
+        'DEU': 'Germany',
+        'FRA': 'France',
+        'IND': 'India',
+        'BRA': 'Brazil',
+        'CAN': 'Canada'
+    }
+    
+    market_name = country_mapping.get(args.country_code, args.country_code)
+    
+    # Query parameters based on command line arguments
     query_params = {
         'datasource': 'WTO-IDB',
-        'market': 'United States',
-        'year': '2023',
+        'market': market_name,
+        'year': args.year,
         'dutycode': 'All Duty Codes',
-        'nomenclature': 'HS 2017',  # World
+        'nomenclature': 'HS 2017',
         'tier': 'Sub-Heading (all 6-digit HS codes)',
         'product': 'All Products'
     }
     
-    # Data columns you want (inspect page for actual column IDs)
+    # Data columns to include
     data_columns = ['SimpleAverage', 'WeightedAverage', 'StandardDeviation']
     
-    # Run the scraper 5 times as a test
-    success_count = 0
-    for i in range(5):
-        print(f"Starting scrape iteration {i + 1}")
-        scraper = WITSTariffScraper()
+    # Create scraper and run
+    scraper = WITSTariffScraper(download_directory=download_directory, headless=args.headless)
+    
+    try:
         success = scraper.scrape_tariff_data(username, password, query_params, data_columns)
+        
         if success:
-            print(f"Scrape iteration {i + 1} completed successfully")
-            success_count += 1
+            # Find the downloaded CSV file and print its name for Java service
+            csv_files = glob.glob(os.path.join(download_directory, "*.csv"))
+            if csv_files:
+                csv_file = os.path.basename(csv_files[0])  # Get just the filename
+                print(f"SUCCESS: {csv_file}")
+                sys.exit(0)
+            else:
+                print("ERROR: No CSV file found after successful scraping")
+                sys.exit(1)
         else:
-            print(f"Scrape iteration {i + 1} failed")
-        time.sleep(5)  # Wait between iterations
+            print("ERROR: Scraping failed")
+            sys.exit(1)
+            
+    except Exception as e:
+        print(f"ERROR: {e}")
+        sys.exit(1)
 
-    print(f"Total successful scrapes: {success_count} out of 5")
+# Usage example for standalone testing or service integration
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        # Called with command line arguments (from Java service)
+        main()
+    else:
+        # Standalone testing mode
+        username = os.getenv('WITS_USERNAME')
+        password = os.getenv('WITS_PASSWORD')
+        
+        # Check if credentials are provided
+        if not username or not password:
+            print("Error: WITS_USERNAME and WITS_PASSWORD environment variables must be set")
+            print("Please set them using:")
+            print("export WITS_USERNAME='your_username'")
+            print("export WITS_PASSWORD='your_password'")
+            exit(1)
+        
+        # ...existing standalone testing code...
+        query_params = {
+            'datasource': 'WTO-IDB',
+            'market': 'United States',
+            'year': '2023',
+            'dutycode': 'All Duty Codes',
+            'nomenclature': 'HS 2017',
+            'tier': 'Sub-Heading (all 6-digit HS codes)',
+            'product': 'All Products'
+        }
+        
+        data_columns = ['SimpleAverage', 'WeightedAverage', 'StandardDeviation']
+        
+        success_count = 0
+        for i in range(5):
+            print(f"Starting scrape iteration {i + 1}")
+            scraper = WITSTariffScraper()
+            success = scraper.scrape_tariff_data(username, password, query_params, data_columns)
+            if success:
+                print(f"Scrape iteration {i + 1} completed successfully")
+                success_count += 1
+            else:
+                print(f"Scrape iteration {i + 1} failed")
+            time.sleep(5)
+
+        print(f"Total successful scrapes: {success_count} out of 5")
