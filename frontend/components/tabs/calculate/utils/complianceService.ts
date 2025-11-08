@@ -14,7 +14,7 @@ export async function fetchComplianceData(
     const countryName = COUNTRY_NAMES[destination] || destination
     const query = `${countryName} ${productDescription}`
     
-    const response = await fetch("http://127.0.0.1:8001/query", {
+    const response = await fetch("https://cs203compliance.duckdns.org/query", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: query }),
