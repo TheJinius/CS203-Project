@@ -157,7 +157,7 @@ export default function ManageRAGChatbotDocumentsTab() {
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Manage RAG Chatbot Documents</CardTitle>
           <CardDescription>
-            Upload PDF documents to enhance the RAG chatbot's knowledge base
+            Upload PDF documents to enhance the RAG chatbot&apos;s knowledge base
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

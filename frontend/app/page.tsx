@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import Sidebar from "@/components/Sidebar"
-import WorldMap from "@/components/WorldMap"
+import WorldMap, { type OptimalRoutesData } from "@/components/WorldMap"
+import type { GeoJSONData } from "@/components/WorldMap"
 import TopBar from "@/components/TopBar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import ConditionalChatbot from "@/components/ConditionalChatbot"
@@ -13,37 +14,39 @@ export default function TariffCalculatorPage() {
   const [activeTab, setActiveTab] = useState("calculate")
   const [calculationResult, setCalculationResult] = useState<number | null>(null)
   const [isResizing, setIsResizing] = useState(false)
-  const [routeGeojson, setRouteGeojson] = useState<any>(null)
-  const [optimalRoutesData, setOptimalRoutesData] = useState<any>(null)
+  const [routeGeojson, setRouteGeojson] = useState<GeoJSONData | null>(null)
+  const [optimalRoutesData, setOptimalRoutesData] = useState<OptimalRoutesData | null>(null)
   
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isResizingRef = useRef(false)
   const lastResizeTime = useRef(0)
 
-  const handleRouteCalculated = useCallback((data: any) => {
+  const handleRouteCalculated = useCallback((data: Record<string, unknown>) => {
     console.log("🗺️ Routes calculated, updating map with data:", data)
     
     // Check if this is the new optimal routes format (GeoJSON with features array)
     if (data.features && data.metadata) {
       console.log("📊 Transforming optimal routes format")
       // Transform GeoJSON features into our component format
-      const transformed: any = {}
+      const transformed = {} as Record<string, unknown>
       
-      data.features.forEach((feature: any) => {
-        const optType = feature.properties.optimization_type
+      (data.features as Array<Record<string, unknown>>).forEach((feature: Record<string, unknown>) => {
+        const props = feature.properties as Record<string, unknown>
+        const geom = feature.geometry as Record<string, unknown>
+        const optType = props?.optimization_type as string | undefined
         console.log(`Processing feature with optimization_type: ${optType}`, feature)
         if (optType) {
           transformed[optType] = {
             // Preserve the original geometry (could be LineString or MultiLineString)
-            coordinates: feature.geometry.coordinates,
+            coordinates: geom.coordinates,
             geometry: feature.geometry, // Keep full geometry info
             metrics: {
-              distance_km: feature.properties.distance_km,
-              cost_usd: feature.properties.cost_usd,
-              time_hours: feature.properties.time_hours,
-              co2_kg: feature.properties.co2_kg,
-              risk_score: feature.properties.risk_score,
-              transport_type: feature.properties.transport_type
+              distance_km: props.distance_km,
+              cost_usd: props.cost_usd,
+              time_hours: props.time_hours,
+              co2_kg: props.co2_kg,
+              risk_score: props.risk_score,
+              transport_type: props.transport_type
             },
             optimization: optType.replace('_optimized', '')
           }
@@ -51,12 +54,12 @@ export default function TariffCalculatorPage() {
       })
       
       console.log("📊 Transformed data:", transformed)
-      setOptimalRoutesData(transformed)
+      setOptimalRoutesData(transformed as unknown as OptimalRoutesData)
       setRouteGeojson(null) // Clear legacy format
     } else if (data.features) {
       // Legacy single route format
       console.log("🚢 Using legacy single route format")
-      setRouteGeojson(data)
+      setRouteGeojson(data as unknown as GeoJSONData)
       setOptimalRoutesData(null)
     }
   }, [])

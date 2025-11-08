@@ -8,7 +8,7 @@ interface OtherDutyFormProps {
   currentValue?: string | number
 }
 
-export default function OtherDutyForm({ rawText, isComputable, currentValue }: OtherDutyFormProps) {
+export default function OtherDutyForm({ rawText, isComputable }: OtherDutyFormProps) {
   // Analyze raw text to detect potential duty type
   const detectPotentialType = (text: string | undefined): string | null => {
     if (!text) return null
@@ -108,7 +108,7 @@ export default function OtherDutyForm({ rawText, isComputable, currentValue }: O
                 Special Duty Type
               </p>
               <p className="text-xs text-yellow-800 dark:text-yellow-200 mb-3">
-                This tariff has a special duty type that doesn't fall into standard categories (Ad Valorem, Specific, or Combined).
+                This tariff has a special duty type that doesn&apos;t fall into standard categories (Ad Valorem, Specific, or Combined).
               </p>
             </div>
           </div>

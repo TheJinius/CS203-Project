@@ -16,7 +16,6 @@ export default function SpecificDutyForm({
   specificRate,
   specificRateUnit,
   currentRate,
-  currentUnit,
   onRateChange,
   onUnitChange
 }: SpecificDutyFormProps) {

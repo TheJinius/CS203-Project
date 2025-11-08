@@ -3,6 +3,49 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 
+// GeoJSON types
+interface GeoJSONGeometry {
+  type: string
+  coordinates: number[][] | number[][][]
+}
+
+interface GeoJSONFeature {
+  type: string
+  geometry: GeoJSONGeometry
+  properties?: Record<string, unknown>
+}
+
+export interface GeoJSONData {
+  type: string
+  features: GeoJSONFeature[]
+}
+
+// Mapbox type declarations
+declare global {
+  interface Window {
+    mapboxgl?: {
+      accessToken: string
+      Map: new (options: Record<string, unknown>) => {
+        loaded: () => boolean
+        on: (event: string, callback: () => void) => void
+        getLayer: (id: string) => unknown
+        removeLayer: (id: string) => void
+        getSource: (id: string) => unknown
+        removeSource: (id: string) => void
+        addSource: (id: string, source: Record<string, unknown>) => void
+        addLayer: (layer: Record<string, unknown>) => void
+        addControl: (control: unknown, position?: string) => void
+        fitBounds: (bounds: unknown, options?: Record<string, unknown>) => void
+      }
+      LngLatBounds: new () => {
+        extend: (coord: [number, number]) => void
+        isEmpty: () => boolean
+      }
+      NavigationControl: new () => unknown
+    }
+  }
+}
+
 interface RouteMetrics {
   distance_km: number
   cost_usd: number
@@ -10,19 +53,20 @@ interface RouteMetrics {
   co2_kg: number
   risk_score: number
   transport_type: string
+  [key: string]: unknown
 }
 
 interface OptimalRoute {
   coordinates: number[][]
   geometry?: {
     type: string
-    coordinates: any
+    coordinates: number[][] | number[][][]
   }
   metrics: RouteMetrics
   optimization: string
 }
 
-interface OptimalRoutesData {
+export interface OptimalRoutesData {
   cost_optimized?: OptimalRoute
   time_optimized?: OptimalRoute
   risk_optimized?: OptimalRoute
@@ -30,8 +74,8 @@ interface OptimalRoutesData {
 }
 
 interface WorldMapProps {
-  geojsonData?: any
-  optimalRoutesData?: OptimalRoutesData
+  geojsonData?: GeoJSONData | null
+  optimalRoutesData?: OptimalRoutesData | null
 }
 
 // Route configuration with colors and labels
@@ -55,13 +99,13 @@ const ROUTE_CONFIG = {
 }
 
 // More robust antimeridian fix using proper geodesic logic
-function fixAntimeridianWrapping(geojsonData: any) {
+function fixAntimeridianWrapping(geojsonData: GeoJSONData | undefined): GeoJSONData | undefined {
   if (!geojsonData?.features?.[0]?.geometry?.coordinates) {
     return geojsonData
   }
 
   const feature = geojsonData.features[0]
-  const coords = feature.geometry.coordinates
+  const coords = feature.geometry.coordinates as number[][]
   
   // Check if it's already a MultiLineString
   if (feature.geometry.type === 'MultiLineString') {
@@ -72,14 +116,14 @@ function fixAntimeridianWrapping(geojsonData: any) {
   let currentSegment: number[][] = []
   
   for (let i = 0; i < coords.length; i++) {
-    const currentPoint = coords[i]
+    const currentPoint = coords[i] as number[]
     
     if (i === 0) {
       currentSegment.push(currentPoint)
       continue
     }
     
-    const prevPoint = coords[i - 1]
+    const prevPoint = coords[i - 1] as number[]
     const prevLon = prevPoint[0]
     const currLon = currentPoint[0]
     
@@ -131,6 +175,7 @@ function fixAntimeridianWrapping(geojsonData: any) {
 
 export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const map = useRef<any>(null)
   
   // Track which routes are visible
@@ -152,7 +197,7 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
         document.head.appendChild(link)
       }
 
-      if (!(window as any).mapboxgl) {
+      if (!window.mapboxgl) {
         const script = document.createElement("script")
         script.src = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"
         script.onload = initializeMap
@@ -163,11 +208,11 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
     }
 
     const initializeMap = () => {
-      if (!(window as any).mapboxgl || !mapContainer.current) return
+      if (!window.mapboxgl || !mapContainer.current) return
 
-      ;(window as any).mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ""
+      window.mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ""
 
-      map.current = new (window as any).mapboxgl.Map({
+      map.current = new window.mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/light-v11",
         center: [0, 20],
@@ -175,7 +220,9 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
         renderWorldCopies: false, // Prevent rendering multiple world copies
       })
 
-      map.current.addControl(new (window as any).mapboxgl.NavigationControl(), "top-left")
+      if (window.mapboxgl) {
+        map.current.addControl(new window.mapboxgl.NavigationControl(), "top-left")
+      }
 
       map.current.on("load", () => {
         console.log("Map loaded successfully")
@@ -235,7 +282,9 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
       })
 
       // Calculate bounds for all routes
-      const bounds = new (window as any).mapboxgl.LngLatBounds()
+      if (!window.mapboxgl) return
+      
+      const bounds = new window.mapboxgl.LngLatBounds()
       let hasRoutes = false
 
       // Add each optimal route
@@ -278,6 +327,12 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
           
           console.log(`WorldMap: Using ${geometry.type} for ${routeKey}`, fixedGeojson)
           
+          // Skip if geojson is invalid
+          if (!fixedGeojson) {
+            console.log(`WorldMap: Invalid geojson for ${routeKey}`)
+            return
+          }
+          
           // Add source
           map.current.addSource(`source-${routeKey}`, {
             type: "geojson",
@@ -307,10 +362,10 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
           // Extend bounds
           const feature = fixedGeojson.features[0]
           if (feature.geometry.type === 'LineString') {
-            feature.geometry.coordinates.forEach((coord: any) => bounds.extend(coord))
+            (feature.geometry.coordinates as number[][]).forEach((coord) => bounds.extend(coord as [number, number]))
           } else if (feature.geometry.type === 'MultiLineString') {
-            feature.geometry.coordinates.forEach((segment: any) => {
-              segment.forEach((coord: any) => bounds.extend(coord))
+            (feature.geometry.coordinates as number[][][]).forEach((segment) => {
+              segment.forEach((coord) => bounds.extend(coord as [number, number]))
             })
           }
         } else {
@@ -350,6 +405,7 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
 
       // Fix antimeridian wrapping before adding to map
       const fixedGeojson = fixAntimeridianWrapping(geojsonData)
+      if (!fixedGeojson) return
       console.log("Fixed GeoJSON:", fixedGeojson.features[0].geometry.type)
 
       // Add new source and layer with lineMetrics enabled for better rendering
@@ -376,14 +432,16 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
 
       // Fit map to route bounds - handle both LineString and MultiLineString
       if (fixedGeojson.features && fixedGeojson.features.length > 0) {
-        const bounds = new (window as any).mapboxgl.LngLatBounds()
+        if (!window.mapboxgl) return
+        
+        const bounds = new window.mapboxgl.LngLatBounds()
         const feature = fixedGeojson.features[0]
         
         if (feature.geometry.type === 'LineString') {
-          feature.geometry.coordinates.forEach((coord: any) => bounds.extend(coord))
+          (feature.geometry.coordinates as number[][]).forEach((coord) => bounds.extend(coord as [number, number]))
         } else if (feature.geometry.type === 'MultiLineString') {
-          feature.geometry.coordinates.forEach((segment: any) => {
-            segment.forEach((coord: any) => bounds.extend(coord))
+          (feature.geometry.coordinates as number[][][]).forEach((segment) => {
+            segment.forEach((coord) => bounds.extend(coord as [number, number]))
           })
         }
         
@@ -476,12 +534,17 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <span className="text-sm font-medium">Shipping Route</span>
               </div>
-              {geojsonData.features?.[0]?.properties && (
-                <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                  <div>Distance: {geojsonData.features[0].properties.total_distance_km?.toFixed(0)} km</div>
-                  <div>Waypoints: {geojsonData.features[0].properties.route_node_ids?.length || 0}</div>
-                </div>
-              )}
+              {geojsonData.features?.[0]?.properties && (() => {
+                const props = geojsonData.features[0].properties as Record<string, unknown>
+                const distance = typeof props.total_distance_km === 'number' ? props.total_distance_km.toFixed(0) : 0
+                const waypoints = Array.isArray(props.route_node_ids) ? props.route_node_ids.length : 0
+                return (
+                  <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+                    <div>Distance: {distance} km</div>
+                    <div>Waypoints: {waypoints}</div>
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         </div>

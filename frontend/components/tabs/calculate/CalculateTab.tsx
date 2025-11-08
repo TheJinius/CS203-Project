@@ -36,7 +36,7 @@ export interface CalculationHistory {
 
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
-  onRouteCalculated?: (geojson: any) => void
+  onRouteCalculated?: (geojson: Record<string, unknown>) => void
   currency: string
   onCurrencyChange: (currency: string) => void
   onSaveCalculation: (calculation: CalculationHistory) => void
