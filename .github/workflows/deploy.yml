@@ -1,0 +1,79 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H cs203compliance.duckdns.org >> ~/.ssh/known_hosts
+        
+    - name: Deploy to EC2
+      run: |
+        # Create backup directory with timestamp
+        ssh -i ~/.ssh/id_rsa ec2-user@cs203compliance.duckdns.org "mkdir -p /home/ec2-user/backend-backups"
+        ssh -i ~/.ssh/id_rsa ec2-user@cs203compliance.duckdns.org "cp -r /home/ec2-user/backend /home/ec2-user/backend-backups/backend-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+        
+        # Upload new code (from Compliance_checklist folder)
+        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/src ec2-user@cs203compliance.duckdns.org:/tmp/deploy-src
+        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/data ec2-user@cs203compliance.duckdns.org:/tmp/deploy-data
+        scp -i ~/.ssh/id_rsa ./Compliance_checklist/requirements.txt ec2-user@cs203compliance.duckdns.org:/tmp/deploy-requirements.txt
+        
+        # Deploy to backend directory
+        ssh -i ~/.ssh/id_rsa ec2-user@cs203compliance.duckdns.org << 'EOF'
+          # Create backend directory if it doesn't exist
+          mkdir -p /home/ec2-user/backend
+          
+          # Copy new files
+          cp -r /tmp/deploy-src /home/ec2-user/backend/
+          cp -r /tmp/deploy-data /home/ec2-user/backend/
+          cp /tmp/deploy-requirements.txt /home/ec2-user/backend/requirements.txt
+          
+          # Clean up temp files
+          rm -rf /tmp/deploy-src /tmp/deploy-data /tmp/deploy-requirements.txt
+          
+          # Install/update dependencies
+          cd /home/ec2-user/backend
+          pip3 install --user -r requirements.txt
+          
+          # Restart the FastAPI service
+          sudo systemctl restart fastapi-backend
+          
+          # Wait for service to start
+          sleep 5
+          
+          # Check service status
+          sudo systemctl status fastapi-backend --no-pager
+        EOF
+        
+    - name: Verify Deployment
+      run: |
+        # Test the API endpoint
+        sleep 3
+        response=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://cs203compliance.duckdns.org/query \
+          -H "Content-Type: application/json" \
+          -d '{"question": "test"}')
+        
+        if [ "$response" -eq 200 ]; then
+          echo "✅ Deployment successful! API is responding."
+        else
+          echo "❌ Deployment may have failed. API returned status code: $response"
+          exit 1
+        fi
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -f ~/.ssh/id_rsa
