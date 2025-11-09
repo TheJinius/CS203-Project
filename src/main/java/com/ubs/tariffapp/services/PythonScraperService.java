@@ -15,10 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.ubs.tariffapp.utils.HSDataCleaner;
 
 @Service
+@ConditionalOnProperty(value = "app.python.script.path", matchIfMissing = false)
 public class PythonScraperService {
     
     private static final Logger logger = LoggerFactory.getLogger(PythonScraperService.class);
@@ -40,11 +42,14 @@ public class PythonScraperService {
     @Value("${app.wits.api.key:}")
     private String witsApiKey;
 
-    @Autowired
-    private DataLoaderService dataLoaderService;
+    private final DataLoaderService dataLoaderService;
+    private final JdbcTemplate jdbcTemplate;
     
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    // Constructor injection
+    public PythonScraperService(DataLoaderService dataLoaderService, JdbcTemplate jdbcTemplate) {
+        this.dataLoaderService = dataLoaderService;
+        this.jdbcTemplate = jdbcTemplate;
+    }
     
     /**
      * Main method to scrape data for a country and process it through the entire pipeline

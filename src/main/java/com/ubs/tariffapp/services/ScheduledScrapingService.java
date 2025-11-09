@@ -8,14 +8,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Service
+@ConditionalOnProperty(value = "spring.task.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class ScheduledScrapingService {
     
     private static final Logger logger = LoggerFactory.getLogger(ScheduledScrapingService.class);
     
-    @Autowired
-    private PythonScraperService pythonScraperService;
+    private final PythonScraperService pythonScraperService;
+    
+    // Constructor injection instead of field injection
+    public ScheduledScrapingService(PythonScraperService pythonScraperService) {
+        this.pythonScraperService = pythonScraperService;
+    }
     
     // List of countries to scrape automatically (using ISO codes or country identifiers)
     private final List<String> COUNTRIES_TO_SCRAPE = Arrays.asList("USA", "CHN", "SGP", "JPN");

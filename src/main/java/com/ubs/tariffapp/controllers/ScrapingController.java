@@ -3,15 +3,21 @@ package com.ubs.tariffapp.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 import com.ubs.tariffapp.services.ScheduledScrapingService;
 
 @RestController
 @RequestMapping("/api/scraping")
+@ConditionalOnBean(ScheduledScrapingService.class)
 public class ScrapingController {
     
-    @Autowired
-    private ScheduledScrapingService scheduledScrapingService;
+    private final ScheduledScrapingService scheduledScrapingService;
+    
+    // Constructor injection
+    public ScrapingController(ScheduledScrapingService scheduledScrapingService) {
+        this.scheduledScrapingService = scheduledScrapingService;
+    }
     
     /**
      * Trigger manual scraping for all configured countries
@@ -35,7 +41,11 @@ public class ScrapingController {
     @PostMapping("/trigger/{countryCode}")
     public ResponseEntity<String> triggerCountrySpecificScraping(@PathVariable String countryCode) {
         try {
-            // No need to check environment variables since credentials are in properties
+            if (scheduledScrapingService == null) {
+                return ResponseEntity.internalServerError()
+                    .body("Scraping service not available");
+            }
+            
             boolean success = scheduledScrapingService.scrapeSpecificCountry(countryCode);
             if (success) {
                 return ResponseEntity.ok("Scraping completed successfully for " + countryCode);
