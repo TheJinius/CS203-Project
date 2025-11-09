@@ -788,9 +788,29 @@ class WITSTariffScraper:
         # Delete the original zip file
         os.remove(zip_path)
         
-        return csv_filename  # Return just the filename, not the full path
+        return final_csv_path  # Return full path instead of just filename
     
-    def scrape_tariff_data(self, username, password, query_params, data_columns):
+    def rename_csv_file(self, csv_path, country_code, year):
+        """
+        Rename CSV file to format: HS2017(Country_Code)Year(4_digit_year).csv
+        Example: HS2017USA2023.csv
+        """
+        try:
+            # Create new filename
+            new_filename = f"HS2017{country_code}{year}.csv"
+            new_path = os.path.join(os.path.dirname(csv_path), new_filename)
+            
+            # Rename the file
+            os.rename(csv_path, new_path)
+            print(f"Renamed CSV file to: {new_filename}")
+            
+            return new_filename
+            
+        except Exception as e:
+            print(f"Error renaming CSV file: {e}")
+            return os.path.basename(csv_path)  # Return original filename if rename fails
+    
+    def scrape_tariff_data(self, username, password, query_params, data_columns, country_code=None, year=None):
         """Main method to perform complete scraping workflow"""
         try:
             # Login
@@ -827,7 +847,14 @@ class WITSTariffScraper:
             time.sleep(30)  # Adjust this wait time as necessary
             
             # Extract CSV from downloaded zip and move to resources
-            csv_filename = self.get_csv_file_from_zip()
+            csv_path = self.get_csv_file_from_zip()
+            
+            # Rename CSV file if country_code and year are provided
+            if country_code and year:
+                csv_filename = self.rename_csv_file(csv_path, country_code, year)
+            else:
+                csv_filename = os.path.basename(csv_path)
+            
             print(f"Tariff data download completed successfully. File: {csv_filename}")
             return csv_filename  # Return filename instead of True
             
@@ -907,14 +934,35 @@ def main():
     country_mapping = {
         'USA': 'United States',
         'CHN': 'China',
-        'SGP': 'Singapore', 
         'JPN': 'Japan',
-        'GBR': 'United Kingdom',
         'DEU': 'Germany',
-        'FRA': 'France',
         'IND': 'India',
+        'GBR': 'United Kingdom',
+        'FRA': 'France',
+        'ITA': 'Italy',
         'BRA': 'Brazil',
-        'CAN': 'Canada'
+        'CAN': 'Canada',
+        'KOR': 'Korea, Rep.',
+        'RUS': 'Russian Federation',
+        'ESP': 'Spain',
+        'AUS': 'Australia',
+        'MEX': 'Mexico',
+        'IDN': 'Indonesia',
+        'NLD': 'Netherlands',
+        'SAU': 'Saudi Arabia',
+        'TUR': 'Turkey',
+        'CHE': 'Switzerland',
+        # Additional common codes
+        'SGP': 'Singapore',
+        'POL': 'Poland',
+        'BEL': 'Belgium',
+        'SWE': 'Sweden',
+        'ARG': 'Argentina',
+        'NOR': 'Norway',
+        'AUT': 'Austria',
+        'IRE': 'Ireland',
+        'THA': 'Thailand',
+        'PHL': 'Philippines'
     }
     
     market_name = country_mapping.get(args.country_code, args.country_code)
@@ -937,7 +985,14 @@ def main():
     scraper = WITSTariffScraper(download_directory=download_directory, headless=args.headless)
     
     try:
-        csv_filename = scraper.scrape_tariff_data(username, password, query_params, data_columns)
+        csv_filename = scraper.scrape_tariff_data(
+            username, 
+            password, 
+            query_params, 
+            data_columns,
+            country_code=args.country_code,
+            year=args.year
+        )
         
         if csv_filename:
             # Print just the filename for Java service to use
@@ -969,7 +1024,7 @@ if __name__ == "__main__":
             print("export WITS_PASSWORD='your_password'")
             exit(1)
         
-        # ...existing standalone testing code...
+        # Query parameters for standalone testing
         query_params = {
             'datasource': 'WTO-IDB',
             'market': 'United States',
@@ -982,16 +1037,18 @@ if __name__ == "__main__":
         
         data_columns = ['SimpleAverage', 'WeightedAverage', 'StandardDeviation']
         
-        success_count = 0
-        for i in range(5):
-            print(f"Starting scrape iteration {i + 1}")
-            scraper = WITSTariffScraper()
-            success = scraper.scrape_tariff_data(username, password, query_params, data_columns)
-            if success:
-                print(f"Scrape iteration {i + 1} completed successfully")
-                success_count += 1
-            else:
-                print(f"Scrape iteration {i + 1} failed")
-            time.sleep(5)
-
-        print(f"Total successful scrapes: {success_count} out of 5")
+        print("Running standalone test scrape...")
+        scraper = WITSTariffScraper(headless=False)  # Set to False to see browser for debugging
+        csv_filename = scraper.scrape_tariff_data(
+            username, 
+            password, 
+            query_params, 
+            data_columns,
+            country_code='USA',
+            year='2023'
+        )
+        
+        if csv_filename:
+            print(f"Standalone test completed successfully. CSV file: {csv_filename}")
+        else:
+            print("Standalone test failed")
