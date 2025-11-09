@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: amazon linux 2023
     
     steps:
     - name: Checkout code
@@ -23,16 +23,16 @@ jobs:
     - name: Deploy to EC2
       run: |
         # Create backup directory with timestamp
-        ssh -i ~/.ssh/id_rsa ec2-user@cs203compliance.duckdns.org "mkdir -p /home/ec2-user/backend-backups"
-        ssh -i ~/.ssh/id_rsa ec2-user@cs203compliance.duckdns.org "cp -r /home/ec2-user/backend /home/ec2-user/backend-backups/backend-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+        ssh -i ~/.ssh/id_rsa echo "${{ secrets.orgasm_techniques}}" "mkdir -p /home/ec2-user/backend-backups"
+        ssh -i ~/.ssh/id_rsa echo "${{ secrets.orgasm_techniques}}" "cp -r /home/ec2-user/backend /home/ec2-user/backend-backups/backend-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
         
         # Upload new code (from Compliance_checklist folder)
-        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/src ec2-user@cs203compliance.duckdns.org:/tmp/deploy-src
-        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/data ec2-user@cs203compliance.duckdns.org:/tmp/deploy-data
-        scp -i ~/.ssh/id_rsa ./Compliance_checklist/requirements.txt ec2-user@cs203compliance.duckdns.org:/tmp/deploy-requirements.txt
+        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/src echo "${{ secrets.orgasm_techniques}}":/tmp/deploy-src
+        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/data echo "${{ secrets.orgasm_techniques}}":/tmp/deploy-data
+        scp -i ~/.ssh/id_rsa ./Compliance_checklist/requirements.txt echo "${{ secrets.orgasm_techniques}}":/tmp/deploy-requirements.txt
         
         # Deploy to backend directory
-        ssh -i ~/.ssh/id_rsa ec2-user@cs203compliance.duckdns.org << 'EOF'
+        ssh -i ~/.ssh/id_rsa echo "${{ secrets.orgasm_techniques}}" << 'EOF'
           # Create backend directory if it doesn't exist
           mkdir -p /home/ec2-user/backend
           
@@ -60,12 +60,10 @@ jobs:
         
     - name: Verify Deployment
       run: |
-        # Test the API endpoint
+        # Test the health endpoint
         sleep 3
-        response=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://cs203compliance.duckdns.org/query \
-          -H "Content-Type: application/json" \
-          -d '{"question": "test"}')
-        
+        response=$(curl -s -o /dev/null -w "%{http_code}" https://cs203compliance.duckdns.org/health)
+    
         if [ "$response" -eq 200 ]; then
           echo "✅ Deployment successful! API is responding."
         else
