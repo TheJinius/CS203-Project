@@ -3,13 +3,13 @@ package com.ubs.tariffapp.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.ubs.tariffapp.services.ScheduledScrapingService;
 
 @RestController
 @RequestMapping("/api/scraping")
-@ConditionalOnBean(ScheduledScrapingService.class)
+@ConditionalOnProperty(value = "app.scraping.enabled", havingValue = "true", matchIfMissing = false)
 public class ScrapingController {
     
     private final ScheduledScrapingService scheduledScrapingService;

@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -58,16 +57,16 @@ public class PythonScraperService {
      */
     public boolean scrapeAndProcessCountryData(String countryCode) {
         try {
-            // Get most recent year for this country from database
-            String mostRecentYear = getMostRecentYearFromDatabase(countryCode);
-            logger.info("Scraping data for country: {}, most recent year: {}", countryCode, mostRecentYear);
+            // Default to 2023 for scraping
+            String targetYear = "2023";
+            logger.info("Scraping data for country: {}, year: {}", countryCode, targetYear);
             
             // Attempt to scrape with retries
             String downloadedFileName = null;
             for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 logger.info("Scraping attempt {} for country {}", attempt, countryCode);
                 
-                downloadedFileName = runWitsDataScraper(countryCode, mostRecentYear);
+                downloadedFileName = runWitsDataScraper(countryCode, targetYear);
                 if (downloadedFileName != null) {
                     logger.info("Successfully scraped data on attempt {}: {}", attempt, downloadedFileName);
                     break;
@@ -84,8 +83,8 @@ public class PythonScraperService {
                 return false;
             }
             
-            // Move file to test_data folder and process through pipeline
-            return moveFileAndProcess(downloadedFileName, countryCode);
+            // Python script already moved file to resources, just process it
+            return processScrapedFile(downloadedFileName, countryCode);
             
         } catch (Exception e) {
             logger.error("Error during scraping process for country {}: {}", countryCode, e.getMessage(), e);
@@ -186,57 +185,31 @@ public class PythonScraperService {
     }
     
     /**
-     * Moves the scraped file to resources folder and processes it through the data pipeline
-     */
-    private boolean moveFileAndProcess(String fileName, String countryCode) {
-        try {
-            // Construct paths
-            Path scriptDir = Paths.get(pythonScriptPath).getParent();
-            Path sourceFile = scriptDir.resolve(fileName);
-            Path targetDir = Paths.get("src/main/resources/data/test_data");
-            Path targetFile = targetDir.resolve(fileName);
-            
-            // Ensure target directory exists
-            Files.createDirectories(targetDir);
-            
-            // Move file
-            if (Files.exists(sourceFile)) {
-                Files.move(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
-                logger.info("Moved file {} to {}", sourceFile, targetFile);
-                
-                // Process the file through cleaning and loading pipeline
-                return processScrapedFile(fileName, countryCode);
-            } else {
-                logger.error("Downloaded file not found: {}", sourceFile);
-                return false;
-            }
-            
-        } catch (Exception e) {
-            logger.error("Error moving and processing file {}: {}", fileName, e.getMessage(), e);
-            return false;
-        }
-    }
-    
-    /**
      * Processes the scraped file through HSDataCleaner and DataLoaderService
+     * File is already in src/main/resources/data/test_data/ from Python script
      */
     private boolean processScrapedFile(String fileName, String countryCode) {
         try {
             logger.info("Processing scraped file: {}", fileName);
             
-            // Since HSDataCleaner.main() processes hardcoded files and creates cleaned files,
-            // we'll run it and then look for the cleaned file it produces
+            // Verify file exists in resources folder
+            Path targetFile = Paths.get("src/main/resources/data/test_data").resolve(fileName);
+            if (!Files.exists(targetFile)) {
+                logger.error("Scraped file not found in resources folder: {}", targetFile);
+                return false;
+            }
+            
+            // Run HSDataCleaner with the actual file name as argument
             try {
-                String[] args = {}; // HSDataCleaner.main doesn't use arguments
+                String[] args = {fileName};
                 HSDataCleaner.main(args);
-                logger.info("HSDataCleaner processing completed");
+                logger.info("HSDataCleaner processing completed for file: {}", fileName);
             } catch (Exception e) {
                 logger.error("Error running HSDataCleaner: {}", e.getMessage(), e);
                 return false;
             }
             
             // The cleaned file name follows the pattern "clean_" + originalFileName
-            // HSDataCleaner creates files with "clean_" prefix in /data/clean_data/
             String cleanedFileName = "clean_" + fileName;
             
             // Load the cleaned data into database
@@ -248,33 +221,6 @@ public class PythonScraperService {
         } catch (Exception e) {
             logger.error("Error processing scraped file {}: {}", fileName, e.getMessage(), e);
             return false;
-        }
-    }
-    
-    /**
-     * Gets the most recent year for tariff data - defaults to 2023
-     */
-    private String getMostRecentYearFromDatabase(String countryCode) {
-        try {
-            // Query to get the most recent year for a specific country
-            String sql = "SELECT MAX(tariff_year) FROM tariff_schedule ts " +
-                        "JOIN country c ON ts.reporter_id = c.country_id " +
-                        "WHERE c.iso_code = ? OR c.country_id = ?";
-            
-            Integer maxYear = jdbcTemplate.queryForObject(sql, Integer.class, countryCode, countryCode);
-            
-            if (maxYear != null) {
-                logger.info("Found most recent year {} for country {}", maxYear, countryCode);
-                return String.valueOf(maxYear);
-            } else {
-                logger.info("No previous data found for country {}, defaulting to 2023", countryCode);
-                return "2023"; // Default to 2023
-            }
-            
-        } catch (Exception e) {
-            logger.warn("Error querying most recent year for country {}: {}. Using default year 2023", 
-                       countryCode, e.getMessage());
-            return "2023"; // Default to 2023 on error
         }
     }
 }

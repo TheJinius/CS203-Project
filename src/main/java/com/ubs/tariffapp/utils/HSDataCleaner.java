@@ -108,7 +108,6 @@ public class HSDataCleaner {
     
     public static void main(String[] args) {
         // Columns used for deduplication key
-        // Key components: Reporter, Partner, Year, HS Code (TL), HS Subheading (TLS), Duty Type, Duty Code
         final int[] KEY_COLS = {0, 2, 4, 5, 6, 7, 8};
 
         // Load country code mappings
@@ -119,17 +118,22 @@ public class HSDataCleaner {
         }
         System.out.println("Loaded " + WITS_TO_ISO_MAP.size() + " country code mappings.");
 
-        String[] inputFileNames = {
-            "HS2017USDYear2023.csv",
-            "HS2017CNYear2023.csv",
-            "HS2017SGYear2023.csv",
-        };
+        // Determine input file name
+        String inputFileName;
+        if (args.length > 0) {
+            // Use command-line argument if provided
+            inputFileName = args[0];
+            System.out.println("Processing file from argument: " + inputFileName);
+        } else {
+            // Fallback to hardcoded file for backward compatibility
+            inputFileName = "HS2017USAYear2023.csv";
+            System.out.println("No file argument provided, using default: " + inputFileName);
+        }
 
         // Read input from resources
-        String inputFileName = "HS2017USAYear2023.csv"; // Original file name
         InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
         if (inputStream == null) {
-            System.err.println("Input CSV file not found in resources folder.");
+            System.err.println("Input CSV file not found in resources folder: " + inputFileName);
             return;
         }
 

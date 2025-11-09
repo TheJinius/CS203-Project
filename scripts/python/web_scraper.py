@@ -42,6 +42,15 @@ class WITSTariffScraper:
             download_directory = os.path.dirname(os.path.abspath(__file__))
         self.download_directory = download_directory
         
+        # Calculate path to Spring Boot resources folder
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Navigate from scripts/python/ to src/main/resources/data/test_data/
+        project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
+        self.target_directory = os.path.join(project_root, 'src', 'main', 'resources', 'data', 'test_data')
+        
+        # Create target directory if it doesn't exist
+        os.makedirs(self.target_directory, exist_ok=True)
+        print(f"Target directory for processed files: {self.target_directory}")
             
         # Convert to absolute path and ensure it exists
         self.download_directory = os.path.abspath(download_directory)
@@ -734,7 +743,7 @@ class WITSTariffScraper:
     def get_csv_file_from_zip(self):
         """
         Extracts a zip file into a folder named after the zip file, finds the CSV inside, 
-        moves it to current directory, and cleans up the extracted folder.
+        moves it to Spring Boot resources directory, and cleans up the extracted folder.
         """
         # Find the zip file in download directory (case-insensitive)
         zip_files = glob.glob(os.path.join(self.download_directory, "*.zip")) + glob.glob(os.path.join(self.download_directory, "*.ZIP"))
@@ -767,10 +776,11 @@ class WITSTariffScraper:
             shutil.rmtree(extraction_folder)
             raise FileNotFoundError("No CSV file found in extracted contents")
         
-        # Move CSV to download directory
+        # Move CSV to Spring Boot resources directory instead of download directory
         csv_filename = os.path.basename(csv_path)
-        final_csv_path = os.path.join(self.download_directory, csv_filename)
+        final_csv_path = os.path.join(self.target_directory, csv_filename)
         shutil.move(csv_path, final_csv_path)
+        print(f"Moved CSV file to: {final_csv_path}")
         
         # Remove the extraction folder and all its contents
         shutil.rmtree(extraction_folder)
@@ -778,7 +788,7 @@ class WITSTariffScraper:
         # Delete the original zip file
         os.remove(zip_path)
         
-        return final_csv_path
+        return csv_filename  # Return just the filename, not the full path
     
     def scrape_tariff_data(self, username, password, query_params, data_columns):
         """Main method to perform complete scraping workflow"""
@@ -816,14 +826,14 @@ class WITSTariffScraper:
             print("Waiting for download to complete...")
             time.sleep(30)  # Adjust this wait time as necessary
             
-            # Extract CSV from downloaded zip
-            csv_file = self.get_csv_file_from_zip()
-            print("Tariff data download completed successfully")
-            return True
+            # Extract CSV from downloaded zip and move to resources
+            csv_filename = self.get_csv_file_from_zip()
+            print(f"Tariff data download completed successfully. File: {csv_filename}")
+            return csv_filename  # Return filename instead of True
             
         except Exception as e:
             print(f"Scraping failed: {e}")
-            return False
+            return None
         finally:
             self.cleanup()
     
@@ -927,18 +937,12 @@ def main():
     scraper = WITSTariffScraper(download_directory=download_directory, headless=args.headless)
     
     try:
-        success = scraper.scrape_tariff_data(username, password, query_params, data_columns)
+        csv_filename = scraper.scrape_tariff_data(username, password, query_params, data_columns)
         
-        if success:
-            # Find the downloaded CSV file and print its name for Java service
-            csv_files = glob.glob(os.path.join(download_directory, "*.csv"))
-            if csv_files:
-                csv_file = os.path.basename(csv_files[0])  # Get just the filename
-                print(f"SUCCESS: {csv_file}")
-                sys.exit(0)
-            else:
-                print("ERROR: No CSV file found after successful scraping")
-                sys.exit(1)
+        if csv_filename:
+            # Print just the filename for Java service to use
+            print(f"SUCCESS: {csv_filename}")
+            sys.exit(0)
         else:
             print("ERROR: Scraping failed")
             sys.exit(1)
