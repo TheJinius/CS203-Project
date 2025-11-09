@@ -16,23 +16,23 @@ jobs:
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        ${{ secrets.EC2_SSH_KEY }} > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H cs203compliance.duckdns.org >> ~/.ssh/known_hosts
         
     - name: Deploy to EC2
       run: |
         # Create backup directory with timestamp
-        ssh -i ~/.ssh/id_rsa echo "${{ secrets.orgasm_techniques}}" "mkdir -p /home/ec2-user/backend-backups"
-        ssh -i ~/.ssh/id_rsa echo "${{ secrets.orgasm_techniques}}" "cp -r /home/ec2-user/backend /home/ec2-user/backend-backups/backend-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
+        ssh -i ~/.ssh/id_rsa ${{ secrets.orgasm_techniques}} "mkdir -p /home/ec2-user/backend-backups"
+        ssh -i ~/.ssh/id_rsa ${{ secrets.orgasm_techniques}} "cp -r /home/ec2-user/backend /home/ec2-user/backend-backups/backend-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
         
         # Upload new code (from Compliance_checklist folder)
-        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/src echo "${{ secrets.orgasm_techniques}}":/tmp/deploy-src
-        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/data echo "${{ secrets.orgasm_techniques}}":/tmp/deploy-data
-        scp -i ~/.ssh/id_rsa ./Compliance_checklist/requirements.txt echo "${{ secrets.orgasm_techniques}}":/tmp/deploy-requirements.txt
+        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/src ${{ secrets.orgasm_techniques}}:/tmp/deploy-src
+        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/data ${{ secrets.orgasm_techniques}}:/tmp/deploy-data
+        scp -i ~/.ssh/id_rsa ./Compliance_checklist/requirements.txt ${{ secrets.orgasm_techniques}}:/tmp/deploy-requirements.txt
         
         # Deploy to backend directory
-        ssh -i ~/.ssh/id_rsa echo "${{ secrets.orgasm_techniques}}" << 'EOF'
+        ssh -i ~/.ssh/id_rsa ${{ secrets.orgasm_techniques}} << 'EOF'
           # Create backend directory if it doesn't exist
           mkdir -p /home/ec2-user/backend
           
