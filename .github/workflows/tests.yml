@@ -50,6 +50,8 @@ jobs:
         COGNITO_DOMAIN: dummy-domain
         AWS_REGION: us-east-1
         COGNITO_CLIENT_ID: dummy-client-id
+        WITS_USERNAME: test-username
+        WITS_PASSWORD: test-password
         # Database configuration (Testcontainers will handle this)
         # The test profile uses Testcontainers with PostgreSQL
         SPRING_PROFILES_ACTIVE: test
