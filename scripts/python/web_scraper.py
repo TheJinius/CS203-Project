@@ -30,9 +30,6 @@ class QuietService(Service):
         except (PermissionError, subprocess.TimeoutExpired, OSError):
             # Suppress these errors as they're expected in some environments
             pass
-        except Exception:
-            # Let other unexpected errors through
-            pass
 
 
 class WITSTariffScraper:
@@ -194,8 +191,8 @@ class WITSTariffScraper:
                     
             return False
             
-        except Exception as e:
-            print(f"No feedback popup to handle: {e}")
+        except Exception:
+            # Silently fail for popup handling - this is optional
             return False
 
     def safe_click(self, locator):
@@ -211,30 +208,25 @@ class WITSTariffScraper:
             element.click()
             return True
             
-        except Exception as first_attempt:
+        except Exception:
             # Check for feedback popup again
             self.handle_feedback_popup()
             
-            try:
-                # If first attempt fails, try with scrolling
-                element = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located(locator)
-                )
-                
-                # Scroll to element
-                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                time.sleep(1)
-                
-                # Try clicking again
-                clickable_element = WebDriverWait(self.driver, 5).until(
-                    EC.element_to_be_clickable(locator)
-                )
-                clickable_element.click()
-                return True
-                
-            except Exception as e:
-                print(f"Safe click failed even with scrolling: {e}")
-                return False
+            # If first attempt fails, try with scrolling
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(locator)
+            )
+            
+            # Scroll to element
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(1)
+            
+            # Try clicking again - let exception propagate if this fails
+            clickable_element = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(locator)
+            )
+            clickable_element.click()
+            return True
 
     def safe_send_keys(self, locator, text):
         """Safe send keys that handles scrolling and feedback popups"""
@@ -253,61 +245,49 @@ class WITSTariffScraper:
             # Check for feedback popup again
             self.handle_feedback_popup()
             
-            try:
-                # Scroll and try again
-                element = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located(locator)
-                )
-                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                time.sleep(1)
-                
-                element = WebDriverWait(self.driver, 5).until(
-                    EC.element_to_be_clickable(locator)
-                )
-                element.clear()
-                element.send_keys(text)
-                return True
-                
-            except Exception as e:
-                print(f"Safe send keys failed: {e}")
-                return False
+            # Scroll and try again - let exception propagate if this fails
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(locator)
+            )
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(1)
+            
+            element = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(locator)
+            )
+            element.clear()
+            element.send_keys(text)
+            return True
         
     def handle_alert(self, accept=True):
         """Handle alert popup"""
-        try:
-            alert = WebDriverWait(self.driver, 10).until(EC.alert_is_present())
-            if accept:
-                alert.accept()
-            else:
-                alert.dismiss()
-            return True
-        except Exception as e:
-            print(f"No alert to handle: {e}")
-            return False
+        alert = WebDriverWait(self.driver, 10).until(EC.alert_is_present())
+        if accept:
+            alert.accept()    country_mapping = {
+        'USA': 'United States', #Pass
+        'CH
+        else:
+            alert.dismiss()
+        return True
         
     def login(self, username, password):
         """Login to WITS website"""
-        try:
-            # Navigate to login page
-            login_url = "https://wits.worldbank.org/WITS/WITS/Restricted/Login.aspx"
-            self.driver.get(login_url)
-            
-            # Fill login form
-            self.safe_send_keys((By.NAME, "UserNameTextBox"), username)
-            self.safe_send_keys((By.NAME, "UserPassTextBox"), password + Keys.ENTER)
-            
-            # Wait for login to complete
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "dropdown-toggle"))
-            )
-            
-            # Check for feedback popup after login
-            self.handle_feedback_popup()
-            return True
-            
-        except Exception as e:
-            print(f"Login failed: {e}")
-            return False
+        # Navigate to login page
+        login_url = "https://wits.worldbank.org/WITS/WITS/Restricted/Login.aspx"
+        self.driver.get(login_url)
+        
+        # Fill login form
+        self.safe_send_keys((By.NAME, "UserNameTextBox"), username)
+        self.safe_send_keys((By.NAME, "UserPassTextBox"), password + Keys.ENTER)
+        
+        # Wait for login to complete
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "dropdown-toggle"))
+        )
+        
+        # Check for feedback popup after login
+        self.handle_feedback_popup()
+        return True
     
     def navigate_to_tariff_page(self):
         """Navigate to the tariff query page"""
@@ -322,76 +302,61 @@ class WITSTariffScraper:
         
     def select_dropdown_option(self, dropdown_id, option_value):
         """Select option from dropdown by ID"""
-        try:
-            dropdown = Select(WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.ID, dropdown_id))))
-            dropdown.select_by_visible_text(option_value)
-            time.sleep(1)  # Wait for page to update
-            return True
-        except Exception as e:
-            print(f"Failed to select {option_value} from {dropdown_id}: {e}")
-            return False
+        dropdown = Select(WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.ID, dropdown_id))))
+        dropdown.select_by_visible_text(option_value)
+        time.sleep(1)  # Wait for page to update
+        return True
         
     def select_radcombobox_option(self, input_id, option_text):
         """Select option from RadComboBox by typing and selecting from dropdown"""
-        try:
-            # Step 1: Find and clear the input field
-            # Step 2: Type the option text to trigger dropdown
-            self.safe_send_keys((By.ID, input_id), option_text)
-            
-            # Step 3: Wait for dropdown list to appear and select the option
-            time.sleep(3)
-            
-            # Look for the dropdown item that matches the text
-            # RadComboBox typically creates a list with class "rcbList"
-            dropdown_option = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, f"//li[contains(@class, 'rcbItem') and contains(text(), '{option_text}')]"))
-            )
-            dropdown_option.click()
-            
-            return True
-            
-        except Exception as e:
-            return False
+        # Step 1: Find and clear the input field
+        # Step 2: Type the option text to trigger dropdown
+        self.safe_send_keys((By.ID, input_id), option_text)
+        
+        # Step 3: Wait for dropdown list to appear and select the option
+        time.sleep(3)
+        
+        # Look for the dropdown item that matches the text
+        dropdown_option = WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, f"//li[contains(@class, 'rcbItem') and contains(text(), '{option_text}')]"))
+        )
+        dropdown_option.click()
+        
+        return True
         
     def find_and_switch_to_iframe_containing_element(self, element_locator, wait_time=2):
         """Find iframe containing specific element and switch to it"""
+        time.sleep(wait_time)
+        
+        # First try main page
         try:
-            time.sleep(wait_time)
-            
-            # First try main page
+            element = WebDriverWait(self.driver, 2).until(
+                EC.presence_of_element_located(element_locator)
+            )
+            print("Element found in main page, no iframe switch needed")
+            return False
+        except:
+            pass
+        
+        # Check each iframe
+        iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
+        
+        for i, iframe in enumerate(iframes):
             try:
+                self.driver.switch_to.frame(iframe)
                 element = WebDriverWait(self.driver, 2).until(
                     EC.presence_of_element_located(element_locator)
                 )
-                print("Element found in main page, no iframe switch needed")
-                return False
+                print(f"Element found in iframe {i}, switched successfully")
+                return True
+                
             except:
-                pass
-            
-            # Check each iframe
-            iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
-            
-            for i, iframe in enumerate(iframes):
-                try:
-                    self.driver.switch_to.frame(iframe)
-                    element = WebDriverWait(self.driver, 2).until(
-                        EC.presence_of_element_located(element_locator)
-                    )
-                    print(f"Element found in iframe {i}, switched successfully")
-                    return True
-                    
-                except:
-                    # Switch back and try next iframe
-                    self.driver.switch_to.default_content()
-                    continue
-            
-            print("Element not found in any iframe")
-            return False
-            
-        except Exception as e:
-            print(f"Error finding iframe with element: {e}")
-            self.driver.switch_to.default_content()
-            return False
+                # Switch back and try next iframe
+                self.driver.switch_to.default_content()
+                continue
+        
+        # Element not found in any iframe - fail fast
+        raise Exception("Element not found in any iframe")
     
     def configure_query_parameters(self, params):
         """Configure query parameters - handle both dropdowns and text inputs"""
@@ -415,30 +380,25 @@ class WITSTariffScraper:
                 print(f"Configuring {param}: {value}")
                 
                 # Scroll to the current element before interacting
-                try:
-                    if element_type == 'dropdown':
-                        # Find element and scroll to it
-                        element = WebDriverWait(self.driver, 10).until(
-                            EC.presence_of_element_located((By.ID, element_id))
-                        )
-                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", element)
-                        
-                        # Now select the option
-                        self.select_dropdown_option(element_id, value)
-                        
-                    elif element_type == 'radcombobox':
-                        # Find element and scroll to it
-                        element = WebDriverWait(self.driver, 10).until(
-                            EC.presence_of_element_located((By.ID, element_id))
-                        )
-                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", element)
-                        
-                        # Now select the option
-                        self.select_radcombobox_option(element_id, value)
-                        
-                except Exception as e:
-                    print(f"Failed to configure {param}: {e}")
-                    continue
+                if element_type == 'dropdown':
+                    # Find element and scroll to it
+                    element = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.ID, element_id))
+                    )
+                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", element)
+                    
+                    # Now select the option
+                    self.select_dropdown_option(element_id, value)
+                    
+                elif element_type == 'radcombobox':
+                    # Find element and scroll to it
+                    element = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.ID, element_id))
+                    )
+                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", element)
+                    
+                    # Now select the option
+                    self.select_radcombobox_option(element_id, value)
                 
         # Click the 'View Report' button after all parameters are set
         self.safe_click((By.ID, "MainContent_btnProceed"))
@@ -447,326 +407,318 @@ class WITSTariffScraper:
     
     def select_data_columns(self):
         """Select which data columns to include in the report - handle overlay loading with enhanced popup handling"""
-        try:
-            print("Waiting for overlay/iframe to load...")
-            time.sleep(3)  # Give more time for iframe to load
+        print("Waiting for overlay/iframe to load...")
+        time.sleep(3)  # Give more time for iframe to load
+        
+        # Aggressively handle any popups before proceeding
+        self.handle_feedback_popup()
+        
+        # Try to remove any overlay elements with JavaScript
+        self.driver.execute_script("""
+            // Remove QSI overlays
+            var qsiElements = document.querySelectorAll('[class*="QSI"], [id*="QSI"]');
+            for (var i = 0; i < qsiElements.length; i++) {
+                qsiElements[i].remove();
+            }
             
-            # Aggressively handle any popups before proceeding
-            self.handle_feedback_popup()
-            
-            # Try to remove any overlay elements with JavaScript
-            self.driver.execute_script("""
-                // Remove QSI overlays
-                var qsiElements = document.querySelectorAll('[class*="QSI"], [id*="QSI"]');
-                for (var i = 0; i < qsiElements.length; i++) {
-                    qsiElements[i].remove();
-                }
+            // Remove other common overlay classes
+            var overlays = document.querySelectorAll('.overlay, .modal-backdrop, .popup-overlay');
+            for (var i = 0; i < overlays.length; i++) {
+                overlays[i].remove();
+            }
+        """)
+        
+        # Switch to iframe containing column selection
+        iframe_switched = self.find_and_switch_to_iframe_containing_element((By.ID, "btnMoveAll"))
+        
+        # Handle popups again after iframe switch
+        self.handle_feedback_popup()
+        
+        # Retry logic for clicking Move All button - KEEP THIS RETRY LOOP
+        max_attempts = 3
+        last_exception = None
+        for attempt in range(max_attempts):
+            try:
+                print(f"Attempt {attempt + 1}: Looking for Move All button...")
                 
-                // Remove other common overlay classes
-                var overlays = document.querySelectorAll('.overlay, .modal-backdrop, .popup-overlay');
-                for (var i = 0; i < overlays.length; i++) {
-                    overlays[i].remove();
-                }
-            """)
-            
-            # Switch to iframe containing column selection
-            iframe_switched = self.find_and_switch_to_iframe_containing_element((By.ID, "btnMoveAll"))
-            
-            # Handle popups again after iframe switch
-            self.handle_feedback_popup()
-            
-            # Retry logic for clicking Move All button
-            max_attempts = 3
-            for attempt in range(max_attempts):
+                # Wait for the Move All button
+                move_all_button = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "btnMoveAll"))
+                )
+                
+                # Scroll to button and ensure it's visible
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", move_all_button)
+                time.sleep(1)
+                
+                # Try different click methods
                 try:
-                    print(f"Attempt {attempt + 1}: Looking for Move All button...")
-                    
-                    # Wait for the Move All button
-                    move_all_button = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.ID, "btnMoveAll"))
+                    # Method 1: Regular click
+                    move_all_button = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.ID, "btnMoveAll"))
                     )
+                    move_all_button.click()
+                    print("Clicked Move All button (regular click)")
                     
-                    # Scroll to button and ensure it's visible
-                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", move_all_button)
-                    time.sleep(1)
-                    
-                    # Try different click methods
-                    try:
-                        # Method 1: Regular click
-                        move_all_button = WebDriverWait(self.driver, 5).until(
-                            EC.element_to_be_clickable((By.ID, "btnMoveAll"))
-                        )
-                        move_all_button.click()
-                        print("Clicked Move All button (regular click)")
-                        
-                    except Exception:
-                        # Method 2: JavaScript click
-                        print("Regular click failed, trying JavaScript click...")
-                        self.driver.execute_script("document.getElementById('btnMoveAll').click();")
-                        print("Clicked Move All button (JavaScript click)")
-                    
-                    time.sleep(2)  # Wait for the move operation to complete
-                    break  # Success, exit retry loop
-                    
-                except Exception as e:
-                    print(f"Attempt {attempt + 1} failed: {e}")
-                    if attempt < max_attempts - 1:
-                        # Handle popups again before retry
-                        self.handle_feedback_popup()
-                        time.sleep(2)
-                    else:
-                        raise e
-            
-            # Wait for and click the "Processed" button with retry logic
-            for attempt in range(max_attempts):
+                except Exception:
+                    # Method 2: JavaScript click
+                    print("Regular click failed, trying JavaScript click...")
+                    self.driver.execute_script("document.getElementById('btnMoveAll').click();")
+                    print("Clicked Move All button (JavaScript click)")
+                
+                time.sleep(2)  # Wait for the move operation to complete
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                last_exception = e
+                if attempt < max_attempts - 1:
+                    # Handle popups again before retry
+                    self.handle_feedback_popup()
+                    time.sleep(2)
+        else:
+            # All retry attempts failed - raise the last exception
+            raise last_exception
+        
+        # Wait for and click the "Processed" button with retry logic - KEEP THIS RETRY LOOP
+        last_exception = None
+        for attempt in range(max_attempts):
+            try:
+                processed_button = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "RptCoulmnSelection1_btnProcessed"))
+                )
+                
+                # Scroll to button
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", processed_button)
+                time.sleep(1)
+                
+                # Try clicking
                 try:
-                    processed_button = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.ID, "RptCoulmnSelection1_btnProcessed"))
+                    processed_button = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.ID, "RptCoulmnSelection1_btnProcessed"))
                     )
+                    processed_button.click()
+                    print("Clicked Processed button (regular click)")
                     
-                    # Scroll to button
-                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", processed_button)
-                    time.sleep(1)
-                    
-                    # Try clicking
-                    try:
-                        processed_button = WebDriverWait(self.driver, 5).until(
-                            EC.element_to_be_clickable((By.ID, "RptCoulmnSelection1_btnProcessed"))
-                        )
-                        processed_button.click()
-                        print("Clicked Processed button (regular click)")
-                        
-                    except Exception:
-                        # JavaScript click fallback
-                        self.driver.execute_script("document.getElementById('RptCoulmnSelection1_btnProcessed').click();")
-                        print("Clicked Processed button (JavaScript click)")
-                    
-                    break  # Success
-                    
-                except Exception as e:
-                    print(f"Processed button attempt {attempt + 1} failed: {e}")
-                    if attempt < max_attempts - 1:
-                        self.handle_feedback_popup()
-                        time.sleep(2)
-                    else:
-                        raise e
-            
-            print("Column selection completed successfully")
-            return True
-            
-        except Exception as e:
-            print(f"Failed to select columns: {e}")
-            return False
+                except Exception:
+                    # JavaScript click fallback
+                    self.driver.execute_script("document.getElementById('RptCoulmnSelection1_btnProcessed').click();")
+                    print("Clicked Processed button (JavaScript click)")
+                
+                break  # Success
+                
+            except Exception as e:
+                print(f"Processed button attempt {attempt + 1} failed: {e}")
+                last_exception = e
+                if attempt < max_attempts - 1:
+                    self.handle_feedback_popup()
+                    time.sleep(2)
+        else:
+            # All retry attempts failed - raise the last exception
+            raise last_exception
+        
+        print("Column selection completed successfully")
+        return True
     
     def initiate_request(self):
         """Trigger the download"""
-        try:
-            # Find and click download/export button
-            self.safe_click((By.ID, "btnDownload"))
-            
-            time.sleep(2)
-            
-            # Swap to iframe containing download options if necessary
-            iframe_switched = self.find_and_switch_to_iframe_containing_element((By.ID, "txtJobName"))
-            
-            # Fill in job name with today's date
-            job_name = f"TariffReport{datetime.now().strftime('%Y%m%d')}"
-            self.safe_send_keys((By.ID, "txtJobName"), job_name)
-            
-            # Fill in job description
-            self.safe_send_keys((By.ID, "txtJobDesc"), "Automated tariff data download")
-            
-            # Select file type
-            filetype_dropdown = Select(WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.ID, "ddlFileFormat"))
-            ))
-            filetype_dropdown.select_by_visible_text("CSV")
-            
-            # Click download button
-            self.safe_click((By.ID, "btnDownload"))
-            
-            # Handle the alert popup
-            self.handle_alert(accept=False)
-            
-            # Wait a moment for any processing
-            time.sleep(2)
-            return True
-            
-        except Exception as e:
-            print(f"Initiating request failed: {e}")
-            return False
+        # Find and click download/export button
+        self.safe_click((By.ID, "btnDownload"))
+        
+        time.sleep(2)
+        
+        # Swap to iframe containing download options if necessary
+        iframe_switched = self.find_and_switch_to_iframe_containing_element((By.ID, "txtJobName"))
+        
+        # Fill in job name with today's date
+        job_name = f"TariffReport{datetime.now().strftime('%Y%m%d')}"
+        self.safe_send_keys((By.ID, "txtJobName"), job_name)
+        
+        # Fill in job description
+        self.safe_send_keys((By.ID, "txtJobDesc"), "Automated tariff data download")
+        
+        # Select file type
+        filetype_dropdown = Select(WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.ID, "ddlFileFormat"))
+        ))
+        filetype_dropdown.select_by_visible_text("CSV")
+        
+        # Click download button
+        self.safe_click((By.ID, "btnDownload"))
+        
+        # Handle the alert popup
+        self.handle_alert(accept=False)
+        
+        # Wait a moment for any processing
+        time.sleep(2)
+        return True
     
     def navigate_to_result_page(self):
-        try:       
-            # Head to result site
-            self.driver.get(self.result_url)
+        # Head to result site
+        self.driver.get(self.result_url)
+        
+        # Wait for page to load and aggressively handle popups
+        WebDriverWait(self.driver, 15).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        time.sleep(3)  # Give time for any overlays to appear
+        
+        # Aggressively remove any overlays before proceeding
+        self.handle_feedback_popup()
+        
+        save_button = None
+        # Check for Save button with retry logic - KEEP THIS RETRY LOOP
+        max_attempts = 3
+        last_exception = None
+        for attempt in range(max_attempts):
+            print(f"Attempt {attempt + 1}: Checking for Save button...")
             
-            # Wait for page to load and aggressively handle popups
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            time.sleep(3)  # Give time for any overlays to appear
-            
-            # Aggressively remove any overlays before proceeding
-            self.handle_feedback_popup()
-            
-            save_button = None
-            # Check for Save button with retry logic
-            max_attempts = 3
-            for attempt in range(max_attempts):
-                print(f"Attempt {attempt + 1}: Checking for Save button...")
+            try:
+                # Remove overlays with JavaScript before each attempt
+                self.driver.execute_script("""
+                    // Remove QSI overlays aggressively
+                    var qsiElements = document.querySelectorAll('[class*="QSI"], [id*="QSI"]');
+                    for (var i = 0; i < qsiElements.length; i++) {
+                        qsiElements[i].style.display = 'none';
+                        qsiElements[i].remove();
+                    }
+                    
+                    // Remove other overlay elements
+                    var overlays = document.querySelectorAll('.overlay, .modal-backdrop, .popup-overlay, [style*="z-index: 2000000000"]');
+                    for (var i = 0; i < overlays.length; i++) {
+                        overlays[i].style.display = 'none';
+                        overlays[i].remove();
+                    }
+                    
+                    // Remove elements with high z-index
+                    var highZElements = document.querySelectorAll('[style*="z-index"]');
+                    for (var i = 0; i < highZElements.length; i++) {
+                        var zIndex = window.getComputedStyle(highZElements[i]).zIndex;
+                        if (zIndex && parseInt(zIndex) > 1000000) {
+                            highZElements[i].style.display = 'none';
+                            highZElements[i].remove();
+                        }
+                    }
+                """)
                 
+                # Handle feedback popups again
+                self.handle_feedback_popup()
+                
+                # Now look for the download button on the new page
+                print("Looking for download button on new page...")
+                
+                # Try multiple methods to click the Download Data tab
+                download_clicked = False
+                
+                # Method 1: Regular click
                 try:
-                    # Remove overlays with JavaScript before each attempt
-                    self.driver.execute_script("""
-                        // Remove QSI overlays aggressively
-                        var qsiElements = document.querySelectorAll('[class*="QSI"], [id*="QSI"]');
-                        for (var i = 0; i < qsiElements.length; i++) {
-                            qsiElements[i].style.display = 'none';
-                            qsiElements[i].remove();
-                        }
-                        
-                        // Remove other overlay elements
-                        var overlays = document.querySelectorAll('.overlay, .modal-backdrop, .popup-overlay, [style*="z-index: 2000000000"]');
-                        for (var i = 0; i < overlays.length; i++) {
-                            overlays[i].style.display = 'none';
-                            overlays[i].remove();
-                        }
-                        
-                        // Remove elements with high z-index
-                        var highZElements = document.querySelectorAll('[style*="z-index"]');
-                        for (var i = 0; i < highZElements.length; i++) {
-                            var zIndex = window.getComputedStyle(highZElements[i]).zIndex;
-                            if (zIndex && parseInt(zIndex) > 1000000) {
-                                highZElements[i].style.display = 'none';
-                                highZElements[i].remove();
-                            }
-                        }
-                    """)
-                    
-                    # Handle feedback popups again
-                    self.handle_feedback_popup()
-                    
-                    # Now look for the download button on the new page
-                    print("Looking for download button on new page...")
-                    
-                    # Try multiple methods to click the Download Data tab
-                    download_clicked = False
-                    
-                    # Method 1: Regular click
+                    download_tab = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "//span[normalize-space()='Download Data']"))
+                    )
+                    download_tab.click()
+                    download_clicked = True
+                    print("Download Data tab clicked (regular click)")
+                except Exception:
+                    pass
+                
+                # Method 2: JavaScript click if regular click failed
+                if not download_clicked:
                     try:
-                        download_tab = WebDriverWait(self.driver, 10).until(
-                            EC.element_to_be_clickable((By.XPATH, "//span[normalize-space()='Download Data']"))
+                        self.driver.execute_script("""
+                            var downloadTab = document.evaluate("//span[normalize-space()='Download Data']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                            if (downloadTab) {
+                                downloadTab.click();
+                            }
+                        """)
+                        download_clicked = True
+                        print("Download Data tab clicked (JavaScript click)")
+                    except Exception:
+                        pass
+                
+                # Method 3: Try alternative selector
+                if not download_clicked:
+                    try:
+                        download_tab = WebDriverWait(self.driver, 5).until(
+                            EC.element_to_be_clickable((By.XPATH, "//span[@class='rtsTxt' and text()='Download Data']"))
                         )
                         download_tab.click()
                         download_clicked = True
-                        print("Download Data tab clicked (regular click)")
+                        print("Download Data tab clicked (alternative selector)")
                     except Exception:
                         pass
+                
+                if not download_clicked:
+                    raise Exception("Could not click Download Data tab with any method")
+                
+                time.sleep(3)
+                
+                # Handle popups again after clicking
+                self.handle_feedback_popup()
+                
+                # Look for Save button
+                save_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, "//td[@title='Save' and contains(@onclick, 'SaveJob')]"))
+                )
+                print("Save button found!")
+                break  # Exit loop if button found
+                
+            except TimeoutException as e:
+                print(f"Save button not found on attempt {attempt + 1}")
+                last_exception = e
+                
+                if attempt < max_attempts - 1:  # Don't wait on last attempt
+                    print("Waiting 15 seconds before refreshing...")
+                    time.sleep(15)
                     
-                    # Method 2: JavaScript click if regular click failed
-                    if not download_clicked:
-                        try:
-                            self.driver.execute_script("""
-                                var downloadTab = document.evaluate("//span[normalize-space()='Download Data']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                                if (downloadTab) {
-                                    downloadTab.click();
-                                }
-                            """)
-                            download_clicked = True
-                            print("Download Data tab clicked (JavaScript click)")
-                        except Exception:
-                            pass
+                    print("Refreshing page...")
+                    self.driver.refresh()
                     
-                    # Method 3: Try alternative selector
-                    if not download_clicked:
-                        try:
-                            download_tab = WebDriverWait(self.driver, 5).until(
-                                EC.element_to_be_clickable((By.XPATH, "//span[@class='rtsTxt' and text()='Download Data']"))
-                            )
-                            download_tab.click()
-                            download_clicked = True
-                            print("Download Data tab clicked (alternative selector)")
-                        except Exception:
-                            pass
-                    
-                    if not download_clicked:
-                        raise Exception("Could not click Download Data tab with any method")
-                    
+                    # Wait for page to reload 
+                    WebDriverWait(self.driver, 15).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "body"))
+                    )
                     time.sleep(3)
                     
-                    # Handle popups again after clicking
+                    # Handle popups after refresh
                     self.handle_feedback_popup()
-                    
-                    # Look for Save button
-                    save_button = WebDriverWait(self.driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, "//td[@title='Save' and contains(@onclick, 'SaveJob')]"))
-                    )
-                    print("Save button found!")
-                    break  # Exit loop if button found
-                    
-                except TimeoutException:
-                    print(f"Save button not found on attempt {attempt + 1}")
-                    
-                    if attempt < max_attempts - 1:  # Don't wait on last attempt
-                        print("Waiting 15 seconds before refreshing...")
-                        time.sleep(15)
-                        
-                        print("Refreshing page...")
-                        self.driver.refresh()
-                        
-                        # Wait for page to reload 
-                        WebDriverWait(self.driver, 15).until(
-                            EC.presence_of_element_located((By.TAG_NAME, "body"))
-                        )
-                        time.sleep(3)
-                        
-                        # Handle popups after refresh
-                        self.handle_feedback_popup()
-                        
-                    else:
-                        print("Save button not found after all attempts")
-                        return False
-                except Exception as e:
-                    print(f"Error on attempt {attempt + 1}: {e}")
-                    if attempt < max_attempts - 1:
-                        time.sleep(5)
-                        self.handle_feedback_popup()
-                    else:
-                        raise e
-            
-            # Click Save button if found
-            try:
-                save_button.click()
-                print("Save button clicked (regular click)")
-            except Exception:
-                # Try JavaScript click as fallback
-                self.driver.execute_script("arguments[0].click();", save_button)
-                print("Save button clicked (JavaScript click)")
-            
-            # Wait a moment for any processing
-            time.sleep(2)
-            
-            # Then click "Delete"
-            delete_button = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable(
-                (By.XPATH, "//td[@title='Delete' and contains(@onclick, 'DeleteJob')]")
-            ))
-            
-            try:
-                delete_button.click()
-                print("Delete button clicked (regular click)")
-            except Exception:
-                # Try JavaScript click as fallback
-                self.driver.execute_script("arguments[0].click();", delete_button)
-                print("Delete button clicked (JavaScript click)")
-            
-            # Handle the alert popup
-            self.handle_alert(accept=True)
-            return True
-            
-        except Exception as e:
-            print(f"Download failed: {e}")
-            return False
+            except Exception as e:
+                print(f"Error on attempt {attempt + 1}: {e}")
+                last_exception = e
+                if attempt < max_attempts - 1:
+                    time.sleep(5)
+                    self.handle_feedback_popup()
+        else:
+            # All retry attempts failed - raise the last exception
+            print("Save button not found after all attempts")
+            raise last_exception
+        
+        # Click Save button if found
+        try:
+            save_button.click()
+            print("Save button clicked (regular click)")
+        except Exception:
+            # Try JavaScript click as fallback
+            self.driver.execute_script("arguments[0].click();", save_button)
+            print("Save button clicked (JavaScript click)")
+        
+        # Wait a moment for any processing
+        time.sleep(2)
+        
+        # Then click "Delete"
+        delete_button = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable(
+            (By.XPATH, "//td[@title='Delete' and contains(@onclick, 'DeleteJob')]")
+        ))
+        
+        try:
+            delete_button.click()
+            print("Delete button clicked (regular click)")
+        except Exception:
+            # Try JavaScript click as fallback
+            self.driver.execute_script("arguments[0].click();", delete_button)
+            print("Delete button clicked (JavaScript click)")
+        
+        # Handle the alert popup
+        self.handle_alert(accept=True)
+        return True
 
     def get_csv_file_from_zip(self):
         """
@@ -825,27 +777,22 @@ class WITSTariffScraper:
         Rename CSV file to format: HS2017(Country_Code)Year(4_digit_year).csv
         Example: HS2017USA2023.csv
         """
-        try:
-            # Create new filename
-            new_filename = f"HS2017{country_code}Year{year}.csv"
-            new_path = os.path.join(os.path.dirname(csv_path), new_filename)
-            
-            # Rename the file
-            os.rename(csv_path, new_path)
-            print(f"Renamed CSV file to: {new_filename}")
-            
-            return new_filename
-            
-        except Exception as e:
-            print(f"Error renaming CSV file: {e}")
-            return os.path.basename(csv_path)  # Return original filename if rename fails
+        # Create new filename
+        new_filename = f"HS2017{country_code}Year{year}.csv"
+        new_path = os.path.join(os.path.dirname(csv_path), new_filename)
+        
+        # Rename the file
+        os.rename(csv_path, new_path)
+        print(f"Renamed CSV file to: {new_filename}")
+        
+        return new_filename
     
     def scrape_tariff_data(self, username, password, query_params, data_columns, country_code=None, year=None):
         """Main method to perform complete scraping workflow"""
         try:
             # Login
             if not self.login(username, password):
-                return False
+                raise Exception("Login failed")
             print("Login successful")
                 
             # Navigate to tariff page
@@ -854,22 +801,22 @@ class WITSTariffScraper:
             
             # Configure parameters
             if not self.configure_query_parameters(query_params):
-                return False
+                raise Exception("Failed to configure query parameters")
             print("Query parameters configured")
             
             # Select data columns
             if not self.select_data_columns():
-                 return False
+                raise Exception("Failed to select data columns")
             print("Data columns selected")
                 
             # Initiate request
             if not self.initiate_request():
-                return False
+                raise Exception("Failed to initiate request")
             print("Request initiated")
             
             # Navigate to result page
             if not self.navigate_to_result_page():
-                return False
+                raise Exception("Failed to navigate to result page")
             print("Navigated to result page")
             
             # Wait for download to complete
@@ -888,9 +835,6 @@ class WITSTariffScraper:
             print(f"Tariff data download completed successfully. File: {csv_filename}")
             return csv_filename  # Return filename instead of True
             
-        except Exception as e:
-            print(f"Scraping failed: {e}")
-            return None
         finally:
             self.cleanup()
     
@@ -960,6 +904,7 @@ def main():
     # Configure download directory
     download_directory = args.download_dir or os.path.dirname(os.path.abspath(__file__))
     
+    # Map country code to market name (expand this mapping as needed)
     # Map country code to market name (expand this mapping as needed)
     country_mapping = {
         'USA': 'United States', #Pass
