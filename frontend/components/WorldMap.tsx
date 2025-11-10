@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { X, Package, DollarSign, Clock, AlertTriangle, Leaf, Truck } from "lucide-react"
 
 // GeoJSON types
 interface GeoJSONGeometry {
@@ -76,6 +78,14 @@ export interface OptimalRoutesData {
 interface WorldMapProps {
   geojsonData?: GeoJSONData | null
   optimalRoutesData?: OptimalRoutesData | null
+  routeDetails?: {
+    productCode?: string
+    productDescription?: string
+    tariffAmount?: number
+    currency?: string
+    sourceCountry?: string
+    destinationCountry?: string
+  }
 }
 
 // Route configuration with colors and labels
@@ -173,7 +183,7 @@ function fixAntimeridianWrapping(geojsonData: GeoJSONData | undefined): GeoJSOND
   return geojsonData
 }
 
-export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapProps) {
+export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails }: WorldMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const map = useRef<any>(null)
@@ -185,6 +195,14 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
     risk_optimized: true,
     co2_optimized: true
   })
+
+  // Track selected route for popup
+  const [selectedRoute, setSelectedRoute] = useState<{
+    type: string
+    label: string
+    metrics: RouteMetrics
+    routeDetails?: typeof routeDetails
+  } | null>(null)
 
   useEffect(() => {
     if (map.current) return
@@ -355,6 +373,26 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
               "line-width": 3,
               "line-opacity": 0.8,
             },
+          })
+
+          // Add click handler for the route
+          map.current.on('click', `route-${routeKey}`, () => {
+            console.log(`Clicked on ${routeKey}`)
+            setSelectedRoute({
+              type: routeKey,
+              label: config.label,
+              metrics: route.metrics,
+              routeDetails: routeDetails
+            })
+          })
+
+          // Change cursor on hover
+          map.current.on('mouseenter', `route-${routeKey}`, () => {
+            map.current.getCanvas().style.cursor = 'pointer'
+          })
+
+          map.current.on('mouseleave', `route-${routeKey}`, () => {
+            map.current.getCanvas().style.cursor = ''
           })
 
           console.log(`WorldMap: Added layer route-${routeKey} with visibility:`, visibleRoutes[routeKey])
@@ -545,6 +583,148 @@ export default function WorldMap({ geojsonData, optimalRoutesData }: WorldMapPro
                   </div>
                 )
               })()}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Route Details Popup */}
+      {selectedRoute && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[400px]">
+          <Card className="shadow-2xl border-2 border-blue-500 dark:border-blue-400">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: ROUTE_CONFIG[selectedRoute.type as keyof typeof ROUTE_CONFIG]?.color }}
+                  />
+                  {selectedRoute.label}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedRoute(null)}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Route Information */}
+              {selectedRoute.routeDetails && (
+                <div className="mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                  <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                    Shipment Details
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedRoute.routeDetails.sourceCountry && selectedRoute.routeDetails.destinationCountry && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Truck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-slate-700 dark:text-slate-300">
+                          <span className="font-medium">{selectedRoute.routeDetails.sourceCountry}</span>
+                          {' → '}
+                          <span className="font-medium">{selectedRoute.routeDetails.destinationCountry}</span>
+                        </span>
+                      </div>
+                    )}
+                    
+                    {selectedRoute.routeDetails.productCode && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <Package className="h-4 w-4 text-purple-600 dark:text-purple-400 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                            HS Code: {selectedRoute.routeDetails.productCode}
+                          </div>
+                          {selectedRoute.routeDetails.productDescription && (
+                            <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                              {selectedRoute.routeDetails.productDescription}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRoute.routeDetails.tariffAmount !== undefined && selectedRoute.routeDetails.currency && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-slate-700 dark:text-slate-300">
+                          Tariff Paid: <span className="font-semibold text-green-600 dark:text-green-400">
+                            {selectedRoute.routeDetails.currency} {selectedRoute.routeDetails.tariffAmount.toFixed(2)}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Route Metrics */}
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                  Route Metrics
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      <Truck className="h-4 w-4" />
+                      Transport Mode
+                    </span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100 uppercase">
+                      {selectedRoute.metrics.transport_type}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      Shipping Cost
+                    </span>
+                    <span className="font-medium text-green-600 dark:text-green-400">
+                      ${selectedRoute.metrics.cost_usd.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      Transit Time
+                    </span>
+                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                      {selectedRoute.metrics.time_hours.toFixed(1)} hours
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      Risk Score
+                    </span>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      {selectedRoute.metrics.risk_score.toFixed(2)} / 10
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      <Leaf className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      Carbon Footprint
+                    </span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      {selectedRoute.metrics.co2_kg.toLocaleString()} kg CO₂
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                      Distance
+                    </span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {selectedRoute.metrics.distance_km.toLocaleString()} km
+                    </span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

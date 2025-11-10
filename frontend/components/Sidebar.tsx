@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Calculator, TrendingUp, FolderUp, GitCompare } from "lucide-react"
+import { X, Calculator, TrendingUp, FolderUp, GitCompare, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -34,6 +34,14 @@ interface SidebarProps {
   calculationResult: number | null
   onCalculationResult: (result: number | null) => void
   onRouteCalculated?: (geojson: Record<string, unknown>) => void
+  onRouteDetailsChange?: (details: {
+    productCode?: string
+    productDescription?: string
+    tariffAmount?: number
+    currency?: string
+    sourceCountry?: string
+    destinationCountry?: string
+  } | undefined) => void
   width: number 
 }
 
@@ -45,6 +53,7 @@ export default function Sidebar({
   calculationResult, 
   onCalculationResult,
   onRouteCalculated,
+  onRouteDetailsChange,
   width
 }: SidebarProps) {
   const { isAdmin } = useAuth();
@@ -82,6 +91,8 @@ export default function Sidebar({
   const sidebarItems = [
     // Admin-only: Manage Chatbot Documents tab
     ...(isAdmin() ? [{ id: "manage-docs", label: "Manage Chatbot Documents", icon: FolderUp }] : []),
+    // Admin-only: Tariff Management
+    ...(isAdmin() ? [{ id: "tariff-management", label: "Tariff Management", icon: Edit }] : []),
     { id: "calculate", label: "Calculate Tariff", icon: Calculator },
     { id: "results", label: "Results", icon: TrendingUp },
     { id: "compare", label: "Compare Tariffs", icon: GitCompare },
@@ -137,6 +148,8 @@ export default function Sidebar({
                 onClick={() => {
                   if (item.id === "compare") {
                     router.push('/compare')
+                  } else if (item.id === "tariff-management") {
+                    router.push('/edit')
                   } else {
                     onTabChange(item.id)
                   }
@@ -168,6 +181,7 @@ export default function Sidebar({
               <CalculateTab 
                 onCalculationResult={onCalculationResult}
                 onRouteCalculated={onRouteCalculated}
+                onRouteDetailsChange={onRouteDetailsChange}
                 currency={currency}
                 onCurrencyChange={setCurrency}
                 onSaveCalculation={handleSaveCalculation}
@@ -200,6 +214,7 @@ export default function Sidebar({
                 calculationResult={calculationResult} 
                 calculationHistory={calculationHistory}
                 currency={currency}
+                onRouteCalculated={onRouteCalculated}
               />
             </div>
           )}
