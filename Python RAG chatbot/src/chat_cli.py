@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pinecone import Pinecone
 
-# ====================================
+# ===================================
 # Load environment variables
-# ====================================
+# ===================================
 load_dotenv()
 
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
