@@ -97,10 +97,22 @@ public class PythonScraperService {
      */
     private String runWitsDataScraper(String countryCode, String mostRecentYear) {
         try {
-            // Build command with country code and year as arguments
+            // Get the absolute path to the script
+            Path scriptPath = Paths.get(pythonScriptPath).toAbsolutePath();
+            
+            if (!Files.exists(scriptPath)) {
+                logger.error("Python script not found at: {}", scriptPath);
+                return null;
+            }
+            
+            logger.info("Using Python script: {}", scriptPath);
+            
+            // Build command with absolute script path
+            // Add -u flag to run Python in unbuffered mode for real-time output
             ProcessBuilder processBuilder = new ProcessBuilder(
-                pythonExecutable, 
-                pythonScriptPath, 
+                pythonExecutable,
+                "-u",  // Unbuffered mode - see output in real-time!
+                scriptPath.toString(),
                 countryCode, 
                 mostRecentYear,
                 "--headless"
@@ -108,7 +120,6 @@ public class PythonScraperService {
             
             Map<String, String> env = processBuilder.environment();
             
-            // Use the configured credentials from application properties
             if (witsUsername != null && !witsUsername.isEmpty()) {
                 env.put("WITS_USERNAME", witsUsername);
                 logger.debug("WITS_USERNAME environment variable set for scraper from properties");
@@ -130,12 +141,7 @@ public class PythonScraperService {
                 env.put("WITS_API_KEY", witsApiKey);
             }
             
-            // Set working directory to script directory
-            Path scriptDir = Paths.get(pythonScriptPath).getParent();
-            if (scriptDir != null && Files.exists(scriptDir)) {
-                processBuilder.directory(scriptDir.toFile());
-                logger.debug("Working directory set to: {}", scriptDir);
-            }
+            // Don't set working directory - let Python script handle paths
             
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
@@ -145,9 +151,11 @@ public class PythonScraperService {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     output.append(line).append("\n");
-                    // Don't log credentials that might appear in output
+                    // Log ALL output in real-time (including password-safe lines)
                     if (!line.toLowerCase().contains("password") && !line.toLowerCase().contains("credential")) {
-                        logger.debug("Web scraper output: {}", line);
+                        // Log to console AND logger
+                        System.out.println("Python: " + line);  // Console output
+                        logger.info("Python: {}", line);         // Logger output
                     }
                 }
             }
@@ -204,6 +212,16 @@ public class PythonScraperService {
                 String[] args = {fileName};
                 HSDataCleaner.main(args);
                 logger.info("HSDataCleaner processing completed for file: {}", fileName);
+                
+                // Delete the original scraped file after cleaning
+                Path originalFile = Paths.get("src/main/resources/data/test_data").resolve(fileName);
+                try {
+                    Files.delete(originalFile);
+                    logger.info("Deleted original scraped file: {}", fileName);
+                } catch (Exception e) {
+                    logger.warn("Could not delete original file {}: {}", fileName, e.getMessage());
+                }
+                
             } catch (Exception e) {
                 logger.error("Error running HSDataCleaner: {}", e.getMessage(), e);
                 return false;

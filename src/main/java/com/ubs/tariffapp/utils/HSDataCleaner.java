@@ -6,8 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -130,10 +131,18 @@ public class HSDataCleaner {
             System.out.println("No file argument provided, using default: " + inputFileName);
         }
 
-        // Read input from resources
-        InputStream inputStream = HSDataCleaner.class.getResourceAsStream("/data/test_data/" + inputFileName);
-        if (inputStream == null) {
+        // Read input from file system instead of classpath resources
+        Path inputPath = Paths.get("src/main/resources/data/test_data/" + inputFileName);
+        if (!Files.exists(inputPath)) {
             System.err.println("Input CSV file not found in resources folder: " + inputFileName);
+            return;
+        }
+
+        InputStream inputStream;
+        try {
+            inputStream = Files.newInputStream(inputPath);
+        } catch (IOException e) {
+            System.err.println("Error opening input file: " + e.getMessage());
             return;
         }
 
@@ -294,6 +303,16 @@ public class HSDataCleaner {
             System.out.println("- Total lines processed: " + (lineNumber - 1));
             System.out.println("Output saved to " + outputFile);
             System.out.println("Added columns: Industry, DutyType, StandardizedAVRate, SpecificDutyAmount, Currency, Unit, OriginalSpecificDuty");
+
+            System.out.println("Data cleaning completed successfully.");
+
+            // Delete the original file from test_data
+            try {
+                Files.delete(inputPath);
+                System.out.println("Deleted original file: " + inputPath);
+            } catch (Exception e) {
+                System.err.println("Warning: Could not delete original file: " + e.getMessage());
+            }
 
         } catch (IOException e) {
             e.printStackTrace();

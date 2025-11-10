@@ -50,6 +50,8 @@ class WITSTariffScraper:
         
         # Create target directory if it doesn't exist
         os.makedirs(self.target_directory, exist_ok=True)
+        print(f"Script directory: {script_dir}")
+        print(f"Project root: {project_root}")
         print(f"Target directory for processed files: {self.target_directory}")
             
         # Convert to absolute path and ensure it exists
@@ -59,21 +61,21 @@ class WITSTariffScraper:
         
         chrome_options = Options()
         if headless:
-            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--headless=new')  # Use new headless mode
             
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--remote-debugging-port=9222')
         chrome_options.add_argument('--window-size=1920,1200')
-        chrome_options.add_argument('--start-maximized')
         
-        # Additional options to prevent permission issues
+        # Remove problematic flags that can cause crashes
+        # REMOVED: --disable-javascript (WITS requires JavaScript!)
+        # REMOVED: --disable-images (can cause issues)
+        # REMOVED: --disable-plugins
+        # REMOVED: --single-process (can cause instability)
+        
+        # Keep essential flags
         chrome_options.add_argument('--disable-extensions')
-        chrome_options.add_argument('--disable-plugins')
-        chrome_options.add_argument('--disable-images')
-        chrome_options.add_argument('--disable-javascript')
-        chrome_options.add_argument('--single-process')
         chrome_options.add_argument('--disable-background-networking')
         chrome_options.add_argument('--disable-default-apps')
         chrome_options.add_argument('--disable-sync')
@@ -81,10 +83,14 @@ class WITSTariffScraper:
         # Add user-data-dir to avoid permission issues
         chrome_options.add_argument('--user-data-dir=/tmp/chrome-user-data')
         
-        # For Docker environments
+        # For Docker/server environments
         chrome_options.add_argument('--disable-background-timer-throttling')
         chrome_options.add_argument('--disable-backgrounding-occluded-windows')
         chrome_options.add_argument('--disable-renderer-backgrounding')
+        
+        # Disable automation detection
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
         
         # Configure downloads with absolute path
         prefs = {
@@ -99,10 +105,32 @@ class WITSTariffScraper:
         
         # Initialize service and driver with error handling
         try:
-            self.service = QuietService(executable_path="chromedriver")
+            # First, try to find chromedriver in the script's directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            local_chromedriver = os.path.join(script_dir, 'chromedriver')
+            
+            # Check if chromedriver exists locally
+            if os.path.exists(local_chromedriver):
+                print(f"Using local chromedriver: {local_chromedriver}")
+                # Make sure it's executable
+                os.chmod(local_chromedriver, 0o755)
+                self.service = QuietService(executable_path=local_chromedriver)
+            else:
+                # Fall back to system chromedriver
+                print(f"Local chromedriver not found at: {local_chromedriver}")
+                print("Trying system chromedriver...")
+                self.service = QuietService(executable_path="chromedriver")
+            
             self.driver = webdriver.Chrome(service=self.service, options=chrome_options)
+            print("Chrome driver initialized successfully")
+            
         except Exception as e:
             print(f"Error initializing Chrome driver: {e}")
+            print("\nTroubleshooting:")
+            print(f"1. Place chromedriver in: {script_dir}")
+            print(f"2. Make it executable: chmod +x {os.path.join(script_dir, 'chromedriver')}")
+            print("3. Or install system-wide: sudo apt install chromium-chromedriver")
+            print("4. Or install webdriver-manager: pip3 install webdriver-manager")
             raise
     
         self.base_url = "https://wits.worldbank.org/WITS/WITS/QuickQuery/FindTariff/FindTariff.aspx?Page=FindATariff"
@@ -779,6 +807,8 @@ class WITSTariffScraper:
         # Move CSV to Spring Boot resources directory instead of download directory
         csv_filename = os.path.basename(csv_path)
         final_csv_path = os.path.join(self.target_directory, csv_filename)
+        print(f"Moving CSV from: {csv_path}")
+        print(f"Moving CSV to: {final_csv_path}")
         shutil.move(csv_path, final_csv_path)
         print(f"Moved CSV file to: {final_csv_path}")
         
@@ -797,7 +827,7 @@ class WITSTariffScraper:
         """
         try:
             # Create new filename
-            new_filename = f"HS2017{country_code}{year}.csv"
+            new_filename = f"HS2017{country_code}Year{year}.csv"
             new_path = os.path.join(os.path.dirname(csv_path), new_filename)
             
             # Rename the file
@@ -932,10 +962,10 @@ def main():
     
     # Map country code to market name (expand this mapping as needed)
     country_mapping = {
-        'USA': 'United States',
-        'CHN': 'China',
+        'USA': 'United States', #Pass
+        'CHN': 'China', 
         'JPN': 'Japan',
-        'DEU': 'Germany',
+        'DEU': 'Germany', #Fail
         'IND': 'India',
         'GBR': 'United Kingdom',
         'FRA': 'France',
