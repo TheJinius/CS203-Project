@@ -1,14 +1,18 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import WorldMap, { type OptimalRoutesData } from "@/components/WorldMap"
 import TopBar from "@/components/TopBar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
-import { ArrowLeft, Route, MapPin, DollarSign, Clock, Leaf, AlertTriangle, GripVertical, X, BarChart3, TrendingUp, Award, Map } from "lucide-react"
+import { ArrowLeft, Route, MapPin, DollarSign, Clock, Leaf, AlertTriangle, GripVertical, X, BarChart3, TrendingUp, Award, Map, Download } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
+import { COUNTRY_NAMES } from "@/components/tabs/calculate/types"
+import { domToPng } from 'modern-screenshot'
+import jsPDF from "jspdf"
 
 interface CalculationHistory {
   id: string
@@ -65,6 +69,11 @@ export default function ComparePage() {
   const [optimalRoutesData, setOptimalRoutesData] = useState<OptimalRoutesData | null>(null)
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cost')
   const [showMap, setShowMap] = useState<boolean>(false)
+  const [isExporting, setIsExporting] = useState<boolean>(false)
+
+  // Refs for PDF export
+  const analyticsRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<HTMLDivElement>(null)
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -118,7 +127,6 @@ export default function ComparePage() {
     e.preventDefault()
     if (draggedItem && !selectedForComparison.find(r => r.id === draggedItem.id)) {
       setSelectedForComparison([...selectedForComparison, draggedItem])
-      // TODO: Fetch optimal routes for this calculation
     }
     setDropTarget(false)
   }
@@ -130,6 +138,12 @@ export default function ComparePage() {
   const clearComparison = () => {
     setSelectedForComparison([])
     setOptimalRoutesData(null)
+  }
+
+  // Helper to find country code from country name
+  const getCountryCodeFromName = (countryName: string): string | null => {
+    const entry = Object.entries(COUNTRY_NAMES).find(([_, name]) => name === countryName)
+    return entry ? entry[0] : null
   }
 
   // Convert calculations to comparison format
@@ -191,6 +205,127 @@ export default function ComparePage() {
     return best
   }, [selectedForComparison, selectedMetric])
 
+  // Calculate optimal routes for the best route based on selected metric
+  useEffect(() => {
+    const calculateOptimalRoutes = async () => {
+      if (!bestRoute || selectedForComparison.length === 0) {
+        setOptimalRoutesData(null)
+        return
+      }
+
+      console.log(`🚢 Calculating optimal routes for best ${selectedMetric} route:`, bestRoute.name)
+
+      // Collect routes grouped by optimization type
+      const routesByOptimization: { 
+        [key: string]: { 
+          coordinates: number[][], 
+          metrics: {
+            distance_km: number,
+            cost_usd: number,
+            time_hours: number,
+            co2_kg: number,
+            risk_score: number,
+            transport_type: string
+          }
+        } 
+      } = {}
+
+      for (let i = 0; i < bestRoute.legs.length; i++) {
+        const leg = bestRoute.legs[i]
+        const sourceCode = getCountryCodeFromName(leg.sourceCountry)
+        const destCode = getCountryCodeFromName(leg.destinationCountry)
+
+        if (!sourceCode || !destCode) {
+          console.warn(`⚠️ Could not find country codes for leg ${i + 1}:`, leg.sourceCountry, leg.destinationCountry)
+          continue
+        }
+
+        const sourceCoords = COUNTRY_COORDINATES[sourceCode]
+        const destCoords = COUNTRY_COORDINATES[destCode]
+
+        if (!sourceCoords || !destCoords) {
+          console.warn(`⚠️ No coordinates found for leg ${i + 1}`)
+          continue
+        }
+
+        try {
+          const { ok, data } = await getOptimalRoutes({
+            src_lat: sourceCoords.lat,
+            src_lon: sourceCoords.lon,
+            dst_lat: destCoords.lat,
+            dst_lon: destCoords.lon,
+          })
+
+          if (ok && data.features) {
+            const features = data.features as Array<Record<string, unknown>>
+            
+            features.forEach((feature: Record<string, unknown>) => {
+              const props = feature.properties as Record<string, unknown>
+              const optType = props?.optimization_type as string | undefined
+              const geometry = feature.geometry as { type: string, coordinates: number[][] | number[][][] }
+              
+              if (optType) {
+                if (!routesByOptimization[optType]) {
+                  routesByOptimization[optType] = {
+                    coordinates: [],
+                    metrics: {
+                      distance_km: 0,
+                      cost_usd: 0,
+                      time_hours: 0,
+                      co2_kg: 0,
+                      risk_score: 0,
+                      transport_type: props.transport_type as string || 'SEA'
+                    }
+                  }
+                }
+
+                // Concatenate coordinates
+                if (geometry.type === 'LineString') {
+                  routesByOptimization[optType].coordinates.push(...(geometry.coordinates as number[][]))
+                } else if (geometry.type === 'MultiLineString') {
+                  (geometry.coordinates as number[][][]).forEach(segment => {
+                    routesByOptimization[optType].coordinates.push(...segment)
+                  })
+                }
+
+                // Sum up metrics
+                routesByOptimization[optType].metrics.distance_km += (props.distance_km as number) || 0
+                routesByOptimization[optType].metrics.cost_usd += (props.cost_usd as number) || 0
+                routesByOptimization[optType].metrics.time_hours += (props.time_hours as number) || 0
+                routesByOptimization[optType].metrics.co2_kg += (props.co2_kg as number) || 0
+                routesByOptimization[optType].metrics.risk_score += (props.risk_score as number) || 0
+              }
+            })
+          }
+        } catch (error) {
+          console.error(`❌ Error calculating leg ${i + 1}:`, error)
+        }
+      }
+
+      // Transform to OptimalRoutesData format
+      const transformedData: OptimalRoutesData = {}
+      
+      Object.entries(routesByOptimization).forEach(([optType, route]) => {
+        if (route.coordinates.length > 0) {
+          transformedData[optType as keyof OptimalRoutesData] = {
+            coordinates: route.coordinates,
+            geometry: {
+              type: 'LineString',
+              coordinates: route.coordinates
+            },
+            metrics: route.metrics,
+            optimization: optType.replace('_optimized', '')
+          }
+        }
+      })
+
+      console.log('✅ Optimal routes calculated:', transformedData)
+      setOptimalRoutesData(transformedData)
+    }
+
+    calculateOptimalRoutes()
+  }, [bestRoute, selectedMetric, selectedForComparison.length])
+
   // Get metric value for display
   const getMetricValue = (route: ComparisonRoute, metric: MetricType): number => {
     switch (metric) {
@@ -247,6 +382,177 @@ export default function ComparePage() {
       case 'carbon': return 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
       case 'risk': return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
       default: return 'bg-slate-50 dark:bg-slate-900/20'
+    }
+  }
+
+  // PDF Export Function
+  const exportToPDF = async () => {
+    if (!analyticsRef.current || selectedForComparison.length === 0) return
+
+    setIsExporting(true)
+
+    try {
+      // Show map if not already visible
+      const wasMapShown = showMap
+      if (!wasMapShown) {
+        setShowMap(true)
+        // Wait for map to fully render
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+
+      // Create PDF in landscape for better layout
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      // Add title page
+      pdf.setFontSize(24)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Route Comparison Report', 148.5, 40, { align: 'center' })
+      
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 148.5, 50, { align: 'center' })
+      pdf.text(`Optimization: ${selectedMetric.toUpperCase()}`, 148.5, 57, { align: 'center' })
+      pdf.text(`Routes Compared: ${selectedForComparison.length}`, 148.5, 64, { align: 'center' })
+
+      // Page 2 & 3: Capture Analytics (split across 2 pages for better quality)
+      pdf.addPage()
+      
+      try {
+        console.log('📊 Capturing analytics...')
+        
+        // Add a temporary class to force light colors for PDF
+        const analyticsElement = analyticsRef.current
+        analyticsElement.classList.add('pdf-export-mode')
+        
+        // Add temporary styles for PDF export
+        const styleTag = document.createElement('style')
+        styleTag.id = 'pdf-export-styles'
+        styleTag.textContent = `
+          .pdf-export-mode * {
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+          }
+          .pdf-export-mode .bg-green-50,
+          .pdf-export-mode .bg-blue-50,
+          .pdf-export-mode .bg-emerald-50,
+          .pdf-export-mode .bg-red-50,
+          .pdf-export-mode .bg-slate-50 {
+            background-color: #f8fafc !important;
+          }
+          .pdf-export-mode .text-green-600 { color: #059669 !important; }
+          .pdf-export-mode .text-blue-600 { color: #2563eb !important; }
+          .pdf-export-mode .text-emerald-600 { color: #059669 !important; }
+          .pdf-export-mode .text-red-600 { color: #dc2626 !important; }
+          .pdf-export-mode .text-slate-600 { color: #475569 !important; }
+          .pdf-export-mode .border-green-200 { border-color: #bbf7d0 !important; }
+          .pdf-export-mode .border-blue-200 { border-color: #bfdbfe !important; }
+          .pdf-export-mode .border-emerald-200 { border-color: #a7f3d0 !important; }
+          .pdf-export-mode .border-red-200 { border-color: #fecaca !important; }
+        `
+        document.head.appendChild(styleTag)
+        
+        // Wait for styles to apply
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        // Use modern-screenshot to capture the analytics section
+        const dataUrl = await domToPng(analyticsRef.current, {
+          quality: 1.0,
+          backgroundColor: '#ffffff',
+          scale: 3,
+          fetch: {
+            requestInit: {
+              mode: 'cors',
+              credentials: 'omit'
+            }
+          }
+        })
+        
+        // Clean up
+        analyticsElement.classList.remove('pdf-export-mode')
+        document.head.removeChild(styleTag)
+
+        const imgData = dataUrl
+        
+        // Calculate dimensions
+        const pageWidth = 297 // A4 landscape width in mm
+        const pageHeight = 210 // A4 landscape height in mm
+        const margin = 10
+        const availableWidth = pageWidth - (2 * margin)
+        const availableHeight = pageHeight - (2 * margin)
+        
+        // Get actual image dimensions
+        const img = new Image()
+        img.src = dataUrl
+        await new Promise((resolve) => { img.onload = resolve })
+        
+        // Calculate dimensions to fit full width
+        const fullWidth = availableWidth
+        const fullHeight = (img.height * fullWidth) / img.width
+        
+        // Add title on first page
+        pdf.setFontSize(16)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Analytics & Metrics', margin, margin + 5)
+        
+        // If image fits on one page
+        if (fullHeight <= availableHeight - 10) {
+          pdf.addImage(imgData, 'PNG', margin, margin + 10, fullWidth, fullHeight)
+          console.log('✅ Analytics captured on single page')
+        } else {
+          // Split across two pages
+          const halfHeight = fullHeight / 2
+          
+          // First half on page 2
+          const canvas1 = document.createElement('canvas')
+          canvas1.width = img.width
+          canvas1.height = img.height / 2
+          const ctx1 = canvas1.getContext('2d')
+          if (ctx1) {
+            ctx1.drawImage(img, 0, 0)
+            const topHalf = canvas1.toDataURL('image/png')
+            pdf.addImage(topHalf, 'PNG', margin, margin + 10, fullWidth, halfHeight)
+          }
+          
+          // Second half on page 3
+          pdf.addPage()
+          pdf.setFontSize(16)
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Analytics & Metrics (continued)', margin, margin + 5)
+          
+          const canvas2 = document.createElement('canvas')
+          canvas2.width = img.width
+          canvas2.height = img.height / 2
+          const ctx2 = canvas2.getContext('2d')
+          if (ctx2) {
+            ctx2.drawImage(img, 0, -img.height / 2)
+            const bottomHalf = canvas2.toDataURL('image/png')
+            pdf.addImage(bottomHalf, 'PNG', margin, margin + 10, fullWidth, halfHeight)
+          }
+          
+          console.log('✅ Analytics captured across two pages')
+        }
+      } catch (error) {
+        console.error('❌ Error capturing analytics:', error)
+        pdf.setFontSize(12)
+        pdf.text('Analytics could not be captured: ' + (error as Error).message, 20, 30)
+      }
+
+      // Map removed from PDF export for simplicity
+
+      // Save PDF
+      const fileName = `route-comparison-${selectedMetric}-${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+
+      console.log('✅ PDF exported successfully:', fileName)
+    } catch (error) {
+      console.error('❌ Error exporting PDF:', error)
+      alert('Failed to export PDF. Please try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -384,8 +690,8 @@ export default function ComparePage() {
           <TopBar sidebarOpen={false} onToggleSidebar={() => {}} />
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Comparison Drop Zone */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            {/* Comparison Drop Zone - Now Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900">
               <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
@@ -409,19 +715,31 @@ export default function ComparePage() {
                       <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                         Comparing {selectedForComparison.length} route{selectedForComparison.length !== 1 ? 's' : ''}
                       </h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearComparison}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Clear All
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={exportToPDF}
+                          disabled={isExporting}
+                          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          {isExporting ? 'Exporting...' : 'Export PDF'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearComparison}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Clear All
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Metric Selector */}
-                    <div className="flex gap-2 pb-3 border-b border-slate-200 dark:border-slate-600">
+                    <div className="flex gap-2 pb-3 border-b border-slate-200 dark:border-slate-600 flex-wrap">
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-2">Optimize for:</span>
                       {(['cost', 'time', 'carbon', 'risk'] as MetricType[]).map((metric) => {
                         const Icon = getMetricIcon(metric)
@@ -449,15 +767,14 @@ export default function ComparePage() {
                         className="w-full gap-2"
                       >
                         <Map className="h-4 w-4" />
-                        {showMap ? 'Hide Map View' : 'Show Map View'}
+                        {showMap ? 'Hide Map Reference' : 'Show Map Reference'}
                       </Button>
                     </div>
 
-                    {/* Analytics View */}
-                    {!showMap && (
-                      <>
-                        {/* Routes Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {/* Analytics View - Wrapped for PDF export */}
+                    <div ref={analyticsRef}>
+                      {/* Routes Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                           {selectedForComparison.map((route) => {
                             const isBest = bestRoute?.id === route.id
                             const metricValue = getMetricValue(route, selectedMetric)
@@ -523,46 +840,82 @@ export default function ComparePage() {
                         <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-600">
                           <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             <BarChart3 className="h-4 w-4" />
-                            Analytics
+                            Route Comparison - All Metrics
                           </h4>
                           
                           {/* Comparison Chart */}
                           <div className="grid grid-cols-1 gap-3">
-                            {/* Bar Chart */}
+                            {/* Grouped Bar Chart */}
                             <Card className="bg-white dark:bg-slate-800">
                               <CardContent className="p-4">
-                                <div className="space-y-3">
-                                  {selectedForComparison.map((route) => {
-                                    const value = getMetricValue(route, selectedMetric)
-                                    const maxValue = Math.max(...selectedForComparison.map(r => getMetricValue(r, selectedMetric)))
-                                    const percentage = (value / maxValue) * 100
-                                    const isBest = bestRoute?.id === route.id
+                                <div className="space-y-6">
+                                  {/* Chart for each metric */}
+                                  {(['cost', 'time', 'carbon', 'risk'] as MetricType[]).map((metric) => {
+                                    const Icon = getMetricIcon(metric)
+                                    const maxValue = Math.max(...selectedForComparison.map(r => getMetricValue(r, metric)))
                                     
                                     return (
-                                      <div key={route.id} className="space-y-1">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
-                                            {route.name}
+                                      <div key={metric} className="space-y-2">
+                                        {/* Metric Header */}
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-200 dark:border-slate-600">
+                                          <Icon className={`h-4 w-4 ${getMetricColor(metric)}`} />
+                                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 capitalize">
+                                            {metric}
                                           </span>
-                                          <span className={`font-semibold ${isBest ? getMetricColor(selectedMetric) : ''}`}>
-                                            {value.toFixed(selectedMetric === 'risk' ? 1 : 0)} {getMetricUnit(selectedMetric)}
+                                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                                            ({getMetricUnit(metric)})
                                           </span>
                                         </div>
-                                        <div className="relative h-6 bg-slate-100 dark:bg-slate-700 rounded overflow-hidden">
-                                          <div
-                                            className={`absolute inset-y-0 left-0 transition-all duration-300 ${
-                                              isBest 
-                                                ? selectedMetric === 'cost' ? 'bg-green-500' : selectedMetric === 'time' ? 'bg-blue-500' : selectedMetric === 'carbon' ? 'bg-emerald-500' : 'bg-red-500'
-                                                : 'bg-slate-300 dark:bg-slate-600'
-                                            }`}
-                                            style={{ width: `${percentage}%` }}
-                                          >
-                                            {isBest && (
-                                              <div className="absolute inset-0 flex items-center justify-center">
-                                                <Award className="h-3.5 w-3.5 text-white" />
+                                        
+                                        {/* Grouped Bars */}
+                                        <div className="flex items-end gap-2 h-40 border-b border-slate-200 dark:border-slate-700">
+                                          {selectedForComparison.map((route) => {
+                                            const value = getMetricValue(route, metric)
+                                            const heightPercentage = (value / maxValue) * 100
+                                            const heightPixels = Math.max((heightPercentage / 100) * 140, 20) // Convert to pixels with min 20px
+                                            const isBest = bestRoute?.id === route.id && selectedMetric === metric
+                                            
+                                            return (
+                                              <div key={route.id} className="flex-1 flex flex-col items-center gap-2">
+                                                {/* Value Label */}
+                                                <div className={`text-xs font-semibold ${isBest ? getMetricColor(metric) : 'text-slate-600 dark:text-slate-400'}`}>
+                                                  {value.toFixed(metric === 'risk' ? 1 : 0)}
+                                                </div>
+                                                
+                                                {/* Bar */}
+                                                <div 
+                                                  className={`relative w-full rounded-t overflow-hidden transition-all duration-300 ${
+                                                    metric === 'cost' 
+                                                      ? 'bg-green-500 hover:bg-green-600' 
+                                                      : metric === 'time' 
+                                                      ? 'bg-blue-500 hover:bg-blue-600' 
+                                                      : metric === 'carbon' 
+                                                      ? 'bg-emerald-500 hover:bg-emerald-600' 
+                                                      : 'bg-red-500 hover:bg-red-600'
+                                                  } ${isBest ? 'ring-2 ring-yellow-400' : ''}`}
+                                                  style={{ height: `${heightPixels}px` }}
+                                                >
+                                                  {isBest && (
+                                                    <div className="absolute top-1 left-1/2 -translate-x-1/2">
+                                                      <Award className="h-3 w-3 text-white drop-shadow" />
+                                                    </div>
+                                                  )}
+                                                </div>
+                                                
+                                                {/* Route Name Label */}
+                                                <div className="text-[10px] text-slate-600 dark:text-slate-400 text-center leading-tight max-w-full px-1">
+                                                  <div className="truncate" title={route.name}>
+                                                    {route.name.split('→').map((part, i) => (
+                                                      <span key={i}>
+                                                        {part.trim().substring(0, 3)}
+                                                        {i < route.name.split('→').length - 1 && '→'}
+                                                      </span>
+                                                    ))}
+                                                  </div>
+                                                </div>
                                               </div>
-                                            )}
-                                          </div>
+                                            )
+                                          })}
                                         </div>
                                       </div>
                                     )
@@ -623,18 +976,63 @@ export default function ComparePage() {
                             </div>
                           </div>
                         </div>
-                      </>
-                    )}
+                      </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* World Map - Toggleable */}
-            {showMap && (
-              <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900">
-                <WorldMap optimalRoutesData={optimalRoutesData} />
+            {/* Map Sidebar - Slide from right */}
+            <div 
+              ref={mapRef}
+              className={`fixed top-0 right-0 h-screen w-[900px] bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+              showMap ? 'translate-x-0' : 'translate-x-full'
+            }`}>
+              <div className="h-full flex flex-col">
+                {/* Map Header */}
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <Map className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      Route Map Reference
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowMap(false)}
+                      className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Showing optimal {selectedMetric}-optimized routes for selected calculations
+                  </p>
+                </div>
+
+                {/* Map Container */}
+                <div className="flex-1 overflow-hidden">
+                  <WorldMap 
+                    optimalRoutesData={optimalRoutesData}
+                    routeDetails={bestRoute ? {
+                      productCode: bestRoute.legs[0]?.productCode,
+                      productDescription: bestRoute.legs[0]?.productDescription,
+                      tariffAmount: bestRoute.tariffCost,
+                      currency: bestRoute.currency,
+                      sourceCountry: bestRoute.legs[0]?.sourceCountry,
+                      destinationCountry: bestRoute.legs[bestRoute.legs.length - 1]?.destinationCountry
+                    } : undefined}
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Overlay backdrop when map is open */}
+            {showMap && (
+              <div 
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
+                onClick={() => setShowMap(false)}
+              />
             )}
           </div>
         </div>

@@ -37,6 +37,14 @@ export interface CalculationHistory {
 interface CalculateTabProps {
   onCalculationResult: (result: number | null) => void
   onRouteCalculated?: (geojson: Record<string, unknown>) => void
+  onRouteDetailsChange?: (details: {
+    productCode?: string
+    productDescription?: string
+    tariffAmount?: number
+    currency?: string
+    sourceCountry?: string
+    destinationCountry?: string
+  } | undefined) => void
   currency: string
   onCurrencyChange: (currency: string) => void
   onSaveCalculation: (calculation: CalculationHistory) => void
@@ -44,7 +52,8 @@ interface CalculateTabProps {
 
 export default function CalculateTab({ 
   onCalculationResult, 
-  onRouteCalculated, 
+  onRouteCalculated,
+  onRouteDetailsChange,
   currency, 
   onCurrencyChange,
   onSaveCalculation
@@ -141,6 +150,14 @@ export default function CalculateTab({
       if (ok && onRouteCalculated) {
         console.log('✅ Optimal routes calculated successfully')
         onRouteCalculated(data)
+        
+        // Set route details for map popup context
+        if (onRouteDetailsChange) {
+          onRouteDetailsChange({
+            sourceCountry: selectedSource,
+            destinationCountry: selectedDestination,
+          })
+        }
       } else {
         console.warn('⚠️ Failed to calculate routes:', data.error)
       }
@@ -161,13 +178,23 @@ export default function CalculateTab({
         tlCode: selectedProduct,
         year: parseInt(selectedYear),
       })
+
       if (ok) {
-        setAvailableTariffs(data.tariffs || [])
-        setStep(2)
-        setSuccess(`Found ${data.tariffs?.length || 0} tariff(s) for ${selectedYear}`)
-        
-        if (onRouteCalculated && selectedSource && selectedDestination) {
-          calculateShippingRoute(selectedSource, selectedDestination)
+        const tariffs = data.tariffs || []
+        setAvailableTariffs(tariffs)
+
+        // If no tariffs were returned, surface an error and don't allow proceeding
+        if (tariffs.length === 0) {
+          setError(`No tariffs found for ${selectedYear}. Try a different year, product or country.`)
+          setSuccess("")
+        } else {
+          setStep(2)
+          setSuccess(`Found ${tariffs.length} tariff(s) for ${selectedYear}`)
+
+          // Only calculate the route when we actually found tariffs
+          if (onRouteCalculated && selectedSource && selectedDestination) {
+            calculateShippingRoute(selectedSource, selectedDestination)
+          }
         }
       } else {
         setError(data.error || 'Search failed')
@@ -212,6 +239,18 @@ export default function CalculateTab({
         const finalAmount = convertFromUSD(tariffAmountUSD, currency, rates)
         onCalculationResult(finalAmount)
         setSuccess(`Tariff: ${currency} ${finalAmount.toFixed(2)}`)
+
+        // Update route details for map popup with tariff information
+        if (onRouteDetailsChange) {
+          onRouteDetailsChange({
+            productCode: selectedProduct,
+            productDescription: data.productDescription || 'N/A',
+            tariffAmount: finalAmount,
+            currency: currency,
+            sourceCountry: selectedSource,
+            destinationCountry: selectedDestination,
+          })
+        }
 
         // Save calculation to history
         const calculation: CalculationHistory = {

@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Package, TrendingUp, Hash, GripVertical, X, Route } from "lucide-react"
+import { getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
+import { COUNTRY_NAMES } from "./calculate/types"
 
 export interface CalculationHistory {
   id: string
@@ -34,13 +36,201 @@ interface ResultsTabProps {
   calculationResult: number | null
   calculationHistory: CalculationHistory[]
   currency: string
+  onRouteCalculated?: (geojson: Record<string, unknown>) => void
 }
 
-export default function ResultsTab({ calculationResult, calculationHistory, currency }: ResultsTabProps) {
+export default function ResultsTab({ calculationResult, calculationHistory, currency, onRouteCalculated }: ResultsTabProps) {
   const [combinedRoutes, setCombinedRoutes] = useState<CombinedRoute[]>([])
   const [draggedItem, setDraggedItem] = useState<CalculationHistory | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [builderLegs, setBuilderLegs] = useState<CalculationHistory[]>([])
+
+  // Helper to find country code from country name
+  const getCountryCodeFromName = (countryName: string): string | null => {
+    const entry = Object.entries(COUNTRY_NAMES).find(([_, name]) => name === countryName)
+    return entry ? entry[0] : null
+  }
+
+  // Calculate and display route on map when clicking a saved calculation
+  const handleCalculationClick = async (calc: CalculationHistory) => {
+    if (!onRouteCalculated) return
+
+    const sourceCode = getCountryCodeFromName(calc.sourceCountry)
+    const destCode = getCountryCodeFromName(calc.destinationCountry)
+
+    if (!sourceCode || !destCode) {
+      console.warn('⚠️ Could not find country codes for:', calc.sourceCountry, calc.destinationCountry)
+      return
+    }
+
+    const sourceCoords = COUNTRY_COORDINATES[sourceCode]
+    const destCoords = COUNTRY_COORDINATES[destCode]
+
+    if (!sourceCoords || !destCoords) {
+      console.warn('⚠️ No coordinates found for selected countries')
+      return
+    }
+
+    console.log(`🚢 Calculating route: ${sourceCoords.name} → ${destCoords.name}`)
+
+    try {
+      const { ok, data } = await getOptimalRoutes({
+        src_lat: sourceCoords.lat,
+        src_lon: sourceCoords.lon,
+        dst_lat: destCoords.lat,
+        dst_lon: destCoords.lon,
+      })
+
+      if (ok) {
+        console.log('✅ Route calculated successfully')
+        onRouteCalculated(data)
+      } else {
+        console.warn('⚠️ Failed to calculate route:', data.error)
+      }
+    } catch (error) {
+      console.error('❌ Error calculating route:', error)
+    }
+  }
+
+  // Calculate and display combined route on map
+  const handleCombinedRouteClick = async (route: CombinedRoute) => {
+    if (!onRouteCalculated || route.legs.length === 0) return
+
+    console.log(`🚢 Calculating multi-leg route with ${route.legs.length} legs`)
+
+    // Collect routes grouped by optimization type
+    const routesByOptimization: { 
+      [key: string]: { 
+        coordinates: number[][], 
+        metrics: {
+          distance_km: number,
+          cost_usd: number,
+          time_hours: number,
+          co2_kg: number,
+          risk_score: number,
+          transport_type: string
+        }
+      } 
+    } = {}
+
+    for (let i = 0; i < route.legs.length; i++) {
+      const leg = route.legs[i]
+      const sourceCode = getCountryCodeFromName(leg.sourceCountry)
+      const destCode = getCountryCodeFromName(leg.destinationCountry)
+
+      if (!sourceCode || !destCode) {
+        console.warn(`⚠️ Could not find country codes for leg ${i + 1}:`, leg.sourceCountry, leg.destinationCountry)
+        continue
+      }
+
+      const sourceCoords = COUNTRY_COORDINATES[sourceCode]
+      const destCoords = COUNTRY_COORDINATES[destCode]
+
+      if (!sourceCoords || !destCoords) {
+        console.warn(`⚠️ No coordinates found for leg ${i + 1}`)
+        continue
+      }
+
+      console.log(`🚢 Leg ${i + 1}: ${sourceCoords.name} → ${destCoords.name}`)
+
+      try {
+        const { ok, data } = await getOptimalRoutes({
+          src_lat: sourceCoords.lat,
+          src_lon: sourceCoords.lon,
+          dst_lat: destCoords.lat,
+          dst_lon: destCoords.lon,
+        })
+
+        if (ok && data.features) {
+          // Process each optimization type
+          const features = data.features as Array<Record<string, unknown>>
+          
+          features.forEach((feature: Record<string, unknown>) => {
+            const props = feature.properties as Record<string, unknown>
+            const optType = props?.optimization_type as string | undefined
+            const geometry = feature.geometry as { type: string, coordinates: number[][] | number[][][] }
+            
+            if (optType) {
+              // Initialize if first leg
+              if (!routesByOptimization[optType]) {
+                routesByOptimization[optType] = {
+                  coordinates: [],
+                  metrics: {
+                    distance_km: 0,
+                    cost_usd: 0,
+                    time_hours: 0,
+                    co2_kg: 0,
+                    risk_score: 0,
+                    transport_type: props.transport_type as string || 'SEA'
+                  }
+                }
+              }
+
+              // Concatenate coordinates (handle both LineString and MultiLineString)
+              if (geometry.type === 'LineString') {
+                routesByOptimization[optType].coordinates.push(...(geometry.coordinates as number[][]))
+              } else if (geometry.type === 'MultiLineString') {
+                // Flatten MultiLineString into single coordinate array
+                (geometry.coordinates as number[][][]).forEach(segment => {
+                  routesByOptimization[optType].coordinates.push(...segment)
+                })
+              }
+
+              // Sum up metrics
+              routesByOptimization[optType].metrics.distance_km += (props.distance_km as number) || 0
+              routesByOptimization[optType].metrics.cost_usd += (props.cost_usd as number) || 0
+              routesByOptimization[optType].metrics.time_hours += (props.time_hours as number) || 0
+              routesByOptimization[optType].metrics.co2_kg += (props.co2_kg as number) || 0
+              routesByOptimization[optType].metrics.risk_score += (props.risk_score as number) || 0
+            }
+          })
+          
+          console.log(`✅ Leg ${i + 1} calculated successfully`)
+        } else {
+          console.warn(`⚠️ Failed to calculate leg ${i + 1}:`, data.error)
+        }
+      } catch (error) {
+        console.error(`❌ Error calculating leg ${i + 1}:`, error)
+      }
+    }
+
+    // Create features with merged coordinates and summed metrics
+    const allFeatures: Array<Record<string, unknown>> = []
+    
+    Object.entries(routesByOptimization).forEach(([optType, route]) => {
+      if (route.coordinates.length > 0) {
+        console.log(`📊 ${optType}: ${route.coordinates.length} total coordinates`)
+        
+        allFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: route.coordinates
+          },
+          properties: {
+            optimization_type: optType,
+            ...route.metrics
+          }
+        })
+      }
+    })
+
+    if (allFeatures.length > 0) {
+      const combinedData = {
+        type: "FeatureCollection",
+        features: allFeatures,
+        metadata: {
+          source: "Multi-leg route",
+          legs: route.legs.length
+        }
+      }
+      
+      console.log(`✅ Combined route with ${allFeatures.length} optimization types`)
+      onRouteCalculated(combinedData as Record<string, unknown>)
+    } else {
+      console.warn('⚠️ No route features could be calculated for this multi-leg route')
+    }
+  }
 
   // Load combined routes from localStorage
   useEffect(() => {
@@ -239,7 +429,11 @@ export default function ResultsTab({ calculationResult, calculationHistory, curr
           <CardContent>
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {combinedRoutes.map((route) => (
-                <Card key={route.id} className="bg-white dark:bg-slate-800 border-green-200 dark:border-green-800">
+                <Card 
+                  key={route.id} 
+                  onClick={() => handleCombinedRouteClick(route)}
+                  className="bg-white dark:bg-slate-800 border-green-200 dark:border-green-800 cursor-pointer hover:shadow-md hover:border-green-400 dark:hover:border-green-500 transition-all"
+                >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -321,7 +515,8 @@ export default function ResultsTab({ calculationResult, calculationHistory, curr
                   draggable
                   onDragStart={() => handleDragStart(calc)}
                   onDragEnd={handleDragEnd}
-                  className={`bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
+                  onClick={() => handleCalculationClick(calc)}
+                  className={`bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 cursor-pointer active:cursor-grabbing transition-all hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 ${
                     draggedItem?.id === calc.id ? 'opacity-50' : ''
                   }`}
                 >
