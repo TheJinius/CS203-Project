@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - 'Python RAG chatbot/**'
-      - '.github/workflows/deploy-chatbot.yml'
+      - '.github/workflows/deploy_chatbot.yml'
 
 jobs:
   deploy-chatbot:
