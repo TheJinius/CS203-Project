@@ -404,8 +404,13 @@ export default function ComparePage() {
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
-        format: 'a4'
+        format: 'a4',
+        compress: true // Enable PDF compression
       })
+
+      const pageWidth = 297 // A4 landscape width in mm
+      const pageHeight = 210 // A4 landscape height in mm
+      const margin = 15
 
       // Add title page
       pdf.setFontSize(24)
@@ -418,7 +423,218 @@ export default function ComparePage() {
       pdf.text(`Optimization: ${selectedMetric.toUpperCase()}`, 148.5, 57, { align: 'center' })
       pdf.text(`Routes Compared: ${selectedForComparison.length}`, 148.5, 64, { align: 'center' })
 
-      // Page 2 & 3: Capture Analytics (split across 2 pages for better quality)
+      // Page 2: Route Summaries
+      pdf.addPage()
+      pdf.setFontSize(18)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Route Summaries', margin, margin + 5)
+
+      let yPos = margin + 15
+
+      selectedForComparison.forEach((route, index) => {
+        const isBest = bestRoute?.id === route.id
+        
+        // Check if we need a new page
+        if (yPos > pageHeight - 60) {
+          pdf.addPage()
+          yPos = margin + 5
+        }
+
+        // Route header with number
+        pdf.setFontSize(14)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(31, 41, 55) // slate-900
+        const routeTitle = `Route ${index + 1}: ${route.name.replace(/→/g, 'to').replace(/->/g, 'to')}`
+        pdf.text(routeTitle, margin, yPos)
+        yPos += 7
+        
+        // Best route indicator on new line
+        if (isBest) {
+          pdf.setFontSize(10)
+          pdf.setTextColor(5, 150, 105) // green-600
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('[OPTIMAL ROUTE]', margin, yPos)
+          pdf.setFont('helvetica', 'normal')
+          yPos += 6
+        }
+
+        // Route type
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(100, 116, 139) // slate-500
+        pdf.text(`Type: ${route.type === 'combined' ? `Multi-leg route (${route.legs.length} stops)` : 'Direct route'}`, margin, yPos)
+        yPos += 8
+
+        // Metrics table header
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(255, 255, 255) // white text
+        
+        const col1 = margin + 3
+        const col2 = margin + 65
+        const col3 = margin + 135
+        const col4 = margin + 205
+
+        // Header row with dark background
+        pdf.setFillColor(71, 85, 105) // slate-600
+        pdf.rect(margin, yPos - 4, pageWidth - 2 * margin, 7, 'F')
+        pdf.text('Metric', col1, yPos)
+        pdf.text('Value', col2, yPos)
+        pdf.text('Details', col3, yPos)
+        pdf.text('Status', col4, yPos)
+        yPos += 7
+
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(31, 41, 55) // slate-900
+        
+        // Alternating row backgrounds
+        let rowBg = true
+        
+        // Tariff Cost
+        if (rowBg) {
+          pdf.setFillColor(248, 250, 252) // slate-50
+          pdf.rect(margin, yPos - 4, pageWidth - 2 * margin, 6, 'F')
+        }
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Tariff Cost', col1, yPos)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(`${route.currency} ${route.tariffCost.toFixed(2)}`, col2, yPos)
+        pdf.setFontSize(9)
+        pdf.setTextColor(100, 116, 139)
+        pdf.text('Total customs duties', col3, yPos)
+        pdf.setFontSize(10)
+        pdf.setTextColor(31, 41, 55)
+        const costDiff = parseFloat(((route.tariffCost / averageTariffCost - 1) * 100).toFixed(0))
+        if (!isNaN(costDiff) && isFinite(costDiff)) {
+          pdf.setTextColor(costDiff > 0 ? 220 : 5, costDiff > 0 ? 38 : 150, costDiff > 0 ? 38 : 105)
+          pdf.text(costDiff > 0 ? `+${costDiff}%` : `${costDiff}%`, col4, yPos)
+        } else {
+          pdf.setTextColor(100, 116, 139)
+          pdf.text('Baseline', col4, yPos)
+        }
+        pdf.setTextColor(31, 41, 55)
+        yPos += 6
+        rowBg = !rowBg
+
+        // Transit Time
+        if (rowBg) {
+          pdf.setFillColor(248, 250, 252)
+          pdf.rect(margin, yPos - 4, pageWidth - 2 * margin, 6, 'F')
+        }
+        const estimatedTime = route.legs.length * 24
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Transit Time', col1, yPos)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(`${estimatedTime} hours`, col2, yPos)
+        pdf.setFontSize(9)
+        pdf.setTextColor(100, 116, 139)
+        pdf.text(`Approx. ${(estimatedTime / 24).toFixed(1)} days`, col3, yPos)
+        pdf.setFontSize(10)
+        pdf.setTextColor(31, 41, 55)
+        yPos += 6
+        rowBg = !rowBg
+
+        // Carbon Footprint
+        if (rowBg) {
+          pdf.setFillColor(248, 250, 252)
+          pdf.rect(margin, yPos - 4, pageWidth - 2 * margin, 6, 'F')
+        }
+        const carbonEmissions = route.legs.length * 100
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Carbon Footprint', col1, yPos)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(`${carbonEmissions} kg CO2`, col2, yPos)
+        pdf.setFontSize(9)
+        pdf.setTextColor(100, 116, 139)
+        pdf.text('Estimated emissions', col3, yPos)
+        pdf.setFontSize(10)
+        pdf.setTextColor(31, 41, 55)
+        yPos += 6
+        rowBg = !rowBg
+
+        // Risk Score
+        if (rowBg) {
+          pdf.setFillColor(248, 250, 252)
+          pdf.rect(margin, yPos - 4, pageWidth - 2 * margin, 6, 'F')
+        }
+        const riskScore = Math.min(route.legs.length * 2, 10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Risk Score', col1, yPos)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(`${riskScore.toFixed(1)} / 10`, col2, yPos)
+        pdf.setFontSize(9)
+        pdf.setTextColor(100, 116, 139)
+        const riskLevel = riskScore < 4 ? 'Low risk' : riskScore < 7 ? 'Moderate risk' : 'High risk'
+        pdf.text(riskLevel, col3, yPos)
+        pdf.setFontSize(10)
+        pdf.setTextColor(31, 41, 55)
+        yPos += 6
+        rowBg = !rowBg
+
+        // Transport Mode
+        if (rowBg) {
+          pdf.setFillColor(248, 250, 252)
+          pdf.rect(margin, yPos - 4, pageWidth - 2 * margin, 6, 'F')
+        }
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Transport Mode', col1, yPos)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text('Sea Freight', col2, yPos)
+        pdf.setFontSize(9)
+        pdf.setTextColor(100, 116, 139)
+        pdf.text('Primary shipping method', col3, yPos)
+        pdf.setFontSize(10)
+        pdf.setTextColor(31, 41, 55)
+        yPos += 9
+
+        // Goods Shipped section
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(71, 85, 105)
+        pdf.text('Goods Shipped:', margin, yPos)
+        yPos += 5
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(9)
+        pdf.setTextColor(31, 41, 55)
+        const goodsText = `${route.legs[0].productCode} - ${route.legs[0].productDescription}`
+        const maxGoodsLength = 100
+        if (goodsText.length > maxGoodsLength) {
+          pdf.text(goodsText.substring(0, maxGoodsLength - 3) + '...', margin + 3, yPos)
+        } else {
+          pdf.text(goodsText, margin + 3, yPos)
+        }
+        yPos += 7
+
+        // Route Path section
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(71, 85, 105)
+        pdf.text('Route Path:', margin, yPos)
+        yPos += 5
+        
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(9)
+        pdf.setTextColor(31, 41, 55)
+        
+        if (route.legs.length > 1) {
+          route.legs.forEach((leg, legIndex) => {
+            pdf.text(`  ${legIndex + 1}. ${leg.sourceCountry} to ${leg.destinationCountry}`, margin + 3, yPos)
+            yPos += 4
+          })
+          yPos += 2
+        } else {
+          pdf.text(`  ${route.legs[0].sourceCountry} to ${route.legs[0].destinationCountry} (Direct)`, margin + 3, yPos)
+          yPos += 6
+        }
+
+        // Separator line
+        pdf.setDrawColor(203, 213, 225) // slate-300
+        pdf.setLineWidth(0.5)
+        pdf.line(margin, yPos, pageWidth - margin, yPos)
+        yPos += 10
+      })
+
+      // Analytics Section - Capture and split intelligently
       pdf.addPage()
       
       try {
@@ -428,10 +644,14 @@ export default function ComparePage() {
         const analyticsElement = analyticsRef.current
         analyticsElement.classList.add('pdf-export-mode')
         
-        // Add temporary styles for PDF export
+        // Add temporary styles for PDF export with better font sizing
         const styleTag = document.createElement('style')
         styleTag.id = 'pdf-export-styles'
         styleTag.textContent = `
+          .pdf-export-mode {
+            background-color: #ffffff !important;
+            padding: 20px !important;
+          }
           .pdf-export-mode * {
             color: #0f172a !important;
             border-color: #cbd5e1 !important;
@@ -443,26 +663,49 @@ export default function ComparePage() {
           .pdf-export-mode .bg-slate-50 {
             background-color: #f8fafc !important;
           }
+          .pdf-export-mode .bg-white {
+            background-color: #ffffff !important;
+          }
           .pdf-export-mode .text-green-600 { color: #059669 !important; }
           .pdf-export-mode .text-blue-600 { color: #2563eb !important; }
           .pdf-export-mode .text-emerald-600 { color: #059669 !important; }
           .pdf-export-mode .text-red-600 { color: #dc2626 !important; }
           .pdf-export-mode .text-slate-600 { color: #475569 !important; }
+          .pdf-export-mode .text-slate-900 { color: #0f172a !important; }
+          .pdf-export-mode .text-slate-100 { color: #0f172a !important; }
           .pdf-export-mode .border-green-200 { border-color: #bbf7d0 !important; }
           .pdf-export-mode .border-blue-200 { border-color: #bfdbfe !important; }
           .pdf-export-mode .border-emerald-200 { border-color: #a7f3d0 !important; }
           .pdf-export-mode .border-red-200 { border-color: #fecaca !important; }
+          /* Increase font sizes for better readability */
+          .pdf-export-mode .text-xs { font-size: 0.875rem !important; }
+          .pdf-export-mode .text-sm { font-size: 1rem !important; }
+          .pdf-export-mode .text-lg { font-size: 1.25rem !important; }
         `
         document.head.appendChild(styleTag)
         
         // Wait for styles to apply
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => setTimeout(resolve, 200))
         
-        // Use modern-screenshot to capture the analytics section
-        const dataUrl = await domToPng(analyticsRef.current, {
-          quality: 1.0,
+        // Calculate dimensions first
+        const availableWidth = pageWidth - (2 * margin)
+        const availableHeight = pageHeight - (2 * margin) - 15 // Extra space for title
+        
+        // Get element dimensions
+        const elementWidth = analyticsElement.offsetWidth
+        const elementHeight = analyticsElement.offsetHeight
+        
+        // Calculate optimal scale: balance between quality and file size
+        const targetWidthPx = availableWidth * 3.78 // mm to px at 96 DPI
+        const optimalScale = Math.max(1.5, Math.min(2.5, targetWidthPx / elementWidth))
+        
+        console.log(`📐 Element: ${elementWidth}x${elementHeight}px, Scale: ${optimalScale.toFixed(2)}`)
+        
+        // Use modern-screenshot with optimal settings
+        const dataUrl = await domToPng(analyticsElement, {
+          quality: 0.95,
           backgroundColor: '#ffffff',
-          scale: 3,
+          scale: optimalScale,
           fetch: {
             requestInit: {
               mode: 'cors',
@@ -475,70 +718,74 @@ export default function ComparePage() {
         analyticsElement.classList.remove('pdf-export-mode')
         document.head.removeChild(styleTag)
 
-        const imgData = dataUrl
-        
-        // Calculate dimensions
-        const pageWidth = 297 // A4 landscape width in mm
-        const pageHeight = 210 // A4 landscape height in mm
-        const margin = 10
-        const availableWidth = pageWidth - (2 * margin)
-        const availableHeight = pageHeight - (2 * margin)
-        
-        // Get actual image dimensions
+        // Load image to get dimensions
         const img = new Image()
         img.src = dataUrl
         await new Promise((resolve) => { img.onload = resolve })
         
+        console.log(`🖼️ Captured image: ${img.width}x${img.height}px`)
+        
         // Calculate dimensions to fit full width
         const fullWidth = availableWidth
         const fullHeight = (img.height * fullWidth) / img.width
+        const maxHeightPerPage = availableHeight
         
-        // Add title on first page
-        pdf.setFontSize(16)
-        pdf.setFont('helvetica', 'bold')
-        pdf.text('Analytics & Metrics', margin, margin + 5)
+        // Determine how many pages we need with better spacing to avoid cutting charts
+        const numPages = Math.ceil(fullHeight / maxHeightPerPage)
+        console.log(`📄 Splitting across ${numPages} page(s), height: ${fullHeight.toFixed(1)}mm`)
         
-        // If image fits on one page
-        if (fullHeight <= availableHeight - 10) {
-          pdf.addImage(imgData, 'PNG', margin, margin + 10, fullWidth, fullHeight)
-          console.log('✅ Analytics captured on single page')
-        } else {
-          // Split across two pages
-          const halfHeight = fullHeight / 2
-          
-          // First half on page 2
-          const canvas1 = document.createElement('canvas')
-          canvas1.width = img.width
-          canvas1.height = img.height / 2
-          const ctx1 = canvas1.getContext('2d')
-          if (ctx1) {
-            ctx1.drawImage(img, 0, 0)
-            const topHalf = canvas1.toDataURL('image/png')
-            pdf.addImage(topHalf, 'PNG', margin, margin + 10, fullWidth, halfHeight)
+        // Split image across pages with intelligent breaks
+        for (let i = 0; i < numPages; i++) {
+          if (i > 0) {
+            pdf.addPage()
           }
           
-          // Second half on page 3
-          pdf.addPage()
+          // Add title
           pdf.setFontSize(16)
           pdf.setFont('helvetica', 'bold')
-          pdf.text('Analytics & Metrics (continued)', margin, margin + 5)
+          pdf.setTextColor(31, 41, 55)
+          const title = i === 0 ? 'Visual Analytics & Metrics' : `Visual Analytics & Metrics (Page ${i + 1}/${numPages})`
+          pdf.text(title, margin, margin + 5)
           
-          const canvas2 = document.createElement('canvas')
-          canvas2.width = img.width
-          canvas2.height = img.height / 2
-          const ctx2 = canvas2.getContext('2d')
-          if (ctx2) {
-            ctx2.drawImage(img, 0, -img.height / 2)
-            const bottomHalf = canvas2.toDataURL('image/png')
-            pdf.addImage(bottomHalf, 'PNG', margin, margin + 10, fullWidth, halfHeight)
+          // Calculate portion of image to show
+          // Add 5% overlap between pages to ensure no content is lost
+          const overlap = i > 0 ? maxHeightPerPage * 0.05 : 0
+          const startY = i * maxHeightPerPage - overlap
+          const segmentHeight = Math.min(maxHeightPerPage, fullHeight - startY)
+          
+          // Calculate source rectangle in image coordinates
+          const srcY = (startY / fullHeight) * img.height
+          const srcHeight = (segmentHeight / fullHeight) * img.height
+          
+          // Create canvas for this segment
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = Math.ceil(srcHeight)
+          const ctx = canvas.getContext('2d')
+          
+          if (ctx) {
+            // Fill with white background
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            
+            // Draw the segment
+            ctx.drawImage(
+              img,
+              0, srcY, img.width, srcHeight,  // Source rectangle
+              0, 0, img.width, srcHeight       // Destination rectangle
+            )
+            
+            const segmentData = canvas.toDataURL('image/jpeg', 0.92)
+            pdf.addImage(segmentData, 'JPEG', margin, margin + 10, fullWidth, segmentHeight, undefined, 'FAST')
           }
-          
-          console.log('✅ Analytics captured across two pages')
         }
+        
+        console.log('✅ Analytics captured successfully')
       } catch (error) {
         console.error('❌ Error capturing analytics:', error)
         pdf.setFontSize(12)
-        pdf.text('Analytics could not be captured: ' + (error as Error).message, 20, 30)
+        pdf.setTextColor(220, 38, 38)
+        pdf.text('Analytics could not be captured: ' + (error as Error).message, margin, margin + 20)
       }
 
       // Map removed from PDF export for simplicity
