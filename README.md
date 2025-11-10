@@ -1,10 +1,10 @@
 # CS203-Project
 
-## Project Setup Instructions
+## 1. Project Setup Instructions
 
 Welcome to our CS203 tariff project! Follow these steps to set up and run the application:
 
-### 1. Backend Setup
+### Backend Setup
 
 1. Open a terminal in the root project directory (`CS203-Project`).
 2. Run the following command to install backend dependencies:
@@ -12,7 +12,7 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	mvn install
 	```
 
-### 2. Frontend Setup
+### Frontend Setup
 
 1. Navigate to the `frontend` directory:
 	```
@@ -23,7 +23,7 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	npm install
 	```
 
-## 3. Chatbot Setup
+### Chatbot Setup
 
 1. Navigate to the `Python RAG chatbot` directory:
     ```
@@ -50,7 +50,7 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
     pip install -r requirements.txt
     ```
 
-## 4. Running Tests
+## 2. Running Tests
 
 We use **Testcontainers** for integration testing with PostgreSQL. Docker is required.
 
@@ -82,7 +82,7 @@ mvn jacoco:report
 
 For detailed testing documentation, see [TEST_SETUP_GUIDE.md](TEST_SETUP_GUIDE.md).
 
-## 5. CI/CD Pipeline
+## 3. CI/CD Pipeline
 
 All tests run automatically on:
 - Push to `main`, `develop`, or `backend` branches
@@ -90,34 +90,42 @@ All tests run automatically on:
 
 View results in the **Actions** tab on GitHub.
 
-### 3. Running the Application
+## 4. Running the Application
 
-#### Backend
+### Backend
 From the root project directory, start the backend server:
 ```
 mvn spring-boot:run
 ```
 
-#### Frontend
+### Frontend
 From the `frontend` directory, start the frontend development server:
 ```
 npm run dev
 ```
 
-#### Chatbot
+### Chatbot
 From the `Python RAG chatbot` directory, start the chatbot:
 ```
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000). The chatbot can be interacted with from the frontend UI.
+### Compliance Checklist
+From the `Compliance_checklist` directory, start the server:
+```
+uvicorn src.api_server:app --host 0.0.0.0 --port 8001
+```
 
-#### Deployed Frontend and Backend
-Alteratively, you can access the tariff calculation UI from the frontend. The frontend is deployed at [https://trade-optimisation-pathfinder.vercel.app/](https://trade-optimisation-pathfinder.vercel.app/), and the backend is deployed at [https://cs203tariffproject.duckdns.org](https://cs203tariffproject.duckdns.org). 
+The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000). The chatbot will be running on [http://localhost:8000](http://localhost:8000), and the compliance checklist server will be hosted at [http://localhost:8001](http://localhost:8001). The chatbot and compliance checklist can also be interacted with from the frontend UI.
+
+### Deployed Servers
+Alteratively, you can access the tariff calculation UI from the frontend. The frontend is deployed at [https://trade-optimisation-pathfinder.vercel.app/](https://trade-optimisation-pathfinder.vercel.app/), and the backend is deployed at [https://cs203tariffproject.duckdns.org](https://cs203tariffproject.duckdns.org).
+
+Additionally, the chatbot is deployed at [https://cs203chatbot.duckdns.org](https://cs203chatbot.duckdns.org), while the compliance checklist is deployed at [https://cs203compliance.duckdns.org](https://cs203compliance.duckdns.org).
 
 If you encounter a `NetworkError` while connected to the SMU Wi-Fi, do connect to a different Wi-Fi source and try again (the DNS server is blocked by the school Wi-Fi).
 
-### 4. Running Backend Tests
+## 5. Running Backend Tests
 
 To run backend tests, make sure Docker Desktop is running on your machine. Some tests require Docker containers for database or service emulation.
 
