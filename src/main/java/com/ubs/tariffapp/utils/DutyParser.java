@@ -111,7 +111,7 @@ public class DutyParser {
                 double parsedRate = Double.parseDouble(avRate.trim());
                 // Round to 6 decimal places to avoid floating point errors
                 info.standardizedAVRate = roundToPrecision(parsedRate, 6);
-                hasExistingAV = parsedRate > 0; // Only consider non-zero as existing AV
+                hasExistingAV = true; 
             } catch (NumberFormatException e) {
                 // Invalid AV rate, ignore and continue processing
             }
@@ -119,9 +119,7 @@ public class DutyParser {
 
         // If no specific duty rate, determine type based on existing AV rate
         if (specificRate == null || specificRate.trim().isEmpty()) {
-            if (hasExistingAV) {
-                info.dutyType = "AD_VALOREM";
-            }
+            info.dutyType = "AD_VALOREM";
             return info;
         }
 
