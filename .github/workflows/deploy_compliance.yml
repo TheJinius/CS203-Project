@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'Compliance checklist/**'
       - 'Compliance_checklist/**'
       - '.github/workflows/deploy_compliance.yml'
 
@@ -21,7 +20,7 @@ jobs:
           host: ${{ secrets.COMPLIANCE_EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "Compliance checklist/*"
+          source: "Compliance_checklist/*"
           target: "/home/ec2-user/"
           strip_components: 0
 
@@ -32,7 +31,7 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd "/home/ec2-user/Compliance checklist"
+            cd "/home/ec2-user/Compliance_checklist"
             
             # Install/update dependencies
             python3 -m pip install --upgrade pip
@@ -59,7 +58,7 @@ jobs:
             [Service]
             Type=simple
             User=ec2-user
-            WorkingDirectory=/home/ec2-user/Compliance checklist
+            WorkingDirectory=/home/ec2-user/Compliance_checklist
             ExecStart=/usr/bin/python3 -m uvicorn src.api_server:app --host 0.0.0.0 --port 8001
             Restart=on-failure
             RestartSec=10
