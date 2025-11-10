@@ -7,7 +7,7 @@ from src.chat_cli import answer
 
 app = FastAPI(title="Tariff RAG Compliance")
 
-# Add CORS middleware to allow frontend connections
+#  Add CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

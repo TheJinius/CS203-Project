@@ -1,79 +1,80 @@
-name: Deploy to EC2
+name: Deploy Compliance Checklist API
 
 on:
   push:
     branches: [ "main" ]
     paths:
+      - 'Compliance checklist/**'
       - 'Compliance_checklist/**'
-      - '.github/workflows/deploy_compliance.yml'
+      - '.github/workflows/deploy-compliance.yml'
 
 jobs:
-  deploy:
-    runs-on: amazon linux 2023
-    
+  deploy-compliance:
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        ${{ secrets.EC2_SSH_KEY }} > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H cs203compliance.duckdns.org >> ~/.ssh/known_hosts
-        
-    - name: Deploy to EC2
-      run: |
-        # Create backup directory with timestamp
-        ssh -i ~/.ssh/id_rsa ${{ secrets.orgasm_techniques}} "mkdir -p /home/ec2-user/backend-backups"
-        ssh -i ~/.ssh/id_rsa ${{ secrets.orgasm_techniques}} "cp -r /home/ec2-user/backend /home/ec2-user/backend-backups/backend-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
-        
-        # Upload new code (from Compliance_checklist folder)
-        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/src ${{ secrets.orgasm_techniques}}:/tmp/deploy-src
-        scp -i ~/.ssh/id_rsa -r ./Compliance_checklist/data ${{ secrets.orgasm_techniques}}:/tmp/deploy-data
-        scp -i ~/.ssh/id_rsa ./Compliance_checklist/requirements.txt ${{ secrets.orgasm_techniques}}:/tmp/deploy-requirements.txt
-        
-        # Deploy to backend directory
-        ssh -i ~/.ssh/id_rsa ${{ secrets.orgasm_techniques}} << 'EOF'
-          # Create backend directory if it doesn't exist
-          mkdir -p /home/ec2-user/backend
-          
-          # Copy new files
-          cp -r /tmp/deploy-src /home/ec2-user/backend/
-          cp -r /tmp/deploy-data /home/ec2-user/backend/
-          cp /tmp/deploy-requirements.txt /home/ec2-user/backend/requirements.txt
-          
-          # Clean up temp files
-          rm -rf /tmp/deploy-src /tmp/deploy-data /tmp/deploy-requirements.txt
-          
-          # Install/update dependencies
-          cd /home/ec2-user/backend
-          pip3 install --user -r requirements.txt
-          
-          # Restart the FastAPI service
-          sudo systemctl restart fastapi-backend
-          
-          # Wait for service to start
-          sleep 5
-          
-          # Check service status
-          sudo systemctl status fastapi-backend --no-pager
-        EOF
-        
-    - name: Verify Deployment
-      run: |
-        # Test the health endpoint
-        sleep 3
-        response=$(curl -s -o /dev/null -w "%{http_code}" https://cs203compliance.duckdns.org/health)
-    
-        if [ "$response" -eq 200 ]; then
-          echo "✅ Deployment successful! API is responding."
-        else
-          echo "❌ Deployment may have failed. API returned status code: $response"
-          exit 1
-        fi
-        
-    - name: Cleanup
-      if: always()
-      run: |
-        rm -f ~/.ssh/id_rsa
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Copy compliance checklist files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.COMPLIANCE_EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "Compliance checklist/*"
+          target: "/home/ec2-user/"
+          strip_components: 0
+
+      - name: Deploy and restart compliance service
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.COMPLIANCE_EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd "/home/ec2-user/Compliance checklist"
+            
+            # Install/update dependencies
+            python3 -m pip install --upgrade pip
+            python3 -m pip install -r requirements.txt
+            
+            # Create/update .env file with secrets (if needed)
+            cat > .env <<EOF
+            PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+            PINECONE_CLOUD=${{ secrets.PINECONE_CLOUD }}
+            PINECONE_REGION=${{ secrets.PINECONE_REGION }}
+            PINECONE_INDEX=${{ secrets.COMPLIANCE_PINECONE_INDEX }}
+            PINECONE_NAMESPACE=${{ secrets.PINECONE_NAMESPACE }}
+            EMBED_MODEL=${{ secrets.EMBED_MODEL }}
+            CHAT_MODEL=${{ secrets.CHAT_MODEL }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            EOF
+            
+            # Create/update systemd service file
+            sudo tee /etc/systemd/system/compliance.service > /dev/null <<EOF
+            [Unit]
+            Description=Tariff Compliance Checklist API
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ec2-user
+            WorkingDirectory=/home/ec2-user/Compliance checklist
+            ExecStart=/usr/bin/python3 -m uvicorn src.api_server:app --host 0.0.0.0 --port 8001
+            Restart=on-failure
+            RestartSec=10
+            StandardOutput=journal
+            StandardError=journal
+            SyslogIdentifier=compliance
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+            
+            # Reload and restart service
+            sudo systemctl daemon-reload
+            sudo systemctl enable compliance
+            sudo systemctl restart compliance
+            
+            # Check service status
+            sudo systemctl status compliance --no-pager
