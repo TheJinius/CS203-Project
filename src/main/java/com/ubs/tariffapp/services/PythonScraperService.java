@@ -57,16 +57,14 @@ public class PythonScraperService {
      */
     public boolean scrapeAndProcessCountryData(String countryCode) {
         try {
-            // Default to 2023 for scraping
-            String targetYear = "2023";
-            logger.info("Scraping data for country: {}, year: {}", countryCode, targetYear);
+            logger.info("Scraping latest data for country: {}", countryCode);
             
             // Attempt to scrape with retries
             String downloadedFileName = null;
             for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 logger.info("Scraping attempt {} for country {}", attempt, countryCode);
                 
-                downloadedFileName = runWitsDataScraper(countryCode, targetYear);
+                downloadedFileName = runWitsDataScraper(countryCode, null);
                 if (downloadedFileName != null) {
                     logger.info("Successfully scraped data on attempt {}: {}", attempt, downloadedFileName);
                     break;
@@ -109,14 +107,26 @@ public class PythonScraperService {
             
             // Build command with absolute script path
             // Add -u flag to run Python in unbuffered mode for real-time output
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                pythonExecutable,
-                "-u",  // Unbuffered mode - see output in real-time!
-                scriptPath.toString(),
-                countryCode, 
-                mostRecentYear,
-                "--headless"
-            );
+            // If mostRecentYear is null, don't pass it - Python will use latest
+            ProcessBuilder processBuilder;
+            if (mostRecentYear == null || mostRecentYear.isEmpty()) {
+                processBuilder = new ProcessBuilder(
+                    pythonExecutable,
+                    "-u",  // Unbuffered mode - see output in real-time!
+                    scriptPath.toString(),
+                    countryCode,
+                    "--headless"
+                );
+            } else {
+                processBuilder = new ProcessBuilder(
+                    pythonExecutable,
+                    "-u",  // Unbuffered mode - see output in real-time!
+                    scriptPath.toString(),
+                    countryCode, 
+                    mostRecentYear,
+                    "--headless"
+                );
+            }
             
             Map<String, String> env = processBuilder.environment();
             

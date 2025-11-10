@@ -13,18 +13,18 @@ import com.ubs.tariffapp.services.PythonScraperService;
 /**
  * Utility class to manually execute the scraper→cleaner→loader pipeline
  * 
- * Usage (single country):
+ * Usage (single country with latest data):
+ * mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.PipelineExecutor" -Dexec.args="USA"
+ * 
+ * Usage (single country with specific year):
  * mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.PipelineExecutor" -Dexec.args="USA 2023"
  * 
- * Usage (multiple countries):
- * mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.PipelineExecutor" -Dexec.args="USA,CHN,SGP,JPN 2023"
- * 
- * Usage (all default countries):
- * mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.PipelineExecutor" -Dexec.args="all 2023"
+ * Usage (all countries from web_scraper.py country_mapping with latest data):
+ * mvn exec:java -Dexec.mainClass="com.ubs.tariffapp.utils.PipelineExecutor" -Dexec.args="USA,CHN,JPN,IND,BRA,CAN,KOR,AUS,MEX,IDN,SAU,TUR,CHE,SGP,NOR,THA,PHL,EU,MYS,VNM"
  * 
  * Arguments:
  * - Country code(s): Single code (USA), comma-separated (USA,CHN,SGP), or "all" for default set
- * - Year (e.g., 2023)
+ * - Year (optional): e.g., 2023. If omitted, uses latest available year from WITS
  * 
  * This will:
  * 1. Run Python web scraper for each specified country/year
@@ -37,27 +37,15 @@ public class PipelineExecutor {
     private static final List<String> DEFAULT_COUNTRIES = Arrays.asList("USA", "CHN", "SGP", "JPN");
     
     public static void main(String[] args) {
-        if (args.length < 2) {
+        if (args.length < 1) {
             System.err.println("ERROR: Insufficient arguments");
-            System.err.println("\nUsage: PipelineExecutor <country_code(s)> <year>");
-            System.err.println("\nExamples:");
-            System.err.println("  Single country:    PipelineExecutor USA 2023");
-            System.err.println("  Multiple countries: PipelineExecutor USA,CHN,SGP 2023");
-            System.err.println("  All defaults:      PipelineExecutor all 2023");
-            System.err.println("\nSupported country codes:");
-            System.err.println("  USA - United States");
-            System.err.println("  CHN - China");
-            System.err.println("  SGP - Singapore");
-            System.err.println("  JPN - Japan");
-            System.err.println("  DEU - Germany");
-            System.err.println("  GBR - United Kingdom");
-            System.err.println("  FRA - France");
-            System.err.println("  And more... (see web_scraper.py for full list)");
+            System.err.println("\nUsage: PipelineExecutor <country_code(s)> [year]");
+            System.err.println("\nNote: If year is omitted, the latest available data will be scraped.");
             System.exit(1);
         }
         
         String countryInput = args[0].toUpperCase();
-        String year = args[1];
+        String year = args.length > 1 ? args[1] : "latest";
         
         // Parse country codes
         List<String> countryCodes;

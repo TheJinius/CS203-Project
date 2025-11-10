@@ -45,6 +45,9 @@ class WITSTariffScraper:
         project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
         self.target_directory = os.path.join(project_root, 'src', 'main', 'resources', 'data', 'test_data')
         
+        # Value for latest year gotten from WITS dropdown
+        self.latest_year = None
+        
         # Create target directory if it doesn't exist
         os.makedirs(self.target_directory, exist_ok=True)
         print(f"Script directory: {script_dir}")
@@ -263,9 +266,7 @@ class WITSTariffScraper:
         """Handle alert popup"""
         alert = WebDriverWait(self.driver, 10).until(EC.alert_is_present())
         if accept:
-            alert.accept()    country_mapping = {
-        'USA': 'United States', #Pass
-        'CH
+            alert.accept()
         else:
             alert.dismiss()
         return True
@@ -300,9 +301,35 @@ class WITSTariffScraper:
         time.sleep(1)
         self.handle_feedback_popup()
         
+    def get_latest_year(self):
+        """Get the latest year from the year dropdown menu"""
+        try:
+            # Find the year dropdown
+            year_dropdown = Select(WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.ID, "MainContent_cboYear"))
+            ))
+            
+            # Get all options
+            options = year_dropdown.options
+            
+            # Find the first non-empty option (skip the first if it's a placeholder)
+            for option in options:
+                year_text = option.text.strip()
+                if year_text and year_text.isdigit():
+                    self.latest_year = year_text
+                    print(f"Latest year detected: {self.latest_year}")
+                    return self.latest_year
+            
+            print("Warning: Could not find a valid year in dropdown")
+            return None
+            
+        except Exception as e:
+            print(f"Error getting latest year: {e}")
+            return None
+        
     def select_dropdown_option(self, dropdown_id, option_value):
         """Select option from dropdown by ID"""
-        dropdown = Select(WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.ID, dropdown_id))))
+        dropdown = Select(WebDriverWait(self.driver, 8).until(EC.element_to_be_clickable((By.ID, dropdown_id))))
         dropdown.select_by_visible_text(option_value)
         time.sleep(1)  # Wait for page to update
         return True
@@ -379,6 +406,14 @@ class WITSTariffScraper:
                 
                 print(f"Configuring {param}: {value}")
                 
+                # Get latest year if needed
+                if param == 'year' and (value is None or value.lower() == 'latest'):
+                    print("Fetching latest year from dropdown...")
+                    if self.latest_year is None:
+                        self.get_latest_year()
+                    value = self.latest_year
+                    print(f"Using latest year: {value}")
+                    
                 # Scroll to the current element before interacting
                 if element_type == 'dropdown':
                     # Find element and scroll to it
@@ -797,7 +832,7 @@ class WITSTariffScraper:
                 
             # Navigate to tariff page
             self.navigate_to_tariff_page()
-            print("Navigated to tariff query page")
+            print("Navigated to tariff query Navigate")
             
             # Configure parameters
             if not self.configure_query_parameters(query_params):
@@ -886,7 +921,7 @@ def main():
     """Main function that can be called from Java service with command line arguments"""
     parser = argparse.ArgumentParser(description='WITS Tariff Data Scraper')
     parser.add_argument('country_code', help='ISO country code (e.g., USA, CHN, SGP)')
-    parser.add_argument('year', help='Year to scrape data for')
+    parser.add_argument('year', nargs='?', default=None, help='Year to scrape data for (optional, defaults to latest available year)')
     parser.add_argument('--download-dir', default=None, help='Download directory path')
     parser.add_argument('--headless', action='store_true', default=True, help='Run in headless mode')
     
@@ -907,46 +942,44 @@ def main():
     # Map country code to market name (expand this mapping as needed)
     # Map country code to market name (expand this mapping as needed)
     country_mapping = {
-        'USA': 'United States', #Pass
+        'USA': 'United States',
         'CHN': 'China', 
         'JPN': 'Japan',
-        'DEU': 'Germany', #Fail
         'IND': 'India',
-        'GBR': 'United Kingdom',
-        'FRA': 'France',
-        'ITA': 'Italy',
         'BRA': 'Brazil',
         'CAN': 'Canada',
         'KOR': 'Korea, Rep.',
-        'RUS': 'Russian Federation',
-        'ESP': 'Spain',
         'AUS': 'Australia',
         'MEX': 'Mexico',
         'IDN': 'Indonesia',
-        'NLD': 'Netherlands',
         'SAU': 'Saudi Arabia',
         'TUR': 'Turkey',
         'CHE': 'Switzerland',
-        # Additional common codes
         'SGP': 'Singapore',
-        'POL': 'Poland',
-        'BEL': 'Belgium',
-        'SWE': 'Sweden',
-        'ARG': 'Argentina',
         'NOR': 'Norway',
-        'AUT': 'Austria',
-        'IRE': 'Ireland',
         'THA': 'Thailand',
-        'PHL': 'Philippines'
+        'PHL': 'Philippines',
+        'EU': 'European Union',
+        'MYS': 'Malaysia',
+        'VNM': 'Vietnam'
     }
     
     market_name = country_mapping.get(args.country_code, args.country_code)
     
+        # Determine which year to use
+    if args.year:
+        year_to_use = args.year
+        print(f"Using provided year: {year_to_use}")
+    else:
+        # Need to fetch latest year from WITS
+        print("No year provided, will use latest available year from WITS")
+        year_to_use = None  # Will be determined when navigating to tariff page
+        
     # Query parameters based on command line arguments
     query_params = {
         'datasource': 'WTO-IDB',
         'market': market_name,
-        'year': args.year,
+        'year': year_to_use,
         'dutycode': 'All Duty Codes',
         'nomenclature': 'HS 2017',
         'tier': 'Sub-Heading (all 6-digit HS codes)',
@@ -966,7 +999,7 @@ def main():
             query_params, 
             data_columns,
             country_code=args.country_code,
-            year=args.year
+            year=year_to_use if year_to_use else scraper.latest_year
         )
         
         if csv_filename:
@@ -1002,8 +1035,8 @@ if __name__ == "__main__":
         # Query parameters for standalone testing
         query_params = {
             'datasource': 'WTO-IDB',
-            'market': 'United States',
-            'year': '2023',
+            'market': 'European Union',
+            'year': None,  
             'dutycode': 'All Duty Codes',
             'nomenclature': 'HS 2017',
             'tier': 'Sub-Heading (all 6-digit HS codes)',
@@ -1019,8 +1052,7 @@ if __name__ == "__main__":
             password, 
             query_params, 
             data_columns,
-            country_code='USA',
-            year='2023'
+            country_code='EU'
         )
         
         if csv_filename:
