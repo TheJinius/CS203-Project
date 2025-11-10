@@ -861,11 +861,8 @@ class WITSTariffScraper:
             # Extract CSV from downloaded zip and move to resources
             csv_path = self.get_csv_file_from_zip()
             
-            # Rename CSV file if country_code and year are provided
-            if country_code and year:
-                csv_filename = self.rename_csv_file(csv_path, country_code, year)
-            else:
-                csv_filename = os.path.basename(csv_path)
+            # Rename CSV file
+            csv_filename = self.rename_csv_file(csv_path, country_code, year if year else self.latest_year)
             
             print(f"Tariff data download completed successfully. File: {csv_filename}")
             return csv_filename  # Return filename instead of True
