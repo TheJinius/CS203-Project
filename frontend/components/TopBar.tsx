@@ -55,7 +55,7 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
               className="hover:bg-accent text-blue-600 dark:text-blue-400"
             >
               <Edit className="h-4 w-4 mr-2" />
-              Edit Tariffs
+              Tariff Management
             </Button>
           )}
 

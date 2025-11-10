@@ -27,6 +27,10 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     question: str
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 @app.post("/query")
 def query_rag(req: QueryRequest):
     print(f"Request: {req}")
