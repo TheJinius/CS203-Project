@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+// app/dashboard/page.tsx for Tariff Management
 'use client';
 import { useState } from 'react';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
