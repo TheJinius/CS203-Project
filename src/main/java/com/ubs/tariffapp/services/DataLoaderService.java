@@ -3,20 +3,20 @@ package com.ubs.tariffapp.services;
 import static com.ubs.tariffapp.utils.HSDataCleaner.parseCSVLine;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -82,7 +82,19 @@ public class DataLoaderService {
     @Transactional
     public void loadCleanedData(String fileName) {
         System.out.println("Attempting to load file: " + fileName);
-        InputStream inputStream = getClass().getResourceAsStream("/data/clean_data/" + fileName);
+        String cleanDataDir = "src/main/resources/data/clean_data/";
+        Path filePath = Paths.get(cleanDataDir, fileName);
+
+        if (!Files.exists(filePath)) {
+            throw new RuntimeException("Cleaned data file not found at: " + filePath.toAbsolutePath());
+        }
+
+        InputStream inputStream;
+        try {
+            inputStream = Files.newInputStream(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to open cleaned data file: " + fileName, e);
+        }
         if (inputStream == null) {
             throw new RuntimeException("Cleaned data file not found: " + fileName);
         }
