@@ -1,7 +1,6 @@
 package com.ubs.tariffapp;
 
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import com.ubs.tariffapp.services.PythonScraperService;
@@ -16,7 +15,6 @@ import com.ubs.tariffapp.services.PythonScraperService;
  * - Country codes (comma-separated, e.g., USA,CHN,SGP,JPN)
  * - Year (e.g., 2023)
  */
-@SpringBootApplication
 public class PipelineRunner {
     
     public static void main(String[] args) {
@@ -42,7 +40,7 @@ public class PipelineRunner {
         int failCount = 0;
         
         try {
-            context = SpringApplication.run(PipelineRunner.class, args);
+            context = SpringApplication.run(App.class, args);
             PythonScraperService scraperService = context.getBean(PythonScraperService.class);
             
             for (String countryCode : countryCodes) {
