@@ -25,9 +25,36 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 
 ### Chatbot Setup
 
-1. Navigate to the `Python RAG chatbot` directory:
+1. Using a Powershell Terminal, navigate to the `Python RAG chatbot` directory:
     ```
 	cd "Python RAG chatbot"
+	```
+
+2. Create the virtual environment, if it does not yet exist:
+    ```
+	python -m venv .venv
+	```
+
+3. In PowerShell (and NOT the Command Prompt), run this command. You should see `(.venv)` in the PowerShell prompt:
+    ```
+    .\.venv\Scripts\Activate.ps1
+    ```
+
+4. If in step 3, you encounter an UnauthorizedAccess SecurityError, it means PowerShell is blocking script execution for security purposes. Allow local scripts to be run by executing this command when running PowerShell as an administrator:
+    ```
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+    ```
+
+5. Install the required dependencies into the virtual environment, like so:
+    ```
+    pip install -r requirements.txt
+    ```
+
+### Compliance Checklist Setup
+
+1. Using a Powershell Terminal, navigate to the `Compliance_checklist` directory:
+    ```
+	cd Compliance_checklist
 	```
 
 2. Create the virtual environment, if it does not yet exist:
@@ -113,7 +140,7 @@ uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 ### Compliance Checklist
 From the `Compliance_checklist` directory, start the server:
 ```
-uvicorn src.api_server:app --host 0.0.0.0 --port 8001
+uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 ```
 
 The backend will be available on [http://localhost:8080](http://localhost:8080), and the frontend will run on [http://localhost:3000](http://localhost:3000). The chatbot will be running on [http://localhost:8000](http://localhost:8000), and the compliance checklist server will be hosted at [http://localhost:8001](http://localhost:8001). The chatbot and compliance checklist can also be interacted with from the frontend UI.
