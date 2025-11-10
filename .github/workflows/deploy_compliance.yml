@@ -39,7 +39,7 @@ jobs:
             
             # Create/update .env file with secrets (if needed)
             cat > .env <<EOF
-            PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+            PINECONE_API_KEY=${{ secrets.COMPLIANCE_PINECONE_API_KEY }}
             PINECONE_CLOUD=${{ secrets.PINECONE_CLOUD }}
             PINECONE_REGION=${{ secrets.PINECONE_REGION }}
             PINECONE_INDEX=${{ secrets.COMPLIANCE_PINECONE_INDEX }}
