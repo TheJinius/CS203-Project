@@ -6,7 +6,7 @@ on:
     paths:
       - 'Compliance checklist/**'
       - 'Compliance_checklist/**'
-      - '.github/workflows/deploy-compliance.yml'
+      - '.github/workflows/deploy_compliance.yml'
 
 jobs:
   deploy-compliance:
