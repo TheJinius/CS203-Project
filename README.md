@@ -95,7 +95,7 @@ run-tests.bat --controller       # Run controller tests only
 ./run-tests.sh --controller      # Run controller tests only
 ```
 
-### Manual Testing
+### Manual Tests
 ```bash
 # Run all tests
 mvn clean test
