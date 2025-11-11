@@ -24,15 +24,6 @@ jobs:
           target: "/home/ec2-user/"
           strip_components: 0
 
-      - name: Rename the chatbot service
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.CHATBOT_EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            mv 'Python RAG chatbot' 'chatbot'
-
       - name: Deploy and restart chatbot service
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -40,6 +31,9 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+
+            cd "/home/ec2-user/
+            mv 'Python RAG chatbot' 'chatbot'
             cd "/home/ec2-user/chatbot"
 
             source .venv/bin/activate
