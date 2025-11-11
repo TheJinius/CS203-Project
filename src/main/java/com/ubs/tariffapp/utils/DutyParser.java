@@ -104,6 +104,17 @@ public class DutyParser {
         DutyInfo info = new DutyInfo();
         info.originalSpecificDuty = specificRate != null ? specificRate.trim() : "";
         
+        // Check if both rates are empty or zero - treat as free duty (AD_VALOREM with 0%)
+        boolean avIsZeroOrEmpty = avRate == null || avRate.trim().isEmpty() || avRate.trim().equals("0");
+        boolean specificIsZeroOrEmpty = specificRate == null || specificRate.trim().isEmpty() || 
+                                       specificRate.trim().equals("0") || specificRate.trim().equalsIgnoreCase("free");
+        
+        if (avIsZeroOrEmpty && specificIsZeroOrEmpty) {
+            info.dutyType = "AD_VALOREM";
+            info.standardizedAVRate = 0.0;
+            return info;
+        }
+        
         // Check if there's already an AV rate
         boolean hasExistingAV = false;
         if (avRate != null && !avRate.trim().isEmpty()) {
