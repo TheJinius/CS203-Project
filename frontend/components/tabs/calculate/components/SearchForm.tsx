@@ -119,6 +119,9 @@ export function SearchForm({
             <SelectValue placeholder="Select year" />
           </SelectTrigger>
           <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
+            <SelectItem value="2025" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+              2025
+            </SelectItem>
             <SelectItem value="2024" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
               2024
             </SelectItem>
@@ -130,6 +133,9 @@ export function SearchForm({
             </SelectItem>
             <SelectItem value="2021" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
               2021
+            </SelectItem>
+            <SelectItem value="2020" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+              2020
             </SelectItem>
           </SelectContent>
         </Select>
