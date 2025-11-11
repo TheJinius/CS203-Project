@@ -18,7 +18,7 @@ export const FloatingDock = ({
   desktopClassName,
   mobileClassName,
 }: {
-  items: { title: string; icon: React.ReactNode; href?: string; onClick?: () => void }[]
+  items: { title: string; icon: React.ReactNode; href?: string; onClick?: () => void; isActive?: boolean }[]
   desktopClassName?: string
   mobileClassName?: string
 }) => {
@@ -34,7 +34,7 @@ const FloatingDockMobile = ({
   items,
   className,
 }: {
-  items: { title: string; icon: React.ReactNode; href?: string; onClick?: () => void }[]
+  items: { title: string; icon: React.ReactNode; href?: string; onClick?: () => void; isActive?: boolean }[]
   className?: string
 }) => {
   const [open, setOpen] = useState(false)
@@ -107,7 +107,7 @@ const FloatingDockDesktop = ({
   items,
   className,
 }: {
-  items: { title: string; icon: React.ReactNode; href?: string; onClick?: () => void }[]
+  items: { title: string; icon: React.ReactNode; href?: string; onClick?: () => void; isActive?: boolean }[]
   className?: string
 }) => {
   const mouseX = useMotionValue(Infinity)
@@ -133,12 +133,14 @@ function IconContainer({
   icon,
   href,
   onClick,
+  isActive,
 }: {
   mouseX: MotionValue
   title: string
   icon: React.ReactNode
   href?: string
   onClick?: () => void
+  isActive?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -164,11 +166,21 @@ function IconContainer({
         style={{ scale }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors relative"
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors relative",
+          isActive 
+            ? "bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 dark:border-blue-400" 
+            : "bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700"
+        )}
         onClick={onClick}
       >
         <div className="h-5 w-5 flex-shrink-0">{icon}</div>
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">
+        <span className={cn(
+          "text-sm font-medium whitespace-nowrap",
+          isActive 
+            ? "text-blue-700 dark:text-blue-300 font-semibold" 
+            : "text-slate-700 dark:text-slate-200"
+        )}>
           {title}
         </span>
       </motion.div>
@@ -182,10 +194,20 @@ function IconContainer({
         style={{ scale }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative"
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-xl transition-colors relative",
+          isActive 
+            ? "bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500 dark:border-blue-400" 
+            : "bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700"
+        )}
       >
         <div className="h-5 w-5 flex-shrink-0">{icon}</div>
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">
+        <span className={cn(
+          "text-sm font-medium whitespace-nowrap",
+          isActive 
+            ? "text-blue-700 dark:text-blue-300 font-semibold" 
+            : "text-slate-700 dark:text-slate-200"
+        )}>
           {title}
         </span>
       </motion.div>

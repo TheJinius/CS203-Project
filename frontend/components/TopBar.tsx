@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { User, ChevronDown, LogOut, Moon, Sun, AlertTriangle, Calculator, TrendingUp, FolderUp, GitCompare, Edit } from 'lucide-react'
+import { User, ChevronDown, LogOut, Moon, Sun, AlertTriangle, Calculator, TrendingUp, FolderUp, GitCompare, Edit, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -58,32 +58,48 @@ export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabC
     {
       title: "Calculate Tariff",
       icon: <Calculator className="h-full w-full" />,
-      onClick: () => navigateToBaseAndChangeTab("calculate")
+      onClick: () => navigateToBaseAndChangeTab("calculate"),
+      isActive: pathname === '/' && activeTab === 'calculate'
     },
     // Admin-only: Manage Chatbot Documents tab
     ...(isAdmin() ? [{
       title: "Manage Chatbot Documents",
       icon: <FolderUp className="h-full w-full" />,
-      onClick: () => navigateToBaseAndChangeTab("manage-docs")
+      onClick: () => navigateToBaseAndChangeTab("manage-docs"),
+      isActive: pathname === '/' && activeTab === 'manage-docs'
     }] : []),
     // Admin-only: Tariff Management
     ...(isAdmin() ? [{
       title: "Tariff Management",
       icon: <Edit className="h-full w-full" />,
-      onClick: () => router.push('/edit')
+      onClick: () => router.push('/edit'),
+      isActive: pathname === '/edit'
     }] : []),
     {
       title: "Results",
       icon: <TrendingUp className="h-full w-full" />,
-      onClick: () => router.push('/compare')
+      onClick: () => router.push('/compare'),
+      isActive: pathname === '/compare'
     },
   ]
 
   return (
     <>
       <header className="h-20 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center px-6 relative">
-        {/* Left side - Empty spacer for balance */}
-        <div className="absolute left-6 w-64"></div>
+        {/* Left side - Logo and Burger Menu */}
+        <div className="absolute left-6 flex items-center gap-3">
+          {/* Burger Menu Button - Only show when sidebar is closed */}
+          {!sidebarOpen && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleSidebar}
+              className="text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
 
         {/* Center - Floating Dock Navigation */}
         <div className="flex justify-center">
