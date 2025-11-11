@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.dto.TariffRequest;
 import com.ubs.tariffapp.models.dto.TariffResponse;
@@ -27,6 +28,7 @@ import com.ubs.tariffapp.models.duty.CombinedDuty;
 import com.ubs.tariffapp.models.duty.OtherDuty;
 import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
+import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.services.DutyService;
 import com.ubs.tariffapp.services.TariffManagementService;
 
@@ -37,10 +39,12 @@ public class TariffManagementController {
 
     private final TariffManagementService tariffManagementService;
     private final DutyService dutyService;
+    private final CountryRepository countryRepository;
 
-    public TariffManagementController(TariffManagementService tariffManagementService, DutyService dutyService) {
+    public TariffManagementController(TariffManagementService tariffManagementService, DutyService dutyService, CountryRepository countryRepository) {
         this.tariffManagementService = tariffManagementService;
         this.dutyService = dutyService;
+        this.countryRepository = countryRepository;
     }
 
     // Get all tariffs (for management view)
@@ -189,5 +193,31 @@ public class TariffManagementController {
         tariffManagementService.deleteTariff(id);
         System.out.println("✅ Tariff deleted successfully");
         return ResponseEntity.noContent().build();
+    }
+
+    // Get all countries
+    @GetMapping("/countries")
+    @PreAuthorize("hasAuthority('Admin')")
+    public ResponseEntity<Map<String, Object>> getAllCountries() {
+        System.out.println("🌍 Fetching all countries");
+        List<Country> countries = countryRepository.findAll();
+        
+        // Convert to simple map format
+        List<Map<String, String>> countryList = countries.stream()
+                .map(country -> {
+                    Map<String, String> countryMap = new HashMap<>();
+                    countryMap.put("code", country.getCountryId());
+                    countryMap.put("name", country.getCountryName());
+                    return countryMap;
+                })
+                .collect(Collectors.toList());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("countries", countryList);
+        response.put("count", countryList.size());
+        response.put("status", "success");
+        
+        System.out.println("✅ Retrieved " + countryList.size() + " countries");
+        return ResponseEntity.ok(response);
     }
 }

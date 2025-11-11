@@ -1,10 +1,11 @@
 import { ClipboardCheck, Loader2 } from "lucide-react"
-import { ComplianceTask, COUNTRY_NAMES } from '../types'
+import { ComplianceTask } from '../types'
 
 interface ComplianceTabProps {
   complianceTasks: ComplianceTask[]
   complianceLoading: boolean
   selectedDestination: string
+  destinationCountryName: string
   getPriorityColor: (category: string) => string
 }
 
@@ -12,13 +13,14 @@ export function ComplianceTab({
   complianceTasks,
   complianceLoading,
   selectedDestination,
+  destinationCountryName,
   getPriorityColor
 }: ComplianceTabProps) {
   return (
     <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded border border-green-200 dark:border-green-800">
       <div className="font-medium text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
         <ClipboardCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-        Compliance Requirements for {COUNTRY_NAMES[selectedDestination] || selectedDestination}
+        Compliance Requirements for {destinationCountryName || selectedDestination}
         {complianceLoading && <Loader2 className="h-4 w-4 animate-spin text-green-600 dark:text-green-400" />}
       </div>
       

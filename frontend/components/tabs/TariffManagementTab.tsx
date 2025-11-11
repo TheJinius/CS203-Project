@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, CheckCircle, XCircle, AlertCircle, Trash2, Search, Edit, ArrowLeft, Loader2, Calculator, FileText } from "lucide-react"
 import { getSession, signOut } from "next-auth/react"
-import { searchProducts as apiSearchProducts } from "@/lib/api"
+import { searchProducts as apiSearchProducts, getCountries } from "@/lib/api"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { COUNTRY_NAMES } from "./calculate/types"
 
 interface Product {
   code: string
@@ -84,6 +83,10 @@ interface DeleteConfirmation {
 export default function TariffManagementTab() {
   // Tab state
   const [activeTab, setActiveTab] = useState<"search" | "add" | "manage">("search")
+
+  // Countries state
+  const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
+  const [countriesLoading, setCountriesLoading] = useState(false)
 
   // Search/Edit Form state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
@@ -195,6 +198,30 @@ export default function TariffManagementTab() {
   const hideNotification = () => {
     setNotification(prev => ({ ...prev, show: false }))
   }
+
+  // Fetch countries on component mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      setCountriesLoading(true)
+      try {
+        const { ok, data } = await getCountries()
+        if (ok && data.countries) {
+          setCountries(data.countries)
+          console.log('✅ Loaded', data.countries.length, 'countries from database')
+        } else {
+          console.error('❌ Failed to load countries:', data.error)
+          showNotification('error', 'Failed to Load Countries', 'Could not fetch countries from database')
+        }
+      } catch (error) {
+        console.error('❌ Error fetching countries:', error)
+        showNotification('error', 'Error', 'An error occurred while fetching countries')
+      } finally {
+        setCountriesLoading(false)
+      }
+    }
+    
+    fetchCountries()
+  }, [])
 
   // Normalize backend dutyCategory values to match frontend type system
   const normalizeDutyCategory = (category?: string | null): 'AD_VALOREM' | 'SPECIFIC' | 'COMBINED' | 'OTHER' => {
@@ -897,11 +924,15 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent className="max-h-60 overflow-y-auto">
-                        {Object.entries(COUNTRY_NAMES).map(([code, name]) => (
-                          <SelectItem key={code} value={code}>
-                            {code} - {name}
-                          </SelectItem>
-                        ))}
+                        {countriesLoading ? (
+                          <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                        ) : (
+                          countries.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.code} - {country.name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -913,13 +944,17 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                         <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
                       <SelectContent className="max-h-60 overflow-y-auto">
-                        {Object.entries(COUNTRY_NAMES)
-                          .filter(([code]) => code !== "000") // Exclude "World" from reporter
-                          .map(([code, name]) => (
-                            <SelectItem key={code} value={code}>
-                              {code} - {name}
-                            </SelectItem>
-                          ))}
+                        {countriesLoading ? (
+                          <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                        ) : (
+                          countries
+                            .filter((country) => country.code !== "000") // Exclude "World" from reporter
+                            .map((country) => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {country.code} - {country.name}
+                              </SelectItem>
+                            ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1115,13 +1150,17 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       <SelectValue placeholder="Select reporter" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
-                      {Object.entries(COUNTRY_NAMES)
-                        .filter(([code]) => code !== "000") // Exclude "World" from reporter
-                        .map(([code, name]) => (
-                          <SelectItem key={code} value={code}>
-                            {code} - {name}
-                          </SelectItem>
-                        ))}
+                      {countriesLoading ? (
+                        <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                      ) : (
+                        countries
+                          .filter((country) => country.code !== "000") // Exclude "World" from reporter
+                          .map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {country.code} - {country.name}
+                            </SelectItem>
+                          ))
+                      )}
                     </SelectContent>
                   </Select>
                   {formErrors.reporterCode && (
@@ -1146,11 +1185,15 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       <SelectValue placeholder="Select partner" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
-                      {Object.entries(COUNTRY_NAMES).map(([code, name]) => (
-                        <SelectItem key={code} value={code}>
-                          {code} - {name}
-                        </SelectItem>
-                      ))}
+                      {countriesLoading ? (
+                        <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                      ) : (
+                        countries.map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.code} - {country.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {formErrors.partnerCode && (

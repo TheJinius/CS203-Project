@@ -116,6 +116,24 @@ export async function searchProducts(query: string, limit: number = 5) {
   }
 }
 
+export async function getCountries() {
+  console.log('🌍 Fetching countries from database');
+  
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/admin/tariffs/countries`, {
+      method: "GET",
+      headers,
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Get countries error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
+}
+
 export async function getShippingRoute(params: {
   src_lat: number;
   src_lon: number;

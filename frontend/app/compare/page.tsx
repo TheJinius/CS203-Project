@@ -9,8 +9,7 @@ import TopBar from "@/components/TopBar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { ArrowLeft, Route, MapPin, DollarSign, Clock, Leaf, AlertTriangle, GripVertical, X, BarChart3, TrendingUp, Award, Map, Download } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
-import { COUNTRY_NAMES } from "@/components/tabs/calculate/types"
+import { getOptimalRoutes, COUNTRY_COORDINATES, getCountries } from "@/lib/api"
 import { domToPng } from 'modern-screenshot'
 import jsPDF from "jspdf"
 
@@ -72,10 +71,27 @@ export default function ComparePage() {
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [builderLegs, setBuilderLegs] = useState<CalculationHistory[]>([])
   const [builderDropTarget, setBuilderDropTarget] = useState<boolean>(false)
+  const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
 
   // Refs for PDF export
   const analyticsRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
+
+  // Fetch countries on component mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const { ok, data } = await getCountries()
+        if (ok && data.countries) {
+          setCountries(data.countries)
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error)
+      }
+    }
+    
+    fetchCountries()
+  }, [])
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -201,8 +217,8 @@ export default function ComparePage() {
 
   // Helper to find country code from country name
   const getCountryCodeFromName = (countryName: string): string | null => {
-    const entry = Object.entries(COUNTRY_NAMES).find(([_, name]) => name === countryName)
-    return entry ? entry[0] : null
+    const country = countries.find(c => c.name === countryName)
+    return country ? country.code : null
   }
 
   // Convert calculations to comparison format

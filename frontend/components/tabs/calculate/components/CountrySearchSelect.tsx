@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Search, X } from "lucide-react"
-import { COUNTRY_NAMES } from '../types'
+import { getCountries } from '@/lib/api'
 
 interface CountrySearchSelectProps {
   label: string
@@ -24,38 +24,55 @@ export function CountrySearchSelect({
   const [searchQuery, setSearchQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [filteredCountries, setFilteredCountries] = useState<Array<{ code: string; name: string }>>([])
+  const [allCountries, setAllCountries] = useState<Array<{ code: string; name: string }>>([])
+  const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Convert COUNTRY_NAMES to array for filtering, with World (000) first
-  const allCountries = Object.entries(COUNTRY_NAMES)
-    .map(([code, name]) => ({
-      code,
-      name
-    }))
-    .sort((a, b) => {
-      // World (000) comes first
-      if (a.code === "000") return -1
-      if (b.code === "000") return 1
-      // Then sort alphabetically by name
-      return a.name.localeCompare(b.name)
-    })
-    .filter(country => country.code !== excludeValue) // Exclude the other field's selected value
-
-  // Filter countries based on search query
+  // Fetch countries from database on component mount
   useEffect(() => {
+    const fetchCountries = async () => {
+      setLoading(true)
+      try {
+        const { ok, data } = await getCountries()
+        if (ok && data.countries) {
+          // Sort countries: World (000) first, then alphabetically by name
+          const sorted = [...data.countries].sort((a, b) => {
+            if (a.code === "000") return -1
+            if (b.code === "000") return 1
+            return a.name.localeCompare(b.name)
+          })
+          setAllCountries(sorted)
+          setFilteredCountries(sorted.filter(c => c.code !== excludeValue))
+        } else {
+          console.error('Failed to load countries:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchCountries()
+  }, [])
+
+  // Filter countries based on search query and excludeValue
+  useEffect(() => {
+    const availableCountries = allCountries.filter(country => country.code !== excludeValue)
+    
     if (searchQuery.trim() === "") {
-      setFilteredCountries(allCountries)
+      setFilteredCountries(availableCountries)
     } else {
       const query = searchQuery.toLowerCase()
-      const filtered = allCountries.filter(
+      const filtered = availableCountries.filter(
         country =>
           country.name.toLowerCase().includes(query) ||
           country.code.includes(query)
       )
       setFilteredCountries(filtered)
     }
-  }, [searchQuery])
+  }, [searchQuery, allCountries, excludeValue])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -83,7 +100,7 @@ export function CountrySearchSelect({
     inputRef.current?.focus()
   }
 
-  const selectedCountry = value ? COUNTRY_NAMES[value] : ""
+  const selectedCountry = value ? allCountries.find(c => c.code === value) : null
 
   return (
     <div className="space-y-1.5" ref={dropdownRef}>
@@ -95,12 +112,12 @@ export function CountrySearchSelect({
         <Input
           ref={inputRef}
           type="text"
-          value={value && !isOpen ? `${value} - ${selectedCountry}` : searchQuery}
+          value={value && !isOpen && selectedCountry ? `${value} - ${selectedCountry.name}` : searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
             if (!isOpen) setIsOpen(true)
           }}
-          placeholder={placeholder}
+          placeholder={loading ? "Loading countries..." : placeholder}
           className="w-full h-9 pl-9 pr-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           onFocus={() => {
             if (value) {
@@ -109,6 +126,7 @@ export function CountrySearchSelect({
             setIsOpen(true)
           }}
           readOnly={Boolean(value && !isOpen)}
+          disabled={loading}
         />
         {value && (
           <button
@@ -125,7 +143,11 @@ export function CountrySearchSelect({
 
         {isOpen && (
           <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {filteredCountries.length > 0 ? (
+            {loading ? (
+              <div className="px-3 py-4 text-center text-sm text-slate-500 dark:text-slate-400">
+                Loading countries...
+              </div>
+            ) : filteredCountries.length > 0 ? (
               filteredCountries.map((country) => (
                 <button
                   key={country.code}

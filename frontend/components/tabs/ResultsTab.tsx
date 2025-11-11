@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Package, TrendingUp, Hash, GripVertical, X, Route } from "lucide-react"
-import { getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
-import { COUNTRY_NAMES } from "./calculate/types"
+import { getOptimalRoutes, COUNTRY_COORDINATES, getCountries } from "@/lib/api"
 
 export interface CalculationHistory {
   id: string
@@ -44,11 +43,28 @@ export default function ResultsTab({ calculationResult, calculationHistory, curr
   const [draggedItem, setDraggedItem] = useState<CalculationHistory | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [builderLegs, setBuilderLegs] = useState<CalculationHistory[]>([])
+  const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
+
+  // Fetch countries on component mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const { ok, data } = await getCountries()
+        if (ok && data.countries) {
+          setCountries(data.countries)
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error)
+      }
+    }
+    
+    fetchCountries()
+  }, [])
 
   // Helper to find country code from country name
   const getCountryCodeFromName = (countryName: string): string | null => {
-    const entry = Object.entries(COUNTRY_NAMES).find(([_, name]) => name === countryName)
-    return entry ? entry[0] : null
+    const country = countries.find(c => c.name === countryName)
+    return country ? country.code : null
   }
 
   // Calculate and display route on map when clicking a saved calculation

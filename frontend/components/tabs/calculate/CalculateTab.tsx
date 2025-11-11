@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, Loader2, ClipboardCheck } from "lucide-react"
-import { searchTariffs, calculateTariff, getExchangeRate, getOptimalRoutes, COUNTRY_COORDINATES } from "@/lib/api"
+import { searchTariffs, calculateTariff, getExchangeRate, getOptimalRoutes, COUNTRY_COORDINATES, getCountries } from "@/lib/api"
 
-import { Tariff, CalculationDetails, ComplianceTask, COUNTRY_NAMES } from './types'
+import { Tariff, CalculationDetails, ComplianceTask } from './types'
 import { useProductSearch } from './hooks/useProductSearch'
 import { useTariffHelpers } from './hooks/useTariffHelpers'
 import { fetchComplianceData } from './utils/complianceService'
@@ -64,6 +64,9 @@ export default function CalculateTab({
   const [selectedYear, setSelectedYear] = useState<string>("2023")
   const [step, setStep] = useState(1)
 
+  // Countries state
+  const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
+
   // Product search hook
   const {
     productSearchQuery,
@@ -100,6 +103,22 @@ export default function CalculateTab({
 
   // Helpers
   const { convertFromUSD, getLowestTariffId, getPriorityColor } = useTariffHelpers()
+
+  // Fetch countries on component mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const { ok, data } = await getCountries()
+        if (ok && data.countries) {
+          setCountries(data.countries)
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error)
+      }
+    }
+    
+    fetchCountries()
+  }, [])
 
   // Auto-convert tariff amount when currency changes
   useEffect(() => {
@@ -253,11 +272,14 @@ export default function CalculateTab({
         }
 
         // Save calculation to history
+        const sourceCountry = countries.find(c => c.code === selectedSource)
+        const destCountry = countries.find(c => c.code === selectedDestination)
+        
         const calculation: CalculationHistory = {
           id: `calc-${Date.now()}`,
           timestamp: new Date(),
-          sourceCountry: COUNTRY_NAMES[selectedSource] || selectedSource,
-          destinationCountry: COUNTRY_NAMES[selectedDestination] || selectedDestination,
+          sourceCountry: sourceCountry?.name || selectedSource,
+          destinationCountry: destCountry?.name || selectedDestination,
           productCode: selectedProduct,
           productDescription: data.productDescription || 'N/A',
           tariffAmount: finalAmount,
@@ -465,6 +487,7 @@ export default function CalculateTab({
                 complianceTasks={complianceTasks}
                 complianceLoading={complianceLoading}
                 selectedDestination={selectedDestination}
+                destinationCountryName={countries.find(c => c.code === selectedDestination)?.name || selectedDestination}
                 getPriorityColor={getPriorityColor}
               />
             )}
