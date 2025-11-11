@@ -2240,3 +2240,9 @@
 458,Malaysia,000,World,2023,8311309100,,0,2,30,"","- - - In rolls","MFN applied duty rates","A",,,MYS,WLD,Metals,CONDITIONAL,30,0,,,""
 458,Malaysia,000,World,2023,8311309900,,0,2,30,"","- - - Other","MFN applied duty rates","A",,,MYS,WLD,Metals,CONDITIONAL,30,0,,,""
 458,Malaysia,000,World,2023,8311900000,,0,2,30,"","- Other","MFN applied duty rates","A",,,MYS,WLD,Metals,CONDITIONAL,30,0,,,""
+840,United States,000,World,2023,20311000,2,1,"7  ",25,," (05 Jan -31 Dec)","Philippines-Iceland under Philippines-EFTA agreement rates","A","",,PHL,WLD,Agriculture,AD_VALOREM,25,0,,,
+840,United States,000,World,2023,20311000,2,1,"8  ",25,," (05 Jan -31 Dec)","Philippines-Switzerland and Liechtenstein under Philippines-EFTA agreement rates","A","",,PHL,WLD,Agriculture,AD_VALOREM,25,0,,,
+840,United States,000,World,2023,20311000,2,1,"9  ",25,," (05 Jan -31 Dec)","Philippines-Norway under Philippines-EFTA agreement rates","A","",,PHL,WLD,Agriculture,AD_VALOREM,25,0,,,
+840,United States,000,World,2023,20311000,2,1,"A  ",25,," (05 Jan -31 Dec)","ASEAN-Hong Kong,China free trade area duty rates","A","",,PHL,WLD,Agriculture,AD_VALOREM,25,0,,,
+840,United States,000,World,2023,20312000,0,0,"2  ",32.5,,"Not provided","MFN applied duty rates","A","S",,PHL,WLD,Agriculture,AD_VALOREM,32.5,0,,,
+840,United States,000,World,2023,20312000,0,1,"0  ",5,,"Not provided","ASEAN free trade area duty rates (ASEAN Trade in Goods Agreement)","A","S",,PHL,WLD,Agriculture,AD_VALOREM,5,0,,,
