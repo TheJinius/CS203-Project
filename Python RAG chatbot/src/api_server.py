@@ -1,8 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 from .chat_cli import answer
+from .ingest import chunk, embed, index, NAMESPACE
+from pypdf import PdfReader
+import uuid
+import io
 
 app = FastAPI(title="Tariff RAG Chatbot API")
 
@@ -10,7 +14,7 @@ app = FastAPI(title="Tariff RAG Chatbot API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000", 
+        "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
@@ -40,92 +44,93 @@ def health_check():
 def query_rag(req: QueryRequest):
     try:
         ans, refs = answer(req.question)
-        
+
         # Helper function to split text into sentences
         def split_into_sentences(text):
             # Split on period, exclamation, question mark followed by space or newline
             sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z(])', text)
             return [s.strip() for s in sentences if s.strip()]
-        
+
         # Extract key concepts from the response and query DYNAMICALLY
         response_lower = ans.lower()
         query_lower = req.question.lower()
-        
+
         # Extract all significant words from query (nouns, technical terms)
         query_words = re.findall(r'\b[a-z]{4,}\b', query_lower)  # Words 4+ chars
-        stopwords = {'what', 'when', 'where', 'which', 'does', 'have', 'there', 'they', 'this', 
+        stopwords = {'what', 'when', 'where', 'which', 'does', 'have', 'there', 'they', 'this',
                      'that', 'with', 'from', 'about', 'between', 'the', 'and', 'for', 'are', 'but',
                      'not', 'you', 'all', 'can', 'her', 'was', 'one', 'our', 'out', 'were', 'will'}
         key_query_terms = [w for w in query_words if w not in stopwords]
-        
+
         # Extract compound terms (any hyphenated words)
         compound_terms = re.findall(r'\b\w+(?:-\w+)+\b', query_lower)
-        
+
         # Extract multi-word phrases from query (2-3 word combinations)
         query_phrases = re.findall(r'\b[a-z]+\s+[a-z]+(?:\s+[a-z]+)?\b', query_lower)
         query_phrases = [p for p in query_phrases if len(p) > 8]  # Only meaningful phrases
-        
+
         # Extract percentage mentions from response
         percent_terms = re.findall(r'\b\d+\s*percent\b', response_lower)
-        
+
+
         # Extract numeric constraints from response
         numeric_patterns = re.findall(r'(?:more than|less than|at least|exceeding?|up to)\s+\d+', response_lower)
-        
+
         # Generic constraint/composition words
-        constraint_words = ['must', 'may', 'cannot', 'shall', 'should', 'exceed', 'less than', 
-                           'more than', 'at least', 'contain', 'consist', 'predominate', 
+        constraint_words = ['must', 'may', 'cannot', 'shall', 'should', 'exceed', 'less than',
+                           'more than', 'at least', 'contain', 'consist', 'predominate',
                            'include', 'require', 'allow', 'permit', 'restrict']
-        
+
         sources = []
         for r in refs:
             meta = r["metadata"]
             source_text = meta.get("text", "")
-            
+
             # Split source into sentences
             sentences = split_into_sentences(source_text)
-            
+
             # Find relevant sentences that contain important information
             relevant_sentences = []
             for sentence in sentences:
                 sentence_lower = sentence.lower()
-                
+
                 # Check if sentence contains important terms or concepts
                 score = 0
-                
+
                 # Check for key query terms
                 for term in key_query_terms:
                     if term in sentence_lower:
                         score += 2
-                
+
                 # Check for compound terms from query
                 for term in compound_terms:
                     if term in sentence_lower:
                         score += 4
-                
+
                 # Check for query phrases
                 for phrase in query_phrases:
                     if phrase in sentence_lower:
                         score += 3
-                
+
                 # Check for percentage information
                 for term in percent_terms:
                     if term in sentence_lower:
                         score += 3
-                
+
                 # Check for numeric patterns
                 for pattern in numeric_patterns:
                     if pattern in sentence_lower:
                         score += 2
-                
+
                 # Check for constraint/composition words
                 for word in constraint_words:
                     if word in sentence_lower:
                         score += 1
-                
+
                 # If sentence is relevant (score > 1 to filter noise), include it
                 if score > 1:
                     relevant_sentences.append(sentence)
-            
+
             # Merge consecutive relevant sentences into continuous regions
             merged_regions = []
             if relevant_sentences:
@@ -139,8 +144,7 @@ def query_rag(req: QueryRequest):
                             last_sent = current_region[-1]
                             last_end = source_text.find(last_sent) + len(last_sent)
                             current_start = source_text.find(sent)
-                            
-                            # If they're close (within 50 chars), merge them
+                           # If they're close (within 50 chars), merge them
                             if current_start - last_end < 50:
                                 current_region.append(sent)
                             else:
@@ -149,11 +153,11 @@ def query_rag(req: QueryRequest):
                                 current_region = [sent]
                         else:
                             current_region.append(sent)
-                
+
                 # Add the last region
                 if current_region:
                     merged_regions.append(' '.join(current_region))
-            
+
             sources.append({
                 "source_document": meta.get("source", "?"),
                 "line_range": f"{meta.get('line_start', '?')}–{meta.get('line_end', '?')}",
@@ -165,6 +169,134 @@ def query_rag(req: QueryRequest):
         return {"response": ans, "sources": sources}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/upload-document")
+async def upload_document(file: UploadFile = File(...)):
+    """Upload a PDF document and add it to the vector database"""
+    try:
+        # Validate file type
+        if not file.filename.endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+        # Read PDF content into memory
+        content = await file.read()
+        pdf_file = io.BytesIO(content)
+
+        # Extract text from PDF
+        reader = PdfReader(pdf_file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="PDF appears to be empty or unreadable")
+
+        # Chunk the text
+        pieces = chunk(text)
+
+        # Create vectors with embeddings
+        vectors = []
+        base = file.filename
+        for i, p in enumerate(pieces):
+            # Sanitize the ID to only ASCII characters
+            safe_base = base.encode('ascii', 'ignore').decode('ascii')
+            vid = f"{safe_base}-{i}-{uuid.uuid4().hex[:8]}"
+            vectors.append(
+                (vid, embed(p), {"text": p, "source": base, "chunk": i})
+            )
+     # Upsert to Pinecone
+        if NAMESPACE:
+            index.upsert(vectors=vectors, namespace=NAMESPACE)
+        else:
+            index.upsert(vectors=vectors)
+
+        return {
+            "success": True,
+            "filename": file.filename,
+            "chunks_added": len(vectors),
+            "message": f"Successfully processed {file.filename} and added {len(vectors)} chunks to the knowledge base"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
+
+@app.delete("/delete-document/{filename}")
+async def delete_document(filename: str):
+    """Delete a document from the vector database by filename"""
+    try:
+        # Query to find all vectors with this source
+        # First, we need to fetch vectors with this metadata
+        query_result = index.query(
+            vector=[0.0] * 1024,  # Dummy vector
+            top_k=10000,  # Large number to get all matches
+            include_metadata=True,
+            filter={"source": filename},
+            namespace=NAMESPACE if NAMESPACE else None
+        )
+
+        if not query_result.matches:
+            raise HTTPException(status_code=404, detail=f"Document '{filename}' not found in database")
+
+        # Extract IDs to delete
+        ids_to_delete = [match.id for match in query_result.matches]
+
+        # Delete from Pinecone
+        if NAMESPACE:
+            index.delete(ids=ids_to_delete, namespace=NAMESPACE)
+        else:
+            index.delete(ids=ids_to_delete)
+
+        return {
+            "success": True,
+            "filename": filename,
+            "chunks_deleted": len(ids_to_delete),
+            "message": f"Successfully deleted {filename} ({len(ids_to_delete)} chunks)"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting document: {str(e)}")
+
+@app.get("/list-documents")
+async def list_documents():
+    """List all documents currently in the vector database"""
+    try:
+        # Get index stats
+        stats = index.describe_index_stats()
+
+        # Query for a sample of vectors to get unique sources
+        # This is a workaround since Pinecone doesn't have a direct "list metadata" function
+        query_result = index.query(
+            vector=[0.0] * 1024,  # Dummy vector
+            top_k=10000,  # Get a large sample
+            include_metadata=True,
+            namespace=NAMESPACE if NAMESPACE else None
+        )
+ # Extract unique sources
+        sources = {}
+        for match in query_result.matches:
+            source = match.metadata.get('source', 'Unknown')
+            if source not in sources:
+                sources[source] = {
+                    'filename': source,
+                    'chunks': 0,
+                    'id': source  # Use filename as ID
+                }
+            sources[source]['chunks'] += 1
+
+        documents = list(sources.values())
+
+        return {
+            "success": True,
+            "documents": documents,
+            "total_vectors": stats.total_vector_count
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing documents: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

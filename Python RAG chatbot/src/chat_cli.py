@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pinecone import Pinecone
 
-# ===================================
+# =======================================
 # Load environment variables
-# ===================================
+# =======================================
 load_dotenv()
 
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
@@ -70,7 +70,7 @@ def retrieve(query: str, top_k: int = TOP_K):
     # Build text context
     snippets = [m.metadata.get("text", "") for m in matches if hasattr(m, "metadata")]
     context = "\n\n".join(snippets)
-
+    
     if DEBUG:
         print(f"[DEBUG] Retrieved {len(matches)} matches:")
         for i, m in enumerate(matches, 1):
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                         "score": r.score,
                         "approx_line": approx_line,
                         "total_lines_in_chunk": total_lines,
-                        "text_preview": text[:250] + ("..." if len(text) > 250 else "")
+       "text_preview": text[:250] + ("..." if len(text) > 250 else "")
                     })
 
             output = {"response": ans, "sources": sources}
@@ -154,3 +154,4 @@ if __name__ == "__main__":
             break
         except Exception as e:
             print(f"[ERROR] {e}")
+
