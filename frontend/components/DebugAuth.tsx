@@ -45,7 +45,7 @@ export default function DebugAuth() {
               AWS_REGION: process.env.AWS_REGION || 'MISSING',
               COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID ? 'SET' : 'MISSING',
               COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID ? 'SET' : 'MISSING',
-              NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'MISSING',
+              NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_BASE_ROUTE || 'MISSING',
             }, null, 2)}
           </pre>
         </div>

@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { X, Package, DollarSign, Clock, AlertTriangle, Leaf, Truck } from "lucide-react"
+import { useTheme } from "@/contexts/ThemeContext"
 
 // GeoJSON types
 interface GeoJSONGeometry {
@@ -187,6 +188,7 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
   const mapContainer = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const map = useRef<any>(null)
+  const { theme } = useTheme()
   
   // Track which routes are visible
   const [visibleRoutes, setVisibleRoutes] = useState<{[key: string]: boolean}>({
@@ -230,9 +232,14 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
 
       window.mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ""
 
+      // Use light or dark style based on theme
+      const mapStyle = theme === "light" 
+        ? "mapbox://styles/mapbox/light-v11" 
+        : "mapbox://styles/mapbox/dark-v11"
+
       map.current = new window.mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/mapbox/dark-v11",
+        style: mapStyle,
         center: [0, 20],
         zoom: 1.5,
         renderWorldCopies: false, // Prevent rendering multiple world copies
@@ -245,18 +252,25 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
       map.current.on("load", () => {
         console.log("Map loaded successfully")
         
-        // Customize map colors - dark blue water and lighter land
-        // Set water color to dark blue
-        map.current.setPaintProperty('water', 'fill-color', '#0a193f')
+        // Apply theme-specific colors
+        if (theme === "dark") {
+          // Dark mode: dark blue water and lighter land
+          map.current.setPaintProperty('water', 'fill-color', '#0a193f')
+          map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
+          map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
+        } else {
+          // Light mode: light blue water and white land
+          map.current.setPaintProperty('water', 'fill-color', '#3055ff')
+          map.current.setPaintProperty('land', 'fill-color', '#f8f9fa')
+          if (map.current.getLayer('country-label')) {
+            map.current.setPaintProperty('country-label', 'text-color', '#1a1a1a')
+          }
+        }
         
-        // Set land color to lighter gray/beige
-        map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
-
-        map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
-        
-        // If there's a landcover layer, make it lighter too
+        // If there's a landcover layer, adjust it too
         if (map.current.getLayer('landcover')) {
-          map.current.setPaintProperty('landcover', 'fill-color', '#e4e4e7')
+          const landcoverColor = theme === "dark" ? '#e4e4e7' : '#ffffff'
+          map.current.setPaintProperty('landcover', 'fill-color', landcoverColor)
         }
       })
     }
@@ -270,6 +284,129 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
       }
     }
   }, [])
+
+  // Update map style and colors when theme changes
+  useEffect(() => {
+    if (!map.current || !map.current.loaded()) return
+
+    const mapStyle = theme === "light" 
+      ? "mapbox://styles/mapbox/light-v11" 
+      : "mapbox://styles/mapbox/dark-v11"
+
+    // Change the map style
+    map.current.setStyle(mapStyle)
+
+    // Wait for the new style to load before applying colors
+    map.current.once('style.load', () => {
+      if (theme === "dark") {
+        // Dark mode colors
+        map.current.setPaintProperty('water', 'fill-color', '#0a193f')
+        map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
+        if (map.current.getLayer('country-label')) {
+          map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
+        }
+        if (map.current.getLayer('landcover')) {
+          map.current.setPaintProperty('landcover', 'fill-color', '#e4e4e7')
+        }
+      } else {
+        // Light mode colors
+        map.current.setPaintProperty('water', 'fill-color', '#c6def1')
+        map.current.setPaintProperty('land', 'fill-color', '#f8f9fa')
+        if (map.current.getLayer('country-label')) {
+          map.current.setPaintProperty('country-label', 'text-color', '#1a1a1a')
+        }
+        if (map.current.getLayer('landcover')) {
+          map.current.setPaintProperty('landcover', 'fill-color', '#ffffff')
+        }
+      }
+
+      // Re-add route layers after style change
+      if (optimalRoutesData) {
+        Object.entries(ROUTE_CONFIG).forEach(([routeKey, config]) => {
+          const route = optimalRoutesData[routeKey as keyof OptimalRoutesData]
+          if (route && route.coordinates && route.coordinates.length > 0) {
+            // Reconstruct the route layers
+            let geometry
+            if (route.geometry) {
+              geometry = route.geometry
+            } else {
+              geometry = {
+                type: "LineString",
+                coordinates: route.coordinates
+              }
+            }
+            
+            const geojson = {
+              type: "FeatureCollection",
+              features: [{
+                type: "Feature",
+                geometry: geometry,
+                properties: route.metrics
+              }]
+            }
+
+            const fixedGeojson = geometry.type === "LineString" 
+              ? fixAntimeridianWrapping(geojson)
+              : geojson
+            
+            if (!fixedGeojson) return
+            
+            // Add source and layer
+            if (!map.current.getSource(`source-${routeKey}`)) {
+              map.current.addSource(`source-${routeKey}`, {
+                type: "geojson",
+                data: fixedGeojson,
+                lineMetrics: true,
+              })
+
+              map.current.addLayer({
+                id: `route-${routeKey}`,
+                type: "line",
+                source: `source-${routeKey}`,
+                layout: {
+                  "line-join": "round",
+                  "line-cap": "round",
+                  "visibility": visibleRoutes[routeKey] ? "visible" : "none"
+                },
+                paint: {
+                  "line-color": config.color,
+                  "line-width": 3,
+                  "line-opacity": 0.8,
+                },
+              })
+            }
+          }
+        })
+      }
+
+      // Re-add legacy route if exists
+      if (geojsonData && !optimalRoutesData) {
+        const fixedGeojson = fixAntimeridianWrapping(geojsonData)
+        if (fixedGeojson && !map.current.getSource("shipping-route")) {
+          map.current.addSource("shipping-route", {
+            type: "geojson",
+            data: fixedGeojson,
+            lineMetrics: true,
+          })
+
+          map.current.addLayer({
+            id: "shipping-route-layer",
+            type: "line",
+            source: "shipping-route",
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#ef4444",
+              "line-width": 3,
+              "line-opacity": 0.8,
+            },
+          })
+        }
+      }
+    })
+  }, [theme])
 
   // Toggle route visibility
   const toggleRoute = (routeKey: string) => {

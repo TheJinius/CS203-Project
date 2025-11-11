@@ -160,6 +160,17 @@ export default function TariffManagementTab() {
   // Add tariff dialog
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
+  // Form validation errors
+  const [formErrors, setFormErrors] = useState<{
+    tariffYear?: string
+    reporterCode?: string
+    partnerCode?: string
+    productCode?: string
+    dutyType?: string
+    specificRateUnit?: string
+    rates?: string
+  }>({})
+
   const predefinedProducts = [
     { code: "27079940", description: "Carbazole, Energy" },
     { code: "1012100", description: "Pure Bred Breeding Horses" },
@@ -221,7 +232,10 @@ export default function TariffManagementTab() {
       // No rates entered - don't set a default
       setCurrentDutyType(null)
     }
-  }, [adValoremRate, specificRate, compoundRate1, compoundRate2])
+    
+    // Validate rates in real-time
+    validateRates()
+  }, [adValoremRate, specificRate, compoundRate1, compoundRate2, specificRateUnit])
 
   const searchProducts = useCallback(async (query: string) => {
     try {
@@ -299,6 +313,90 @@ export default function TariffManagementTab() {
     }
   }
 
+  // Input validation handlers
+  const handleNumericInput = (value: string, setter: (val: string) => void, fieldName?: string) => {
+    // Only allow numbers and decimal point
+    const numericValue = value.replace(/[^0-9.]/g, '')
+    // Prevent multiple decimal points
+    const parts = numericValue.split('.')
+    const validValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : numericValue
+    setter(validValue)
+    
+    // Clear error if valid
+    if (fieldName && validValue) {
+      setFormErrors(prev => ({ ...prev, [fieldName]: undefined }))
+    }
+  }
+
+  const handleHSCodeInput = (value: string, setter: (val: string) => void, fieldName?: string) => {
+    // Only allow numbers for HS Code
+    const numericValue = value.replace(/[^0-9]/g, '')
+    setter(numericValue)
+    
+    // Validate and set error
+    if (fieldName) {
+      if (!numericValue) {
+        setFormErrors(prev => ({ ...prev, [fieldName]: 'This field is required' }))
+      } else if (fieldName === 'productCode' && numericValue.length < 4) {
+        setFormErrors(prev => ({ ...prev, [fieldName]: 'HS Code must be at least 4 digits' }))
+      } else if (fieldName === 'tariffYear' && numericValue.length !== 4) {
+        setFormErrors(prev => ({ ...prev, [fieldName]: 'Year must be 4 digits' }))
+      } else {
+        setFormErrors(prev => ({ ...prev, [fieldName]: undefined }))
+      }
+    }
+  }
+
+  const handleAlphaInput = (value: string, setter: (val: string) => void) => {
+    // Only allow letters and spaces (no numbers)
+    const alphaValue = value.replace(/[0-9]/g, '')
+    setter(alphaValue)
+  }
+
+  // Validate rates
+  const validateRates = () => {
+    const hasAdValorem = adValoremRate && adValoremRate.trim() !== "" && parseFloat(adValoremRate) >= 0
+    const hasSpecific = specificRate && specificRate.trim() !== "" && parseFloat(specificRate) >= 0
+    const hasCompound1 = compoundRate1 && compoundRate1.trim() !== "" && parseFloat(compoundRate1) >= 0
+    const hasCompound2 = compoundRate2 && compoundRate2.trim() !== "" && parseFloat(compoundRate2) >= 0
+    
+    if (!hasAdValorem && !hasSpecific && !hasCompound1 && !hasCompound2) {
+      setFormErrors(prev => ({ ...prev, rates: 'At least one duty rate must be specified' }))
+      return false
+    } else {
+      setFormErrors(prev => ({ ...prev, rates: undefined }))
+    }
+    
+    // Validate specific rate unit if specific rates are provided
+    if ((hasSpecific || hasCompound2) && (!specificRateUnit || specificRateUnit.trim() === "")) {
+      setFormErrors(prev => ({ ...prev, specificRateUnit: 'Unit required for specific/compound duties' }))
+      return false
+    } else {
+      setFormErrors(prev => ({ ...prev, specificRateUnit: undefined }))
+    }
+    
+    return true
+  }
+
+  // Validate required fields
+  const validateRequiredFields = () => {
+    const errors: typeof formErrors = {}
+    
+    if (!tariffYear) errors.tariffYear = 'Tariff year is required'
+    else if (tariffYear.length !== 4) errors.tariffYear = 'Year must be 4 digits'
+    
+    if (!reporterCode) errors.reporterCode = 'Reporter country is required'
+    if (!partnerCode) errors.partnerCode = 'Partner country is required'
+    
+    if (!productCode) errors.productCode = 'Product code is required'
+    else if (productCode.length < 4) errors.productCode = 'HS Code must be at least 4 digits'
+    
+    if (!dutyType || !dutyCode) errors.dutyType = 'Duty type is required'
+    
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
     if (typeof window === "undefined") return {}
     try {
@@ -335,6 +433,7 @@ export default function TariffManagementTab() {
     setCompoundRate2("")
     setCurrentDutyType(null)
     setCombinedDutyMode('M')
+    setFormErrors({})
   }
 
   // SEARCH & EDIT FUNCTIONS
@@ -345,7 +444,7 @@ export default function TariffManagementTab() {
 
     try {
       const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080"
 
       const searchRequest = {
         reporterCode: selectedDestination,
@@ -356,7 +455,7 @@ export default function TariffManagementTab() {
 
       console.log("🔍 Searching tariffs with:", searchRequest)
 
-      const response = await fetch(`${apiUrl}/api/admin/tariffs/search`, {
+      const response = await fetch(`${apiUrl}/admin/tariffs/search`, {
         method: "POST",
         headers,
         body: JSON.stringify(searchRequest),
@@ -478,8 +577,8 @@ export default function TariffManagementTab() {
     
     try {
       const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-      const endpoint = `${apiUrl}/api/admin/tariffs/${selectedTariff.tariffId}`
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080"
+      const endpoint = `${apiUrl}/admin/tariffs/${selectedTariff.tariffId}`
       
       const requestBody: Record<string, unknown> = {
         tlsSuffix: editFormData.tlsSuffix || selectedTariff.tlsSuffix || "",
@@ -560,38 +659,20 @@ export default function TariffManagementTab() {
 
   // ADD TARIFF FUNCTIONS
   const handleCreateTariff = async () => {
+    // Validate all fields first
+    const isValid = validateRequiredFields() && validateRates()
+    if (!isValid) {
+      setError("Please fix the errors in the form before submitting")
+      return
+    }
+
     setLoading(true)
     setError("")
     setSuccess("")
 
     try {
-      const missingFields = []
-      if (!tariffYear) missingFields.push("Tariff Year")
-      if (!reporterCode) missingFields.push("Reporter Country")
-      if (!partnerCode) missingFields.push("Partner Country")
-      if (!productCode) missingFields.push("Product")
-      if (!dutyType) missingFields.push("Duty Type")
-      if (!dutyCode) missingFields.push("Duty Code")
-      
-      if (missingFields.length > 0) {
-        throw new Error(`Please fill in the following required fields: ${missingFields.join(", ")}`)
-      }
-
-      const hasAdValorem = adValoremRate && adValoremRate.trim() !== "" && parseFloat(adValoremRate) >= 0
-      const hasSpecific = specificRate && specificRate.trim() !== "" && parseFloat(specificRate) >= 0
-      const hasCompound1 = compoundRate1 && compoundRate1.trim() !== "" && parseFloat(compoundRate1) >= 0
-      const hasCompound2 = compoundRate2 && compoundRate2.trim() !== "" && parseFloat(compoundRate2) >= 0
-      
-      if (!hasAdValorem && !hasSpecific && !hasCompound1 && !hasCompound2) {
-        throw new Error("At least one duty rate must be specified (Ad Valorem, Specific, or Combined rates)")
-      }
-      
-      if ((hasSpecific || hasCompound2) && (!specificRateUnit || specificRateUnit.trim() === "")) {
-        throw new Error("Specific rate unit is required when using specific or combined duties")
-      }
-
       const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080"
 
       const requestBody: Record<string, unknown> = {
         tariffYear: parseInt(tariffYear),
@@ -633,7 +714,7 @@ export default function TariffManagementTab() {
         }
       }
 
-      const response = await fetch(`${apiUrl}/api/admin/tariffs`, {
+      const response = await fetch(`${apiUrl}/admin/tariffs`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
@@ -692,9 +773,9 @@ export default function TariffManagementTab() {
     
     try {
       const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080"
       
-      const response = await fetch(`${apiUrl}/api/admin/tariffs`, {
+      const response = await fetch(`${apiUrl}/admin/tariffs`, {
         method: 'GET',
         headers,
         mode: 'cors',
@@ -725,9 +806,9 @@ export default function TariffManagementTab() {
     
     try {
       const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080"
       
-      const response = await fetch(`${apiUrl}/api/admin/tariffs/${tariffId}`, {
+      const response = await fetch(`${apiUrl}/admin/tariffs/${tariffId}`, {
         method: 'DELETE',
         headers,
         mode: 'cors',
@@ -749,10 +830,11 @@ export default function TariffManagementTab() {
       
       setDeleteConfirmation({ show: false, tariffId: null, tariffDetails: '' })
       
+      // Immediately remove the deleted tariff from the frontend state
       if (activeTab === "manage") {
-        await handleLoadAllTariffs()
+        setAllTariffs(prev => prev.filter(tariff => tariff.tariffId !== tariffId))
       } else {
-        await handleSearchTariffs()
+        setSearchResults(prev => prev.filter(tariff => tariff.tariffId !== tariffId))
       }
       
     } catch (e) {
@@ -1007,20 +1089,29 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     Tariff Year <span className="text-red-500">*</span>
                   </Label>
                   <Input 
-                    type="number"
+                    type="text"
                     value={tariffYear} 
-                    onChange={(e) => setTariffYear(e.target.value)}
+                    onChange={(e) => handleHSCodeInput(e.target.value, setTariffYear, 'tariffYear')}
                     placeholder="2023"
-                    className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
+                    className={`border-2 ${formErrors.tariffYear ? 'border-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:border-blue-500'}`}
                   />
+                  {formErrors.tariffYear && (
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formErrors.tariffYear}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Reporter Country (Destination) <span className="text-red-500">*</span>
                   </Label>
-                  <Select onValueChange={setReporterCode}>
-                    <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
+                  <Select onValueChange={(value) => {
+                    setReporterCode(value)
+                    setFormErrors(prev => ({ ...prev, reporterCode: undefined }))
+                  }}>
+                    <SelectTrigger className={`border-2 ${formErrors.reporterCode ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}>
                       <SelectValue placeholder="Select reporter" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
@@ -1033,6 +1124,12 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                         ))}
                     </SelectContent>
                   </Select>
+                  {formErrors.reporterCode && (
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formErrors.reporterCode}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1041,8 +1138,11 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                   <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Partner Country (Source) <span className="text-red-500">*</span>
                   </Label>
-                  <Select onValueChange={setPartnerCode}>
-                    <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
+                  <Select onValueChange={(value) => {
+                    setPartnerCode(value)
+                    setFormErrors(prev => ({ ...prev, partnerCode: undefined }))
+                  }}>
+                    <SelectTrigger className={`border-2 ${formErrors.partnerCode ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}>
                       <SelectValue placeholder="Select partner" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
@@ -1053,6 +1153,12 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       ))}
                     </SelectContent>
                   </Select>
+                  {formErrors.partnerCode && (
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formErrors.partnerCode}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -1062,16 +1168,25 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                   <div className="relative">
                     <Input
                       value={productSearchQuery}
-                      onChange={(e) => handleProductSearchChange(e.target.value)}
+                      onChange={(e) => {
+                        handleProductSearchChange(e.target.value)
+                        // Validate if it's a direct HS code entry
+                        if (/^\d+$/.test(e.target.value.trim())) {
+                          handleHSCodeInput(e.target.value.trim(), setProductCode, 'productCode')
+                        }
+                      }}
                       placeholder="Search by HS Code or description..."
-                      className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
+                      className={`border-2 ${formErrors.productCode ? 'border-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:border-blue-500'}`}
                     />
                     {productSearchResults.length > 0 && productSearchQuery && (
                       <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                         {productSearchResults.map((product, idx) => (
                           <div
                             key={idx}
-                            onClick={() => handleProductSelect(product)}
+                            onClick={() => {
+                              handleProductSelect(product)
+                              setFormErrors(prev => ({ ...prev, productCode: undefined }))
+                            }}
                             className="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b last:border-b-0 transition-colors"
                           >
                             <div className="font-bold text-blue-600 dark:text-blue-400">{product.code}</div>
@@ -1086,10 +1201,16 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       </div>
                     )}
                   </div>
-                  {productCode && (
+                  {productCode && !formErrors.productCode && (
                     <div className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
                       ✓ Selected: {productCode}
                     </div>
+                  )}
+                  {formErrors.productCode && (
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formErrors.productCode}
+                    </p>
                   )}
                 </div>
               </div>
@@ -1104,9 +1225,10 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     if (selected) {
                       setDutyType(selected.dutyType)
                       setDutyCode(selected.dutyCode)
+                      setFormErrors(prev => ({ ...prev, dutyType: undefined }))
                     }
                   }}>
-                    <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
+                    <SelectTrigger className={`border-2 ${formErrors.dutyType ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}>
                       <SelectValue placeholder="Select duty type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1122,10 +1244,16 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       ))}
                     </SelectContent>
                   </Select>
-                  {dutyType && dutyCode && (
+                  {dutyType && dutyCode && !formErrors.dutyType && (
                     <div className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
                       ✓ Selected: {dutyType}-{dutyCode}
                     </div>
+                  )}
+                  {formErrors.dutyType && (
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formErrors.dutyType}
+                    </p>
                   )}
                 </div>
 
@@ -1135,13 +1263,23 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                   </Label>
                   <Input 
                     value={specificRateUnit} 
-                    onChange={(e) => setSpecificRateUnit(e.target.value)}
+                    onChange={(e) => {
+                      setSpecificRateUnit(e.target.value)
+                      validateRates()
+                    }}
                     placeholder="e.g., kg, liter, piece"
-                    className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
+                    className={`border-2 ${formErrors.specificRateUnit ? 'border-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:border-blue-500'}`}
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Required for specific/compound duties
-                  </p>
+                  {formErrors.specificRateUnit ? (
+                    <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {formErrors.specificRateUnit}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Required for specific/compound duties
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1189,6 +1327,15 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 Duty Rates <span className="text-xs font-normal text-slate-500">(At least one required)</span>
               </h3>
               
+              {formErrors.rates && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    {formErrors.rates}
+                  </p>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -1196,11 +1343,9 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     {currentDutyType === 'AD_VALOREM' && <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">Primary</span>}
                   </Label>
                   <Input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={adValoremRate} 
-                    onChange={(e) => setAdValoremRate(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value, setAdValoremRate)}
                     placeholder="0.00"
                     className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
                   />
@@ -1215,11 +1360,9 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     {currentDutyType === 'SPECIFIC' && <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">Primary</span>}
                   </Label>
                   <Input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={specificRate} 
-                    onChange={(e) => setSpecificRate(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value, setSpecificRate)}
                     placeholder="0.00"
                     className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
                   />
@@ -1236,11 +1379,9 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     {currentDutyType === 'COMBINED' && <span className="text-xs bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full">Primary</span>}
                   </Label>
                   <Input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={compoundRate1} 
-                    onChange={(e) => setCompoundRate1(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value, setCompoundRate1)}
                     placeholder="0.00"
                     className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
                   />
@@ -1255,11 +1396,9 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     {currentDutyType === 'COMBINED' && <span className="text-xs bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full">Primary</span>}
                   </Label>
                   <Input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={compoundRate2} 
-                    onChange={(e) => setCompoundRate2(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value, setCompoundRate2)}
                     placeholder="0.00"
                     className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
                   />
@@ -1283,7 +1422,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 </Label>
                 <Input 
                   value={tlsSuffix} 
-                  onChange={(e) => setTlsSuffix(e.target.value)}
+                  onChange={(e) => handleAlphaInput(e.target.value, setTlsSuffix)}
                   placeholder="Additional code suffix (if any)"
                   className="border-2 border-slate-300 dark:border-slate-600 focus:border-blue-500"
                 />
@@ -1352,17 +1491,27 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 <div>
                   <Label>Ad Valorem Rate (%)</Label>
                   <Input
-                    type="number"
+                    type="text"
                     value={editFormData.adValoremRate ?? ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, adValoremRate: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^0-9.]/g, '')
+                      const parts = numericValue.split('.')
+                      const validValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : numericValue
+                      setEditFormData({ ...editFormData, adValoremRate: validValue ? parseFloat(validValue) : undefined })
+                    }}
                   />
                 </div>
                 <div>
                   <Label>Specific Rate</Label>
                   <Input
-                    type="number"
+                    type="text"
                     value={editFormData.specificRate ?? ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, specificRate: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^0-9.]/g, '')
+                      const parts = numericValue.split('.')
+                      const validValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : numericValue
+                      setEditFormData({ ...editFormData, specificRate: validValue ? parseFloat(validValue) : undefined })
+                    }}
                   />
                 </div>
               </div>
@@ -1371,17 +1520,27 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 <div>
                   <Label>Compound Rate 1</Label>
                   <Input
-                    type="number"
+                    type="text"
                     value={editFormData.compoundRate1 ?? ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, compoundRate1: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^0-9.]/g, '')
+                      const parts = numericValue.split('.')
+                      const validValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : numericValue
+                      setEditFormData({ ...editFormData, compoundRate1: validValue ? parseFloat(validValue) : undefined })
+                    }}
                   />
                 </div>
                 <div>
                   <Label>Compound Rate 2</Label>
                   <Input
-                    type="number"
+                    type="text"
                     value={editFormData.compoundRate2 ?? ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, compoundRate2: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^0-9.]/g, '')
+                      const parts = numericValue.split('.')
+                      const validValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : numericValue
+                      setEditFormData({ ...editFormData, compoundRate2: validValue ? parseFloat(validValue) : undefined })
+                    }}
                   />
                 </div>
               </div>
@@ -1398,7 +1557,10 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 <Label>TLS Suffix</Label>
                 <Input
                   value={editFormData.tlsSuffix}
-                  onChange={(e) => setEditFormData({ ...editFormData, tlsSuffix: e.target.value })}
+                  onChange={(e) => {
+                    const alphaValue = e.target.value.replace(/[0-9]/g, '')
+                    setEditFormData({ ...editFormData, tlsSuffix: alphaValue })
+                  }}
                 />
               </div>
 
