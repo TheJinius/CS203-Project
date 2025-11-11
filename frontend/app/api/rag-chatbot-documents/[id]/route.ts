@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000"
+// const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000"
+const PYTHON_API_URL = process.env.PYTHON_API_URL || "https://cs203chatbot.duckdns.org"
 
 export async function DELETE(
   request: NextRequest,
@@ -14,7 +15,7 @@ export async function DELETE(
         { error: "Document ID is required" },
         { status: 400 }
       )
-    }
+    } 
 
     // Call Python backend to delete the document
     const response = await fetch(`${PYTHON_API_URL}/delete-document/${encodeURIComponent(id)}`, {
