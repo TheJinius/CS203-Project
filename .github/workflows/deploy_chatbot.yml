@@ -31,7 +31,9 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd "/home/ec2-user/Python RAG chatbot"
+            cd "/home/ec2-user/chatbot"
+
+            source .venv/bin/activate
             
             # Install/update dependencies
             python3 -m pip install --upgrade pip
@@ -47,27 +49,6 @@ jobs:
             EMBED_MODEL=${{ secrets.EMBED_MODEL }}
             CHAT_MODEL=${{ secrets.CHAT_MODEL }}
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            EOF
-            
-            # Create/update systemd service file
-            sudo tee /etc/systemd/system/chatbot.service > /dev/null <<EOF
-            [Unit]
-            Description=Tariff RAG Chatbot API
-            After=network.target
-
-            [Service]
-            Type=simple
-            User=ec2-user
-            WorkingDirectory=/home/ec2-user/Python RAG chatbot
-            ExecStart=/usr/bin/python3 -m uvicorn src.api_server:app --host 0.0.0.0 --port 8000
-            Restart=on-failure
-            RestartSec=10
-            StandardOutput=journal
-            StandardError=journal
-            SyslogIdentifier=chatbot
-
-            [Install]
-            WantedBy=multi-user.target
             EOF
             
             # Reload and restart service
