@@ -1,24 +1,28 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Menu, User, ChevronDown, LogOut, Moon, Sun, AlertTriangle } from 'lucide-react'
+import { User, ChevronDown, LogOut, Moon, Sun, AlertTriangle, Calculator, TrendingUp, FolderUp, GitCompare, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { FloatingDock } from '@/components/ui/floating-dock'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 interface TopBarProps {
   sidebarOpen: boolean
   onToggleSidebar: () => void
+  activeTab?: string
+  onTabChange?: (tab: string) => void
 }
 
-export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
+export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabChange }: TopBarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const { user, signOut, sessionError, isAdmin } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleSignOut = async () => {
     await signOut()
@@ -28,24 +32,71 @@ export default function TopBar({ sidebarOpen, onToggleSidebar }: TopBarProps) {
   // Show session error alert
   useEffect(() => {
     if (sessionError === "RefreshAccessTokenError") {
-      // Could show a toast notification here instead
       console.error("Session expired, please sign in again");
     }
   }, [sessionError]);
 
+  // Helper function to check if we're on the base route
+  const isOnBaseRoute = () => pathname === '/'
+
+  // Helper function to navigate to base route and then change tab
+  const navigateToBaseAndChangeTab = (tab: string) => {
+    if (!isOnBaseRoute()) {
+      // Store the desired tab in localStorage
+      localStorage.setItem('pendingTab', tab)
+      // Navigate to base route
+      router.push('/')
+    } else {
+      // Already on base route, just change tab
+      if (!sidebarOpen) onToggleSidebar()
+      if (onTabChange) onTabChange(tab)
+    }
+  }
+
+  // Build dock items dynamically based on user role
+  const dockItems = [
+    // Admin-only: Manage Chatbot Documents tab
+    ...(isAdmin() ? [{
+      title: "Manage Chatbot Documents",
+      icon: <FolderUp className="h-full w-full" />,
+      onClick: () => navigateToBaseAndChangeTab("manage-docs")
+    }] : []),
+    // Admin-only: Tariff Management
+    ...(isAdmin() ? [{
+      title: "Tariff Management",
+      icon: <Edit className="h-full w-full" />,
+      onClick: () => router.push('/edit')
+    }] : []),
+    {
+      title: "Calculate Tariff",
+      icon: <Calculator className="h-full w-full" />,
+      onClick: () => navigateToBaseAndChangeTab("calculate")
+    },
+    {
+      title: "Results",
+      icon: <TrendingUp className="h-full w-full" />,
+      onClick: () => navigateToBaseAndChangeTab("results")
+    },
+    {
+      title: "Compare Tariffs",
+      icon: <GitCompare className="h-full w-full" />,
+      onClick: () => router.push('/compare')
+    },
+  ]
+
   return (
     <>
-      <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4">
-        <div className="flex items-center">
-          {!sidebarOpen && (
-            <Button variant="ghost" size="sm" onClick={onToggleSidebar} className="mr-4">
-              <Menu className="h-4 w-4" />
-            </Button>
-          )}
-          <h2 className="text-lg font-semibold text-card-foreground">Global Trade Map</h2>
+      <header className="h-20 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center px-6 relative">
+        {/* Left side - Empty spacer for balance */}
+        <div className="absolute left-6 w-64"></div>
+
+        {/* Center - Floating Dock Navigation */}
+        <div className="flex justify-center">
+          <FloatingDock items={dockItems} />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Right side - Controls */}
+        <div className="absolute right-6 flex items-center gap-2">
           {/* Session Error Indicator */}
           {sessionError && (
             <Alert variant="destructive" className="w-auto p-2">

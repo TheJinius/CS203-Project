@@ -29,6 +29,19 @@ export default function TariffCalculatorPage() {
   const isResizingRef = useRef(false)
   const lastResizeTime = useRef(0)
 
+  // Check for pending tab on mount
+  useEffect(() => {
+    const pendingTab = localStorage.getItem('pendingTab')
+    if (pendingTab) {
+      setActiveTab(pendingTab)
+      if (!sidebarOpen) {
+        setSidebarOpen(true)
+      }
+      // Clear the pending tab
+      localStorage.removeItem('pendingTab')
+    }
+  }, [sidebarOpen])
+
   const handleRouteCalculated = useCallback((data: Record<string, unknown>) => {
     console.log("🗺️ Routes calculated, updating map with data:", data)
     
@@ -185,6 +198,8 @@ export default function TariffCalculatorPage() {
           <TopBar 
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
 
           <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900 relative">

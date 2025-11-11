@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Calculator, TrendingUp, FolderUp, GitCompare, Edit } from "lucide-react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
 import CalculateTab from "./tabs/CalculateTab"
 import ResultsTab from "./tabs/ResultsTab"
 import ManageRAGChatbotDocumentsTab from "./tabs/ManageRAGChatbotDocumentsTab"
@@ -58,7 +57,6 @@ export default function Sidebar({
 }: SidebarProps) {
   const { isAdmin } = useAuth();
   const { theme } = useTheme();
-  const router = useRouter();
 
   const [currency, setCurrency] = useState<string>("USD")
   const [calculationHistory, setCalculationHistory] = useState<CalculationHistory[]>([])
@@ -87,17 +85,6 @@ export default function Sidebar({
     setCalculationHistory(prev => [calculation, ...prev])
   }
 
-  // Build sidebar items dynamically based on user role
-  const sidebarItems = [
-    // Admin-only: Manage Chatbot Documents tab
-    ...(isAdmin() ? [{ id: "manage-docs", label: "Manage Chatbot Documents", icon: FolderUp }] : []),
-    // Admin-only: Tariff Management
-    ...(isAdmin() ? [{ id: "tariff-management", label: "Tariff Management", icon: Edit }] : []),
-    { id: "calculate", label: "Calculate Tariff", icon: Calculator },
-    { id: "results", label: "Results", icon: TrendingUp },
-    { id: "compare", label: "Compare Tariffs", icon: GitCompare },
-  ]
-
   if (!isOpen) return null
 
   return (
@@ -109,9 +96,9 @@ export default function Sidebar({
         maxWidth: `${width}px`
       }}
     >
-      {/* Header Section */}
+      {/* Header Section - Logo and Close Button Only */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
               src={theme === 'dark' ? '/TOP dark.png' : '/TOP light.png'}
@@ -131,38 +118,6 @@ export default function Sidebar({
             <X className="h-4 w-4" />
           </Button>
         </div>
-
-        {/* Navigation Tabs */}
-        <nav className="space-y-1">
-          {sidebarItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <Button
-                key={item.id}
-                variant={activeTab === item.id ? "default" : "ghost"}
-                className={`w-full justify-start gap-2 text-sm transition-all duration-200 ${
-                  activeTab === item.id
-                    ? "bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
-                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100"
-                }`}
-                onClick={() => {
-                  if (item.id === "compare") {
-                    router.push('/compare')
-                  } else if (item.id === "tariff-management") {
-                    router.push('/edit')
-                  } else {
-                    onTabChange(item.id)
-                  }
-                }}
-              >
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                <span className={`truncate ${width < 350 ? 'text-xs' : 'text-sm'}`}>
-                  {item.label}
-                </span>
-              </Button>
-            )
-          })}
-        </nav>
       </div>
 
       {/* Tab Content Container with proper overflow handling */}

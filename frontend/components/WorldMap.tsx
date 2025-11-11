@@ -250,7 +250,7 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
         map.current.setPaintProperty('water', 'fill-color', '#0a193f')
         
         // Set land color to lighter gray/beige
-        map.current.setPaintProperty('land', 'background-color', '#a7a7bdff')
+        map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
 
         map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
         
