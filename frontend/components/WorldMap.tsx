@@ -232,7 +232,7 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
 
       map.current = new window.mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/mapbox/light-v11",
+        style: "mapbox://styles/mapbox/dark-v11",
         center: [0, 20],
         zoom: 1.5,
         renderWorldCopies: false, // Prevent rendering multiple world copies
@@ -244,6 +244,20 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
 
       map.current.on("load", () => {
         console.log("Map loaded successfully")
+        
+        // Customize map colors - dark blue water and lighter land
+        // Set water color to dark blue
+        map.current.setPaintProperty('water', 'fill-color', '#0a193f')
+        
+        // Set land color to lighter gray/beige
+        map.current.setPaintProperty('land', 'background-color', '#a7a7bdff')
+
+        map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
+        
+        // If there's a landcover layer, make it lighter too
+        if (map.current.getLayer('landcover')) {
+          map.current.setPaintProperty('landcover', 'fill-color', '#e4e4e7')
+        }
       })
     }
 
@@ -496,7 +510,19 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
   }, [geojsonData])
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-blue-100 relative">
+    <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
+      {/* Stars effect for space theme */}
+      <div className="absolute inset-0 opacity-50">
+        <div className="absolute top-[10%] left-[15%] w-1 h-1 bg-white rounded-full animate-pulse"></div>
+        <div className="absolute top-[25%] right-[20%] w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        <div className="absolute bottom-[30%] left-[25%] w-0.5 h-0.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-[60%] right-[35%] w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute bottom-[20%] right-[15%] w-0.5 h-0.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-[40%] left-[40%] w-0.5 h-0.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+        <div className="absolute bottom-[50%] right-[45%] w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '1.2s' }}></div>
+        <div className="absolute top-[15%] right-[50%] w-0.5 h-0.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.8s' }}></div>
+      </div>
+      
       <div ref={mapContainer} className="w-full h-full absolute inset-0" />
       
       {/* Legend for optimal routes */}
