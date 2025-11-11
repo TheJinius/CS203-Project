@@ -279,10 +279,10 @@ public class DataLoaderServiceTest {
         // Data should already be loaded from the first test
         assertTrue(dataLoaded, "Data should have been loaded by previous test");
 
-        // Test that United States is created correctly
-        Optional<Country> usaCountry = countryRepository.findById("840");
-        assertTrue(usaCountry.isPresent(), "USA should be present");
-        assertEquals("United States", usaCountry.get().getCountryName());
+        // Test that Malaysia is created correctly
+        Optional<Country> usaCountry = countryRepository.findById("458");
+        assertTrue(usaCountry.isPresent(), "MYS should be present");
+        assertEquals("Malaysia", usaCountry.get().getCountryName());
         assertNotNull(usaCountry.get().getIsoCode(), "ISO code should be set");
 
         // Test World partner
