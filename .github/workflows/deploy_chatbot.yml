@@ -32,7 +32,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
 
-            cd "/home/ec2-user/
+            cd "/home/ec2-user/"
             mv 'Python RAG chatbot' 'chatbot'
             cd "/home/ec2-user/chatbot"
 
