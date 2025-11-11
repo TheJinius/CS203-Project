@@ -11,6 +11,7 @@ import { getSession, signOut } from "next-auth/react"
 import { searchProducts as apiSearchProducts } from "@/lib/api"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { COUNTRY_NAMES } from "./calculate/types"
 
 interface Product {
   code: string
@@ -813,11 +814,12 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       <SelectTrigger>
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="702">702 - Singapore</SelectItem>
-                        <SelectItem value="840">840 - United States</SelectItem>
-                        <SelectItem value="156">156 - China</SelectItem>
-                        <SelectItem value="000">000 - World (Any Country)</SelectItem>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {Object.entries(COUNTRY_NAMES).map(([code, name]) => (
+                          <SelectItem key={code} value={code}>
+                            {code} - {name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -828,10 +830,14 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       <SelectTrigger>
                         <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="702">702 - Singapore</SelectItem>
-                        <SelectItem value="840">840 - United States</SelectItem>
-                        <SelectItem value="156">156 - China</SelectItem>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {Object.entries(COUNTRY_NAMES)
+                          .filter(([code]) => code !== "000") // Exclude "World" from reporter
+                          .map(([code, name]) => (
+                            <SelectItem key={code} value={code}>
+                              {code} - {name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1013,10 +1019,14 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
                       <SelectValue placeholder="Select reporter" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="702">702 - Singapore</SelectItem>
-                      <SelectItem value="840">840 - United States</SelectItem>
-                      <SelectItem value="156">156 - China</SelectItem>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {Object.entries(COUNTRY_NAMES)
+                        .filter(([code]) => code !== "000") // Exclude "World" from reporter
+                        .map(([code, name]) => (
+                          <SelectItem key={code} value={code}>
+                            {code} - {name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1031,11 +1041,12 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     <SelectTrigger className="border-2 border-slate-300 dark:border-slate-600">
                       <SelectValue placeholder="Select partner" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="702">702 - Singapore</SelectItem>
-                      <SelectItem value="840">840 - United States</SelectItem>
-                      <SelectItem value="156">156 - China</SelectItem>
-                      <SelectItem value="000">000 - World (Any Country)</SelectItem>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {Object.entries(COUNTRY_NAMES).map(([code, name]) => (
+                        <SelectItem key={code} value={code}>
+                          {code} - {name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

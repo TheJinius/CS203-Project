@@ -133,7 +133,8 @@ export const COUNTRY_NAMES: { [key: string]: string } = {
   "818": "Egypt",
   "826": "United Kingdom",
   "840": "United States",
-  "862": "Venezuela"
+  "862": "Venezuela",
+  "918": "European Union"
 }
 
 export const PREDEFINED_PRODUCTS = [
