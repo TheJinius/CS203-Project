@@ -55,6 +55,11 @@ export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabC
 
   // Build dock items dynamically based on user role
   const dockItems = [
+    {
+      title: "Calculate Tariff",
+      icon: <Calculator className="h-full w-full" />,
+      onClick: () => navigateToBaseAndChangeTab("calculate")
+    },
     // Admin-only: Manage Chatbot Documents tab
     ...(isAdmin() ? [{
       title: "Manage Chatbot Documents",
@@ -67,11 +72,6 @@ export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabC
       icon: <Edit className="h-full w-full" />,
       onClick: () => router.push('/edit')
     }] : []),
-    {
-      title: "Calculate Tariff",
-      icon: <Calculator className="h-full w-full" />,
-      onClick: () => navigateToBaseAndChangeTab("calculate")
-    },
     {
       title: "Results",
       icon: <TrendingUp className="h-full w-full" />,

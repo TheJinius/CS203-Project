@@ -164,11 +164,11 @@ function IconContainer({
         style={{ scale }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700 cursor-pointer transition-colors relative"
+        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors relative"
         onClick={onClick}
       >
         <div className="h-5 w-5 flex-shrink-0">{icon}</div>
-        <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200 whitespace-nowrap">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">
           {title}
         </span>
       </motion.div>
@@ -182,10 +182,10 @@ function IconContainer({
         style={{ scale }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700 transition-colors relative"
+        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative"
       >
         <div className="h-5 w-5 flex-shrink-0">{icon}</div>
-        <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200 whitespace-nowrap">
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">
           {title}
         </span>
       </motion.div>
