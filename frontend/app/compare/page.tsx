@@ -70,6 +70,8 @@ export default function ComparePage() {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cost')
   const [showMap, setShowMap] = useState<boolean>(false)
   const [isExporting, setIsExporting] = useState<boolean>(false)
+  const [builderLegs, setBuilderLegs] = useState<CalculationHistory[]>([])
+  const [builderDropTarget, setBuilderDropTarget] = useState<boolean>(false)
 
   // Refs for PDF export
   const analyticsRef = useRef<HTMLDivElement>(null)
@@ -138,6 +140,63 @@ export default function ComparePage() {
   const clearComparison = () => {
     setSelectedForComparison([])
     setOptimalRoutesData(null)
+  }
+
+  // Route Builder Functions
+  const handleDropOnBuilder = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (draggedItem && draggedItem.type === 'single') {
+      const calc = draggedItem.legs[0]
+      // Check if the leg connects properly
+      if (builderLegs.length > 0) {
+        const lastLeg = builderLegs[builderLegs.length - 1]
+        if (lastLeg.destinationCountry !== calc.sourceCountry) {
+          alert(`Cannot add this leg: Last destination was ${lastLeg.destinationCountry}, but this leg starts from ${calc.sourceCountry}`)
+          setBuilderDropTarget(false)
+          return
+        }
+      }
+      setBuilderLegs([...builderLegs, calc])
+    }
+    setBuilderDropTarget(false)
+  }
+
+  const handleBuilderDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setBuilderDropTarget(true)
+  }
+
+  const handleBuilderDragLeave = () => {
+    setBuilderDropTarget(false)
+  }
+
+  const removeLegFromBuilder = (legId: string) => {
+    setBuilderLegs(builderLegs.filter(leg => leg.id !== legId))
+  }
+
+  const saveBuiltRoute = () => {
+    if (builderLegs.length < 2) {
+      alert("A combined route must have at least 2 legs")
+      return
+    }
+
+    const totalCost = builderLegs.reduce((sum, leg) => sum + leg.tariffAmount, 0)
+    const countries = [builderLegs[0].sourceCountry, ...builderLegs.map(leg => leg.destinationCountry)]
+    const routeName = countries.join(" → ")
+
+    const newRoute: CombinedRoute = {
+      id: `route-${Date.now()}`,
+      name: routeName,
+      legs: [...builderLegs],
+      totalCost,
+      currency: builderLegs[0].currency,
+      createdAt: new Date()
+    }
+
+    setCombinedRoutes([newRoute, ...combinedRoutes])
+    // Update localStorage
+    localStorage.setItem('combinedRoutes', JSON.stringify([newRoute, ...combinedRoutes]))
+    setBuilderLegs([])
   }
 
   // Helper to find country code from country name
@@ -929,6 +988,76 @@ export default function ComparePage() {
                 </Button>
               </div>
             )}
+          </div>
+
+          {/* Route Builder Section */}
+          <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+              <Route className="h-4 w-4" />
+              Route Builder
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+              Drag single routes here to combine them into multi-leg routes
+            </p>
+            <div
+              onDrop={handleDropOnBuilder}
+              onDragOver={handleBuilderDragOver}
+              onDragLeave={handleBuilderDragLeave}
+              className={`min-h-[120px] border-2 border-dashed rounded-lg p-3 transition-colors ${
+                builderDropTarget
+                  ? 'border-amber-500 bg-amber-100 dark:bg-amber-900/20'
+                  : 'border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800'
+              }`}
+            >
+              {builderLegs.length === 0 ? (
+                <div className="text-center py-6 text-amber-600 dark:text-amber-400 text-sm">
+                  Drop single routes here to build a multi-leg route
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {builderLegs.map((leg, index) => (
+                    <div key={leg.id} className="bg-white dark:bg-slate-700 border border-amber-200 dark:border-amber-800 rounded p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1">
+                          <Badge variant="outline" className="text-xs">Leg {index + 1}</Badge>
+                          <div className="text-sm">
+                            <span className="font-medium">{leg.sourceCountry}</span>
+                            <span className="mx-1 text-slate-400">→</span>
+                            <span className="font-medium">{leg.destinationCountry}</span>
+                          </div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400">
+                            {leg.productCode}
+                          </div>
+                          <div className="text-sm font-semibold text-green-600 dark:text-green-400 ml-auto">
+                            {leg.currency} {leg.tariffAmount.toFixed(2)}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeLegFromBuilder(leg.id)}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 border-t border-amber-200 dark:border-amber-700">
+                    <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                      Total Cost: {builderLegs[0]?.currency} {builderLegs.reduce((sum, leg) => sum + leg.tariffAmount, 0).toFixed(2)}
+                    </div>
+                    <Button
+                      onClick={saveBuiltRoute}
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      Save Route
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -75,11 +75,6 @@ export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabC
     {
       title: "Results",
       icon: <TrendingUp className="h-full w-full" />,
-      onClick: () => navigateToBaseAndChangeTab("results")
-    },
-    {
-      title: "Compare Tariffs",
-      icon: <GitCompare className="h-full w-full" />,
       onClick: () => router.push('/compare')
     },
   ]
