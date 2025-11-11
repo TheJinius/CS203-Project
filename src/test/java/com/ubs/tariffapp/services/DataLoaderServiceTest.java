@@ -71,7 +71,7 @@ public class DataLoaderServiceTest {
     @Autowired
     private OtherDutyRepository otherDutyRepository;
 
-    private static final String TEST_CSV_FILE = "clean_HS2017USAYear2023.csv";
+    private static final String TEST_CSV_FILE = "testclean_HS2017MYSYear2023.csv";
     private static boolean dataLoaded = false;
 
     @AfterAll
