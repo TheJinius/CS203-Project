@@ -23,7 +23,7 @@ Welcome to our CS203 tariff project! Follow these steps to set up and run the ap
 	npm install
 	```
 
-### AI Chatbot Setup
+### Chatbot Setup
 
 1. Using a Powershell Terminal, navigate to the `Python RAG chatbot` directory:
     ```
