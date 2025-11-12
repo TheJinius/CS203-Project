@@ -134,6 +134,44 @@ export async function getCountries() {
   }
 }
 
+export async function getAvailableYears() {
+  console.log('📅 Fetching available tariff years from database');
+  
+  try {
+    const headers = await getAuthHeaders();
+    
+    // Fetch all tariffs and extract unique years
+    const response = await fetch(`${API_BASE_ROUTE}/admin/tariffs`, {
+      method: "GET",
+      headers,
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tariffs: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    // Extract unique years from tariffs
+    const years = new Set<number>()
+    if (data.tariffs && Array.isArray(data.tariffs)) {
+      data.tariffs.forEach((tariff: any) => {
+        if (tariff.tariffYear) {
+          years.add(tariff.tariffYear)
+        }
+      })
+    }
+    
+    // Convert to sorted array (newest first)
+    const sortedYears = Array.from(years).sort((a, b) => b - a)
+    
+    return { ok: true, data: { years: sortedYears } }
+  } catch (error) {
+    console.error('Get available years error:', error);
+    return { ok: false, data: { error: (error as Error).message, years: [] } };
+  }
+}
+
 export async function getShippingRoute(params: {
   src_lat: number;
   src_lon: number;

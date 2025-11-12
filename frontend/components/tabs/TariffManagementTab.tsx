@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, CheckCircle, XCircle, AlertCircle, Trash2, Search, Edit, ArrowLeft, Loader2, Calculator, FileText } from "lucide-react"
 import { getSession, signOut } from "next-auth/react"
-import { searchProducts as apiSearchProducts, getCountries } from "@/lib/api"
+import { searchProducts as apiSearchProducts, getCountries, getAvailableYears } from "@/lib/api"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -87,6 +87,10 @@ export default function TariffManagementTab() {
   // Countries state
   const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
   const [countriesLoading, setCountriesLoading] = useState(false)
+  
+  // Years state
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+  const [yearsLoading, setYearsLoading] = useState(false)
 
   // Search/Edit Form state
   const [selectedProduct, setSelectedProduct] = useState<string>("")
@@ -195,8 +199,20 @@ export default function TariffManagementTab() {
   const hideNotification = () => {
     setNotification(prev => ({ ...prev, show: false }))
   }
+  
+  // Generate years for Add New form (2020 to current year + 1)
+  const generateAddNewYears = (): number[] => {
+    const currentYear = new Date().getFullYear()
+    const startYear = 2020
+    const endYear = currentYear + 1
+    const years: number[] = []
+    for (let year = endYear; year >= startYear; year--) {
+      years.push(year)
+    }
+    return years
+  }
 
-  // Fetch countries on component mount
+  // Fetch countries and available years on component mount
   useEffect(() => {
     const fetchCountries = async () => {
       setCountriesLoading(true)
@@ -217,7 +233,33 @@ export default function TariffManagementTab() {
       }
     }
     
+    const fetchAvailableYears = async () => {
+      setYearsLoading(true)
+      try {
+        const { ok, data } = await getAvailableYears()
+        if (ok && data.years) {
+          setAvailableYears(data.years)
+          console.log('✅ Loaded', data.years.length, 'available years from database:', data.years)
+        } else {
+          console.error('❌ Failed to load years:', data.error)
+          // Fallback to default years if fetch fails
+          const currentYear = new Date().getFullYear()
+          const fallbackYears = Array.from({ length: 6 }, (_, i) => currentYear - i)
+          setAvailableYears(fallbackYears)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching years:', error)
+        // Fallback to default years
+        const currentYear = new Date().getFullYear()
+        const fallbackYears = Array.from({ length: 6 }, (_, i) => currentYear - i)
+        setAvailableYears(fallbackYears)
+      } finally {
+        setYearsLoading(false)
+      }
+    }
+    
     fetchCountries()
+    fetchAvailableYears()
   }, [])
 
   // Normalize backend dutyCategory values to match frontend type system
@@ -948,13 +990,18 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       <SelectTrigger>
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2025">2025</SelectItem>
-                        <SelectItem value="2024">2024</SelectItem>
-                        <SelectItem value="2023">2023</SelectItem>
-                        <SelectItem value="2022">2022</SelectItem>
-                        <SelectItem value="2021">2021</SelectItem>
-                        <SelectItem value="2020">2020</SelectItem>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {yearsLoading ? (
+                          <SelectItem value="loading" disabled>Loading years...</SelectItem>
+                        ) : availableYears.length > 0 ? (
+                          availableYears.map((year) => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="2023" disabled>No years available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1045,13 +1092,24 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                   <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Tariff Year <span className="text-red-500">*</span>
                   </Label>
-                  <Input 
-                    type="text"
-                    value={tariffYear} 
-                    onChange={(e) => handleHSCodeInput(e.target.value, setTariffYear, 'tariffYear')}
-                    placeholder="2023"
-                    className={`border-2 ${formErrors.tariffYear ? 'border-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:border-blue-500'}`}
-                  />
+                  <Select 
+                    onValueChange={(value) => {
+                      setTariffYear(value)
+                      setFormErrors(prev => ({ ...prev, tariffYear: undefined }))
+                    }}
+                    value={tariffYear}
+                  >
+                    <SelectTrigger className={`border-2 ${formErrors.tariffYear ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                      <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {generateAddNewYears().map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {formErrors.tariffYear && (
                     <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-1">
                       <AlertCircle className="h-3 w-3" />
