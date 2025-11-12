@@ -131,7 +131,7 @@ From the `frontend` directory, start the frontend development server:
 npm run dev
 ```
 
-### Chatbot
+### AI Chatbot
 From the `Python RAG chatbot` directory, start the chatbot:
 ```
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
