@@ -650,4 +650,97 @@ class TariffManagementControllerIntegrationTest {
                     .andExpect(jsonPath("$.status").value("error"));
         }
     }
+
+    @Nested
+    @DisplayName("GET /api/admin/tariffs/countries/with-tariffs - Get Countries With Tariffs")
+    class GetCountriesWithTariffsTests {
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should return countries that have tariffs with success status")
+        void testGetCountriesWithTariffs_Success() throws Exception {
+            // Arrange
+            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            usa.setCountryId("USA");
+            usa.setCountryName("United States");
+            
+            com.ubs.tariffapp.models.Country chn = new com.ubs.tariffapp.models.Country();
+            chn.setCountryId("CHN");
+            chn.setCountryName("China");
+            
+            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa, chn);
+            when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.countries").isArray())
+                    .andExpect(jsonPath("$.countries.length()").value(2))
+                    .andExpect(jsonPath("$.countries[0].code").value("USA"))
+                    .andExpect(jsonPath("$.countries[0].name").value("United States"))
+                    .andExpect(jsonPath("$.countries[1].code").value("CHN"))
+                    .andExpect(jsonPath("$.countries[1].name").value("China"))
+                    .andExpect(jsonPath("$.count").value(2));
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should return empty array when no countries have tariffs")
+        void testGetCountriesWithTariffs_EmptyDatabase() throws Exception {
+            // Arrange
+            when(tariffScheduleRepository.findDistinctCountries()).thenReturn(Collections.emptyList());
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.countries").isArray())
+                    .andExpect(jsonPath("$.countries.length()").value(0))
+                    .andExpect(jsonPath("$.count").value(0));
+        }
+
+        @Test
+        @WithMockUser(authorities = "Users")
+        @DisplayName("Should allow Users to get countries with tariffs")
+        void testGetCountriesWithTariffs_AllowedForUsers() throws Exception {
+            // Arrange
+            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            usa.setCountryId("USA");
+            usa.setCountryName("United States");
+            
+            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa);
+            when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.countries").isArray())
+                    .andExpect(jsonPath("$.countries.length()").value(1))
+                    .andExpect(jsonPath("$.count").value(1));
+        }
+
+        @Test
+        @DisplayName("Should return 401 Unauthorized for unauthenticated requests")
+        void testGetCountriesWithTariffs_Unauthorized() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle service exceptions gracefully")
+        void testGetCountriesWithTariffs_ServiceException() throws Exception {
+            // Arrange
+            when(tariffScheduleRepository.findDistinctCountries())
+                    .thenThrow(new RuntimeException("Database connection error"));
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value("error"));
+        }
+    }
 }

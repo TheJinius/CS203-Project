@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, CheckCircle, XCircle, AlertCircle, Trash2, Search, Edit, ArrowLeft, Loader2, Calculator, FileText } from "lucide-react"
 import { getSession, signOut } from "next-auth/react"
-import { searchProducts as apiSearchProducts, getCountries, getAvailableYears } from "@/lib/api"
+import { searchProducts as apiSearchProducts, getCountries, getCountriesWithTariffs, getAvailableYears } from "@/lib/api"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -84,8 +84,9 @@ export default function TariffManagementTab() {
   // Tab state
   const [activeTab, setActiveTab] = useState<"search" | "add">("search")
 
-  // Countries state
-  const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
+  // Countries state - separate lists for different purposes
+  const [allCountries, setAllCountries] = useState<Array<{ code: string; name: string }>>([]) // For Add New form
+  const [countriesWithTariffs, setCountriesWithTariffs] = useState<Array<{ code: string; name: string }>>([]) // For Search & Edit
   const [countriesLoading, setCountriesLoading] = useState(false)
   
   // Years state
@@ -214,20 +215,34 @@ export default function TariffManagementTab() {
 
   // Fetch countries and available years on component mount
   useEffect(() => {
-    const fetchCountries = async () => {
+    const fetchAllCountries = async () => {
       setCountriesLoading(true)
       try {
         const { ok, data } = await getCountries()
         if (ok && data.countries) {
-          setCountries(data.countries)
-          console.log('✅ Loaded', data.countries.length, 'countries from database')
+          setAllCountries(data.countries)
+          console.log('✅ Loaded', data.countries.length, 'countries (all) from database')
         } else {
-          console.error('❌ Failed to load countries:', data.error)
+          console.error('❌ Failed to load all countries:', data.error)
         }
       } catch (error) {
-        console.error('❌ Error fetching countries:', error)
+        console.error('❌ Error fetching all countries:', error)
       } finally {
         setCountriesLoading(false)
+      }
+    }
+    
+    const fetchCountriesWithTariffs = async () => {
+      try {
+        const { ok, data } = await getCountriesWithTariffs()
+        if (ok && data.countries) {
+          setCountriesWithTariffs(data.countries)
+          console.log('✅ Loaded', data.countries.length, 'countries (with tariffs) from database')
+        } else {
+          console.error('❌ Failed to load countries with tariffs:', data.error)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching countries with tariffs:', error)
       }
     }
     
@@ -263,7 +278,8 @@ export default function TariffManagementTab() {
       }
     }
     
-    fetchCountries()
+    fetchAllCountries()
+    fetchCountriesWithTariffs()
     fetchAvailableYears()
   }, [])
 
@@ -931,7 +947,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                         {countriesLoading ? (
                           <SelectItem value="loading" disabled>Loading countries...</SelectItem>
                         ) : (
-                          countries.map((country) => (
+                          countriesWithTariffs.map((country) => (
                             <SelectItem key={country.code} value={country.code}>
                               {country.code} - {country.name}
                             </SelectItem>
@@ -951,7 +967,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                         {countriesLoading ? (
                           <SelectItem value="loading" disabled>Loading countries...</SelectItem>
                         ) : (
-                          countries
+                          countriesWithTariffs
                             .filter((country) => country.code !== "000") // Exclude "World" from reporter
                             .map((country) => (
                               <SelectItem key={country.code} value={country.code}>
@@ -1138,7 +1154,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       {countriesLoading ? (
                         <SelectItem value="loading" disabled>Loading countries...</SelectItem>
                       ) : (
-                        countries
+                        allCountries
                           .filter((country) => country.code !== "000") // Exclude "World" from reporter
                           .map((country) => (
                             <SelectItem key={country.code} value={country.code}>
@@ -1173,7 +1189,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                       {countriesLoading ? (
                         <SelectItem value="loading" disabled>Loading countries...</SelectItem>
                       ) : (
-                        countries.map((country) => (
+                        allCountries.map((country) => (
                           <SelectItem key={country.code} value={country.code}>
                             {country.code} - {country.name}
                           </SelectItem>

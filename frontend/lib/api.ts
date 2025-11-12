@@ -117,7 +117,7 @@ export async function searchProducts(query: string, limit: number = 5) {
 }
 
 export async function getCountries() {
-  console.log('🌍 Fetching countries from database');
+  console.log('🌍 Fetching ALL countries from database');
   
   try {
     const headers = await getAuthHeaders();
@@ -130,6 +130,24 @@ export async function getCountries() {
     return { ok: response.ok, data }
   } catch (error) {
     console.error('Get countries error:', error);
+    return { ok: false, data: { error: (error as Error).message } };
+  }
+}
+
+export async function getCountriesWithTariffs() {
+  console.log('🌍 Fetching countries with tariffs from database');
+  
+  try {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_ROUTE}/admin/tariffs/countries/with-tariffs`, {
+      method: "GET",
+      headers,
+    })
+    const data = await response.json()
+    return { ok: response.ok, data }
+  } catch (error) {
+    console.error('Get countries with tariffs error:', error);
     return { ok: false, data: { error: (error as Error).message } };
   }
 }

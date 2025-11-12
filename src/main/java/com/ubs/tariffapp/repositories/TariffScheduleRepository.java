@@ -97,4 +97,12 @@ public interface TariffScheduleRepository extends JpaRepository<TariffSchedule, 
     // Get distinct years from tariff_schedule table
     @Query("SELECT DISTINCT ts.tariffYear FROM TariffSchedule ts ORDER BY ts.tariffYear DESC")
     List<Integer> findDistinctYears();
+    
+    // Get distinct countries that have at least one tariff (from both reporter and partner columns)
+    @Query("SELECT DISTINCT c FROM Country c WHERE c.countryId IN " +
+           "(SELECT DISTINCT ts.reporter.countryId FROM TariffSchedule ts " +
+           "UNION " +
+           "SELECT DISTINCT ts.partner.countryId FROM TariffSchedule ts) " +
+           "ORDER BY c.countryName")
+    List<com.ubs.tariffapp.models.Country> findDistinctCountries();
 }

@@ -224,6 +224,32 @@ public class TariffManagementController {
         return ResponseEntity.ok(response);
     }
     
+    // Get countries that have at least one tariff in tariff_schedule
+    @GetMapping("/countries/with-tariffs")
+    @PreAuthorize("hasAnyAuthority('Users', 'Admins')")
+    public ResponseEntity<Map<String, Object>> getCountriesWithTariffs() {
+        System.out.println("🌍 Fetching countries with tariffs");
+        List<Country> countries = tariffScheduleRepository.findDistinctCountries();
+        
+        // Convert to simple map format
+        List<Map<String, String>> countryList = countries.stream()
+                .map(country -> {
+                    Map<String, String> countryMap = new HashMap<>();
+                    countryMap.put("code", country.getCountryId());
+                    countryMap.put("name", country.getCountryName());
+                    return countryMap;
+                })
+                .collect(Collectors.toList());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("countries", countryList);
+        response.put("count", countryList.size());
+        response.put("status", "success");
+        
+        System.out.println("✅ Retrieved " + countryList.size() + " countries with tariffs");
+        return ResponseEntity.ok(response);
+    }
+    
     // Get available years from tariff_schedule table
     @GetMapping("/years")
     @PreAuthorize("hasAnyAuthority('Users', 'Admins')")
