@@ -46,7 +46,7 @@ public class AuditLogService {
     }
 
     // Extract username from JWT token (Cognito)
-    // Priority: cognito:username > email > preferred_username > sub (UUID fallback)
+    // Priority: username > cognito:username > email > preferred_username > sub (UUID fallback)
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
@@ -59,9 +59,14 @@ public class AuditLogService {
             Jwt jwt = jwtAuth.getToken();
             
             // Try to get username from Cognito claims (in order of preference)
-            String username = jwt.getClaimAsString("cognito:username");
+            String username = jwt.getClaimAsString("username");
             if (username != null && !username.isBlank()) {
                 return username;
+            }
+            
+            String cognitoUsername = jwt.getClaimAsString("cognito:username");
+            if (cognitoUsername != null && !cognitoUsername.isBlank()) {
+                return cognitoUsername;
             }
             
             String email = jwt.getClaimAsString("email");
