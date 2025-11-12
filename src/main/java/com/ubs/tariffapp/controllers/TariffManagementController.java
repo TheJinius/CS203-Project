@@ -52,7 +52,7 @@ public class TariffManagementController {
 
     // Get all tariffs (for management view)
     @GetMapping
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<Map<String, Object>> getAllTariffs() {
         System.out.println("📋 Fetching all tariffs for management");
         List<TariffResponse> allTariffs = tariffManagementService.getAllTariffs();
@@ -68,7 +68,7 @@ public class TariffManagementController {
 
     // NEW: Search for tariffs to edit (same as CalculateTab logic)
     @PostMapping("/search")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
         System.out.println("🔍 Admin searching tariffs for editing:");
         System.out.println("ReporterCode = " + request.getReporterCode());
@@ -159,7 +159,7 @@ public class TariffManagementController {
 
     // Get specific tariff details for editing
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<TariffResponse> getTariffForEdit(@PathVariable Integer id) {
         System.out.println("🔍 Fetching tariff for edit - ID: " + id);
         TariffResponse response = tariffManagementService.getTariffById(id);
@@ -168,7 +168,7 @@ public class TariffManagementController {
 
     // Create new tariff
     @PostMapping
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<TariffResponse> createTariff(
             @Validated(TariffRequest.Create.class) @RequestBody TariffRequest request) {
         System.out.println("📝 Creating new tariff");
@@ -179,7 +179,7 @@ public class TariffManagementController {
 
     // Update existing tariff
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<TariffResponse> updateTariff(
         @PathVariable Integer id,
         @RequestBody Map<String, Object> updates  // ✅ Change from TariffRequest to Map
@@ -190,7 +190,7 @@ public class TariffManagementController {
 
     // Delete tariff
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<Void> deleteTariff(@PathVariable Integer id) {
         System.out.println("🗑️ Deleting tariff ID: " + id);
         tariffManagementService.deleteTariff(id);
@@ -200,7 +200,7 @@ public class TariffManagementController {
 
     // Get all countries
     @GetMapping("/countries")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<Map<String, Object>> getAllCountries() {
         System.out.println("🌍 Fetching all countries");
         List<Country> countries = countryRepository.findAll();
@@ -226,7 +226,7 @@ public class TariffManagementController {
     
     // Get available years from tariff_schedule table
     @GetMapping("/years")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAuthority('Admins')")
     public ResponseEntity<Map<String, Object>> getAvailableYears() {
         System.out.println("📅 Fetching available tariff years");
         List<Integer> years = tariffScheduleRepository.findDistinctYears();

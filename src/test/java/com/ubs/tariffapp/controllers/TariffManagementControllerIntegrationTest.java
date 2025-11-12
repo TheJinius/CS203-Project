@@ -103,7 +103,7 @@ class TariffManagementControllerIntegrationTest {
     class CreateTariffTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should create tariff successfully with valid request")
         void testCreateTariffSuccess() throws Exception {
             // Arrange
@@ -124,7 +124,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 with validation errors when required fields are missing")
         void testCreateTariffMissingRequiredFields() throws Exception {
             // Arrange - Missing required fields
@@ -148,7 +148,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when tariffYear is below minimum (2000)")
         void testCreateTariffInvalidYearTooLow() throws Exception {
             // Arrange
@@ -166,7 +166,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when tariffYear exceeds maximum (2100)")
         void testCreateTariffInvalidYearTooHigh() throws Exception {
             // Arrange
@@ -183,7 +183,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when reporterCode is not 3 characters")
         void testCreateTariffInvalidReporterCodeLength() throws Exception {
             // Arrange
@@ -200,7 +200,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when partnerCode is not 3 characters")
         void testCreateTariffInvalidPartnerCodeLength() throws Exception {
             // Arrange
@@ -217,7 +217,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when adValoremRate is negative")
         void testCreateTariffNegativeAdValoremRate() throws Exception {
             // Arrange
@@ -234,7 +234,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when adValoremRate exceeds 100%")
         void testCreateTariffAdValoremRateExceeds100() throws Exception {
             // Arrange
@@ -251,7 +251,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when specificRate is negative")
         void testCreateTariffNegativeSpecificRate() throws Exception {
             // Arrange
@@ -270,7 +270,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when compoundRate1 is negative")
         void testCreateTariffNegativeCompoundRate1() throws Exception {
             // Arrange
@@ -289,7 +289,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 with business logic error from service")
         void testCreateTariffBusinessLogicError() throws Exception {
             // Arrange
@@ -311,7 +311,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should accept valid tariff with boundary values")
         void testCreateTariffBoundaryValues() throws Exception {
             // Arrange - Test boundary values
@@ -337,7 +337,7 @@ class TariffManagementControllerIntegrationTest {
     class UpdateTariffTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should update tariff successfully")
         void testUpdateTariffSuccess() throws Exception {
             // Arrange
@@ -361,7 +361,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 404 when tariff not found")
         void testUpdateTariffNotFound() throws Exception {
             // Arrange
@@ -384,7 +384,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 400 when invalid rate provided in update")
         void testUpdateTariffInvalidRate() throws Exception {
             // Arrange
@@ -412,7 +412,7 @@ class TariffManagementControllerIntegrationTest {
     class GetTariffTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should get tariff successfully")
         void testGetTariffSuccess() throws Exception {
             // Arrange
@@ -428,7 +428,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 404 when tariff not found")
         void testGetTariffNotFound() throws Exception {
             // Arrange
@@ -446,7 +446,7 @@ class TariffManagementControllerIntegrationTest {
     class DeleteTariffTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should delete tariff successfully")
         void testDeleteTariffSuccess() throws Exception {
             // Arrange
@@ -458,7 +458,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return 404 when deleting non-existent tariff")
         void testDeleteTariffNotFound() throws Exception {
             // Arrange
@@ -476,7 +476,7 @@ class TariffManagementControllerIntegrationTest {
     class GetAllTariffsTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should get all tariffs successfully")
         void testGetAllTariffsSuccess() throws Exception {
             // Arrange
@@ -493,7 +493,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should handle internal server error gracefully")
         void testGetAllTariffsInternalError() throws Exception {
             // Arrange
@@ -512,7 +512,7 @@ class TariffManagementControllerIntegrationTest {
     class ExceptionHandlerTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should handle multiple validation errors and return all field errors")
         void testMultipleValidationErrors() throws Exception {
             // Arrange - Request with multiple invalid fields
@@ -535,7 +535,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should format InvalidRequestException with proper error response")
         void testInvalidRequestExceptionFormat() throws Exception {
             // Arrange
@@ -553,7 +553,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should format TariffNotFoundException with proper error response")
         void testTariffNotFoundExceptionFormat() throws Exception {
             // Arrange
@@ -573,7 +573,7 @@ class TariffManagementControllerIntegrationTest {
     class GetAvailableYearsTests {
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return available years with success status")
         void testGetAvailableYears_Success() throws Exception {
             // Arrange
@@ -593,7 +593,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should return empty array when no years available")
         void testGetAvailableYears_EmptyDatabase() throws Exception {
             // Arrange
@@ -628,7 +628,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "Admin")
+        @WithMockUser(authorities = "Admins")
         @DisplayName("Should handle service exceptions gracefully")
         void testGetAvailableYears_ServiceException() throws Exception {
             // Arrange
