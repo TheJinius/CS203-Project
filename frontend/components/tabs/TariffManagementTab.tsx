@@ -82,7 +82,7 @@ interface DeleteConfirmation {
 
 export default function TariffManagementTab() {
   // Tab state
-  const [activeTab, setActiveTab] = useState<"search" | "add" | "manage">("search")
+  const [activeTab, setActiveTab] = useState<"search" | "add">("search")
 
   // Countries state
   const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
@@ -127,9 +127,6 @@ export default function TariffManagementTab() {
   const [specificRate, setSpecificRate] = useState<string>("")
   const [compoundRate1, setCompoundRate1] = useState<string>("")
   const [compoundRate2, setCompoundRate2] = useState<string>("")
-  
-  // Manage tab state
-  const [allTariffs, setAllTariffs] = useState<TariffData[]>([])
   
   // UI state
   const [loading, setLoading] = useState(false)
@@ -792,41 +789,6 @@ export default function TariffManagementTab() {
     }
   }
 
-  // MANAGE (VIEW ALL) FUNCTIONS
-  const handleLoadAllTariffs = async () => {
-    setLoading(true)
-    setError("")
-    setSuccess("")
-    
-    try {
-      const headers = await getAuthHeaders()
-      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_ROUTE || "http://localhost:8080"
-      
-      const response = await fetch(`${apiUrl}/admin/tariffs`, {
-        method: 'GET',
-        headers,
-        mode: 'cors',
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch tariffs: ${response.status}`)
-      }
-
-      const data = await response.json()
-      const tariffs = data.tariffs || []
-      
-      setAllTariffs(tariffs)
-      setSuccess(`Found ${tariffs.length} tariff(s)`)
-    } catch (e) {
-      const err = e as Error
-      console.error("❌ Load failed:", err)
-      setError(`Failed to load tariffs: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // DELETE FUNCTIONS
   const handleDeleteTariff = async (tariffId: number) => {
     setLoading(true)
@@ -858,11 +820,7 @@ export default function TariffManagementTab() {
       setDeleteConfirmation({ show: false, tariffId: null, tariffDetails: '' })
       
       // Immediately remove the deleted tariff from the frontend state
-      if (activeTab === "manage") {
-        setAllTariffs(prev => prev.filter(tariff => tariff.tariffId !== tariffId))
-      } else {
-        setSearchResults(prev => prev.filter(tariff => tariff.tariffId !== tariffId))
-      }
+      setSearchResults(prev => prev.filter(tariff => tariff.tariffId !== tariffId))
       
     } catch (e) {
       const err = e as Error
@@ -906,11 +864,10 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
         </CardHeader>
         
         <CardContent className="pt-4">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "search" | "add" | "manage")}>
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "search" | "add")}>
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="search">Search & Edit</TabsTrigger>
               <TabsTrigger value="add">Add New</TabsTrigger>
-              <TabsTrigger value="manage">View All</TabsTrigger>
             </TabsList>
             
             {/* SEARCH & EDIT TAB */}
@@ -1055,41 +1012,6 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                 <Plus className="h-4 w-4 mr-2" />
                 Create New Tariff
               </Button>
-            </TabsContent>
-
-            {/* VIEW ALL TAB */}
-            <TabsContent value="manage" className="space-y-4">
-              <Button
-                onClick={handleLoadAllTariffs}
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? "Loading..." : "Load All Tariffs"}
-              </Button>
-
-              {allTariffs.length > 0 && (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {allTariffs.map((tariff) => (
-                    <Card key={tariff.tariffId} className="border-2">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="font-bold text-lg">ID: {tariff.tariffId}</div>
-                            <div className="text-sm">Product: {tariff.tlCode} - {tariff.productDescription}</div>
-                            <div className="text-sm">Route: {tariff.partnerName} → {tariff.reporterName}</div>
-                            <div className="text-sm">Year: {tariff.tariffYear}</div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="destructive" onClick={() => confirmDelete(tariff)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
             </TabsContent>
           </Tabs>
         </CardContent>
