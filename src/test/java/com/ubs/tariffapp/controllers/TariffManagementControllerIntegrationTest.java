@@ -36,8 +36,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ubs.tariffapp.exceptions.InvalidRequestException;
 import com.ubs.tariffapp.exceptions.TariffNotFoundException;
 import com.ubs.tariffapp.extensions.DockerRequiredExtension;
+import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.dto.TariffRequest;
 import com.ubs.tariffapp.models.dto.TariffResponse;
+import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.services.DutyService;
 import com.ubs.tariffapp.services.TariffManagementService;
 
@@ -69,10 +72,10 @@ class TariffManagementControllerIntegrationTest {
     private DutyService dutyService;
 
     @MockBean
-    private com.ubs.tariffapp.repositories.TariffScheduleRepository tariffScheduleRepository;
+    private TariffScheduleRepository tariffScheduleRepository;
 
     @MockBean
-    private com.ubs.tariffapp.repositories.CountryRepository countryRepository;
+    private CountryRepository countryRepository;
 
     private TariffRequest createValidTariffRequest() {
         TariffRequest request = new TariffRequest();
@@ -663,24 +666,24 @@ class TariffManagementControllerIntegrationTest {
         @DisplayName("Should return all countries sorted alphabetically by name")
         void testGetAllCountries_SortedAlphabetically() throws Exception {
             // Arrange - Create countries in non-alphabetical order
-            com.ubs.tariffapp.models.Country zimbabwe = new com.ubs.tariffapp.models.Country();
+            Country zimbabwe = new Country();
             zimbabwe.setCountryId("ZWE");
             zimbabwe.setCountryName("Zimbabwe");
             
-            com.ubs.tariffapp.models.Country australia = new com.ubs.tariffapp.models.Country();
+            Country australia = new Country();
             australia.setCountryId("AUS");
             australia.setCountryName("Australia");
             
-            com.ubs.tariffapp.models.Country china = new com.ubs.tariffapp.models.Country();
+            Country china = new Country();
             china.setCountryId("CHN");
             china.setCountryName("China");
             
-            com.ubs.tariffapp.models.Country brazil = new com.ubs.tariffapp.models.Country();
+            Country brazil = new Country();
             brazil.setCountryId("BRA");
             brazil.setCountryName("Brazil");
             
             // Return in random order
-            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(zimbabwe, australia, china, brazil);
+            List<Country> mockCountries = Arrays.asList(zimbabwe, australia, china, brazil);
             when(countryRepository.findAll()).thenReturn(mockCountries);
 
             // Act & Assert - Verify alphabetical order: Australia, Brazil, China, Zimbabwe
@@ -705,19 +708,19 @@ class TariffManagementControllerIntegrationTest {
         @DisplayName("Should handle case-insensitive sorting correctly")
         void testGetAllCountries_CaseInsensitiveSorting() throws Exception {
             // Arrange - Test case sensitivity
-            com.ubs.tariffapp.models.Country country1 = new com.ubs.tariffapp.models.Country();
+            Country country1 = new Country();
             country1.setCountryId("001");
             country1.setCountryName("australia");  // lowercase
             
-            com.ubs.tariffapp.models.Country country2 = new com.ubs.tariffapp.models.Country();
+            Country country2 = new Country();
             country2.setCountryId("002");
             country2.setCountryName("Brazil");  // capitalized
             
-            com.ubs.tariffapp.models.Country country3 = new com.ubs.tariffapp.models.Country();
+            Country country3 = new Country();
             country3.setCountryId("003");
             country3.setCountryName("ARGENTINA");  // uppercase
             
-            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(country1, country2, country3);
+            List<Country> mockCountries = Arrays.asList(country1, country2, country3);
             when(countryRepository.findAll()).thenReturn(mockCountries);
 
             // Act & Assert - Should sort case-insensitively: ARGENTINA, australia, Brazil
@@ -733,11 +736,11 @@ class TariffManagementControllerIntegrationTest {
         @DisplayName("Should allow Users to get all countries")
         void testGetAllCountries_AllowedForUsers() throws Exception {
             // Arrange
-            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            Country usa = new Country();
             usa.setCountryId("USA");
             usa.setCountryName("United States");
             
-            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa);
+            List<Country> mockCountries = Arrays.asList(usa);
             when(countryRepository.findAll()).thenReturn(mockCountries);
 
             // Act & Assert
@@ -794,20 +797,20 @@ class TariffManagementControllerIntegrationTest {
         @DisplayName("Should return countries that have tariffs sorted alphabetically by name")
         void testGetCountriesWithTariffs_SortedAlphabetically() throws Exception {
             // Arrange - Create countries in non-alphabetical order
-            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            Country usa = new Country();
             usa.setCountryId("USA");
             usa.setCountryName("United States");
             
-            com.ubs.tariffapp.models.Country chn = new com.ubs.tariffapp.models.Country();
+            Country chn = new Country();
             chn.setCountryId("CHN");
             chn.setCountryName("China");
             
-            com.ubs.tariffapp.models.Country jpn = new com.ubs.tariffapp.models.Country();
+            Country jpn = new Country();
             jpn.setCountryId("JPN");
             jpn.setCountryName("Japan");
             
             // Return in non-alphabetical order
-            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa, chn, jpn);
+            List<Country> mockCountries = Arrays.asList(usa, chn, jpn);
             when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
 
             // Act & Assert - Verify alphabetical order: China, Japan, United States
@@ -830,16 +833,16 @@ class TariffManagementControllerIntegrationTest {
         @DisplayName("Should return countries that have tariffs with success status")
         void testGetCountriesWithTariffs_Success() throws Exception {
             // Arrange
-            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            Country usa = new Country();
             usa.setCountryId("USA");
             usa.setCountryName("United States");
             
-            com.ubs.tariffapp.models.Country chn = new com.ubs.tariffapp.models.Country();
+            Country chn = new Country();
             chn.setCountryId("CHN");
             chn.setCountryName("China");
             
             // Return in non-alphabetical order
-            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa, chn);
+            List<Country> mockCountries = Arrays.asList(usa, chn);
             when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
 
             // Act & Assert - Verify alphabetical order: China comes before United States
@@ -876,11 +879,11 @@ class TariffManagementControllerIntegrationTest {
         @DisplayName("Should allow Users to get countries with tariffs")
         void testGetCountriesWithTariffs_AllowedForUsers() throws Exception {
             // Arrange
-            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            Country usa = new Country();
             usa.setCountryId("USA");
             usa.setCountryName("United States");
             
-            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa);
+            List<Country> mockCountries = Arrays.asList(usa);
             when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
 
             // Act & Assert

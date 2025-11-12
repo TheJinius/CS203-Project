@@ -9,9 +9,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -543,7 +545,7 @@ public class HSDataCleaner {
      * @return Array of field values with original quotes preserved
      */
     public static String[] parseCSVLine(String line) {
-        java.util.List<String> fields = new java.util.ArrayList<>();
+        List<String> fields = new ArrayList<>();
         
         if (line == null || line.isEmpty()) {
             return new String[0];

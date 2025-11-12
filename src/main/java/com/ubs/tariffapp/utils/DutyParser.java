@@ -1,19 +1,21 @@
 package com.ubs.tariffapp.utils;
 
-import opennlp.tools.tokenize.TokenizerME;
-import opennlp.tools.tokenize.TokenizerModel;
-import opennlp.tools.postag.POSModel;
-import opennlp.tools.postag.POSTaggerME;
-import net.objecthunter.exp4j.Expression;
-import net.objecthunter.exp4j.ExpressionBuilder;
-
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
+import opennlp.tools.postag.POSModel;
+import opennlp.tools.postag.POSTaggerME;
+import opennlp.tools.tokenize.TokenizerME;
+import opennlp.tools.tokenize.TokenizerModel;
 
 public class DutyParser {
     
@@ -22,7 +24,7 @@ public class DutyParser {
     
     // Enhanced currency conversion rates (to standardize to USD)
     private static final double CENTS_TO_DOLLARS = 0.01;
-    private static final java.util.Map<String, Double> CURRENCY_TO_USD = java.util.Map.of(
+    private static final Map<String, Double> CURRENCY_TO_USD = Map.of(
         "usd", 1.0,
         "dollar", 1.0,
         "cent", CENTS_TO_DOLLARS,
@@ -33,10 +35,10 @@ public class DutyParser {
     );
     
     // Enhanced unit conversion factors (to standardize to per kg)
-    private static final java.util.Map<String, Double> UNIT_CONVERSION = createUnitConversionMap();
+    private static final Map<String, Double> UNIT_CONVERSION = createUnitConversionMap();
 
-    private static java.util.Map<String, Double> createUnitConversionMap() {
-        java.util.Map<String, Double> map = new java.util.HashMap<>();
+    private static Map<String, Double> createUnitConversionMap() {
+        Map<String, Double> map = new HashMap<>();
         map.put("kg", 1.0);
         map.put("kilogram", 1.0);
         map.put("gram", 0.001);

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.ubs.tariffapp.models.Country;
 import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.dto.TariffSearchResult;
 
@@ -104,5 +105,5 @@ public interface TariffScheduleRepository extends JpaRepository<TariffSchedule, 
            "UNION " +
            "SELECT DISTINCT ts.partner.countryId FROM TariffSchedule ts) " +
            "ORDER BY c.countryName")
-    List<com.ubs.tariffapp.models.Country> findDistinctCountries();
+    List<Country> findDistinctCountries();
 }

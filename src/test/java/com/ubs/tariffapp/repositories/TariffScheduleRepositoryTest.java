@@ -2,6 +2,7 @@ package com.ubs.tariffapp.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -91,10 +92,10 @@ public class TariffScheduleRepositoryTest {
         dutyTypeRepository.saveAndFlush(dutyType);
 
         // Create unique products for each schedule to avoid unique constraint violation
-        Product product1 = new Product("10011000", "Product 1", 8, new java.util.ArrayList<>());
-        Product product2 = new Product("10012000", "Product 2", 8, new java.util.ArrayList<>());
-        Product product3 = new Product("10013000", "Product 3", 8, new java.util.ArrayList<>());
-        Product product4 = new Product("10014000", "Product 4", 8, new java.util.ArrayList<>());
+        Product product1 = new Product("10011000", "Product 1", 8, new ArrayList<>());
+        Product product2 = new Product("10012000", "Product 2", 8, new ArrayList<>());
+        Product product3 = new Product("10013000", "Product 3", 8, new ArrayList<>());
+        Product product4 = new Product("10014000", "Product 4", 8, new ArrayList<>());
         
         productRepository.saveAndFlush(product1);
         productRepository.saveAndFlush(product2);
