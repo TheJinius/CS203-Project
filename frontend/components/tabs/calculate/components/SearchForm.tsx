@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search } from "lucide-react"
+import { Search, AlertTriangle } from "lucide-react"
 import { CountrySearchSelect } from './CountrySearchSelect'
 
 interface SearchFormProps {
@@ -19,6 +19,9 @@ interface SearchFormProps {
   searchTimeout: NodeJS.Timeout | null
   selectedYear: string
   setSelectedYear: (value: string) => void
+  availableYears: number[]
+  yearsLoading: boolean
+  hasLikelyTariffData: boolean
   loading: boolean
   onSearch: () => void
 }
@@ -37,6 +40,9 @@ export function SearchForm({
   searchTimeout,
   selectedYear,
   setSelectedYear,
+  availableYears,
+  yearsLoading,
+  hasLikelyTariffData,
   loading,
   onSearch
 }: SearchFormProps) {
@@ -114,32 +120,38 @@ export function SearchForm({
         <Label htmlFor="year" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Year
         </Label>
-        <Select onValueChange={setSelectedYear} value={selectedYear}>
+        <Select onValueChange={setSelectedYear} value={selectedYear} disabled={yearsLoading}>
           <SelectTrigger className="w-full h-9 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
-            <SelectValue placeholder="Select year" />
+            <SelectValue placeholder={yearsLoading ? "Loading years..." : "Select year"} />
           </SelectTrigger>
           <SelectContent className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600">
-            <SelectItem value="2025" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              2025
-            </SelectItem>
-            <SelectItem value="2024" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              2024
-            </SelectItem>
-            <SelectItem value="2023" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              2023
-            </SelectItem>
-            <SelectItem value="2022" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              2022
-            </SelectItem>
-            <SelectItem value="2021" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              2021
-            </SelectItem>
-            <SelectItem value="2020" className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20">
-              2020
-            </SelectItem>
+            {availableYears.length > 0 ? (
+              availableYears.map((year) => (
+                <SelectItem 
+                  key={year} 
+                  value={year.toString()} 
+                  className="!text-slate-900 dark:!text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 focus:bg-blue-50 dark:focus:bg-blue-900/20"
+                >
+                  {year}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="2023" disabled className="!text-slate-400 dark:!text-slate-500">
+                No years available
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
+
+      {!hasLikelyTariffData && selectedSource && selectedDestination && (
+        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-amber-800 dark:text-amber-200">
+            <span className="font-semibold">Limited tariff data available:</span> The selected country pair may have limited or no tariff records in the database. You can still search, but results may be sparse.
+          </div>
+        </div>
+      )}
 
       <Button
         onClick={onSearch}

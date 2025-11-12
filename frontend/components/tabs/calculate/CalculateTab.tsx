@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Calculator, Loader2, ClipboardCheck } from "lucide-react"
-import { searchTariffs, calculateTariff, getExchangeRate, getOptimalRoutes, COUNTRY_COORDINATES, getCountries } from "@/lib/api"
+import { searchTariffs, calculateTariff, getExchangeRate, getOptimalRoutes, COUNTRY_COORDINATES, getCountries, getCountriesWithTariffs, getAvailableYears } from "@/lib/api"
 
 import { Tariff, CalculationDetails, ComplianceTask } from './types'
 import { useProductSearch } from './hooks/useProductSearch'
@@ -64,8 +64,11 @@ export default function CalculateTab({
   const [selectedYear, setSelectedYear] = useState<string>("2023")
   const [step, setStep] = useState(1)
 
-  // Countries state
+  // Countries and years state
   const [countries, setCountries] = useState<Array<{ code: string; name: string }>>([])
+  const [countriesWithTariffs, setCountriesWithTariffs] = useState<Set<string>>(new Set())
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+  const [yearsLoading, setYearsLoading] = useState(true)
 
   // Product search hook
   const {
@@ -104,20 +107,67 @@ export default function CalculateTab({
   // Helpers
   const { convertFromUSD, getLowestTariffId, getPriorityColor } = useTariffHelpers()
 
-  // Fetch countries on component mount
+  // Check if selected countries likely have tariff data
+  const hasLikelyTariffData = () => {
+    if (!selectedSource || !selectedDestination) return true // No warning if not selected
+    
+    // Check if both source (partner) and destination (reporter) are in the countries with tariffs
+    const sourceHasTariffs = countriesWithTariffs.has(selectedSource)
+    const destHasTariffs = countriesWithTariffs.has(selectedDestination)
+    
+    return sourceHasTariffs && destHasTariffs
+  }
+
+  // Fetch countries and years on component mount
   useEffect(() => {
     const fetchCountries = async () => {
       try {
+        // Fetch all countries
         const { ok, data } = await getCountries()
         if (ok && data.countries) {
           setCountries(data.countries)
+        }
+
+        // Fetch countries with tariffs for validation
+        const { ok: okWithTariffs, data: dataWithTariffs } = await getCountriesWithTariffs()
+        if (okWithTariffs && dataWithTariffs.countries) {
+          const codesWithTariffs = new Set<string>(
+            dataWithTariffs.countries.map((c: { code: string; name: string }) => c.code)
+          )
+          setCountriesWithTariffs(codesWithTariffs)
         }
       } catch (error) {
         console.error('Error fetching countries:', error)
       }
     }
     
+    const fetchYears = async () => {
+      setYearsLoading(true)
+      try {
+        const { ok, data } = await getAvailableYears()
+        if (ok && data.years && data.years.length > 0) {
+          setAvailableYears(data.years)
+          // Set the most recent year as default
+          setSelectedYear(data.years[0].toString())
+        } else {
+          // Fallback to hardcoded years if API fails
+          const fallbackYears = [2025, 2024, 2023, 2022, 2021, 2020]
+          setAvailableYears(fallbackYears)
+          setSelectedYear("2023")
+        }
+      } catch (error) {
+        console.error('Error fetching years:', error)
+        // Fallback to hardcoded years
+        const fallbackYears = [2025, 2024, 2023, 2022, 2021, 2020]
+        setAvailableYears(fallbackYears)
+        setSelectedYear("2023")
+      } finally {
+        setYearsLoading(false)
+      }
+    }
+    
     fetchCountries()
+    fetchYears()
   }, [])
 
   // Auto-convert tariff amount when currency changes
@@ -340,6 +390,9 @@ export default function CalculateTab({
               searchTimeout={searchTimeout}
               selectedYear={selectedYear}
               setSelectedYear={setSelectedYear}
+              availableYears={availableYears}
+              yearsLoading={yearsLoading}
+              hasLikelyTariffData={hasLikelyTariffData()}
               loading={loading}
               onSearch={handleSearchTariffs}
             />
