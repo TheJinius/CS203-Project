@@ -610,13 +610,19 @@ class TariffManagementControllerIntegrationTest {
 
         @Test
         @WithMockUser(authorities = "Users")
-        @DisplayName("Should return 403 Forbidden for non-admin users")
-        void testGetAvailableYears_Forbidden() throws Exception {
+        @DisplayName("Should allow Users to get available years")
+        void testGetAvailableYears_AllowedForUsers() throws Exception {
+            // Arrange
+            List<Integer> mockYears = Arrays.asList(2024, 2023);
+            when(tariffScheduleRepository.findDistinctYears()).thenReturn(mockYears);
+
             // Act & Assert
             mockMvc.perform(get("/api/admin/tariffs/years"))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.status").value("error"))
-                    .andExpect(jsonPath("$.message").value("Access denied"));
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.years").isArray())
+                    .andExpect(jsonPath("$.years.length()").value(2))
+                    .andExpect(jsonPath("$.count").value(2));
         }
 
         @Test
