@@ -609,7 +609,7 @@ class TariffManagementControllerIntegrationTest {
         }
 
         @Test
-        @WithMockUser(authorities = "User")
+        @WithMockUser(authorities = "Users")
         @DisplayName("Should return 403 Forbidden for non-admin users")
         void testGetAvailableYears_Forbidden() throws Exception {
             // Act & Assert

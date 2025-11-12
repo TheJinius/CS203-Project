@@ -68,7 +68,7 @@ public class TariffManagementController {
 
     // NEW: Search for tariffs to edit (same as CalculateTab logic)
     @PostMapping("/search")
-    @PreAuthorize("hasAuthority('Admins')")
+    @PreAuthorize("hasAnyAuthority('Users', 'Admins')")
     public ResponseEntity<Map<String, Object>> searchTariffs(@RequestBody TariffSearchRequest request) {
         System.out.println("🔍 Admin searching tariffs for editing:");
         System.out.println("ReporterCode = " + request.getReporterCode());
@@ -200,7 +200,7 @@ public class TariffManagementController {
 
     // Get all countries
     @GetMapping("/countries")
-    @PreAuthorize("hasAuthority('Admins')")
+    @PreAuthorize("hasAnyAuthority('Users', 'Admins')")
     public ResponseEntity<Map<String, Object>> getAllCountries() {
         System.out.println("🌍 Fetching all countries");
         List<Country> countries = countryRepository.findAll();
@@ -226,7 +226,7 @@ public class TariffManagementController {
     
     // Get available years from tariff_schedule table
     @GetMapping("/years")
-    @PreAuthorize("hasAuthority('Admins')")
+    @PreAuthorize("hasAnyAuthority('Users', 'Admins')")
     public ResponseEntity<Map<String, Object>> getAvailableYears() {
         System.out.println("📅 Fetching available tariff years");
         List<Integer> years = tariffScheduleRepository.findDistinctYears();
