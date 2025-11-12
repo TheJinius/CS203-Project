@@ -205,7 +205,7 @@ public class TariffManagementController {
         System.out.println("🌍 Fetching all countries");
         List<Country> countries = countryRepository.findAll();
         
-        // Convert to simple map format
+        // Convert to simple map format and sort alphabetically by country name
         List<Map<String, String>> countryList = countries.stream()
                 .map(country -> {
                     Map<String, String> countryMap = new HashMap<>();
@@ -213,6 +213,7 @@ public class TariffManagementController {
                     countryMap.put("name", country.getCountryName());
                     return countryMap;
                 })
+                .sorted((c1, c2) -> c1.get("name").compareToIgnoreCase(c2.get("name")))
                 .collect(Collectors.toList());
         
         Map<String, Object> response = new HashMap<>();
@@ -220,7 +221,7 @@ public class TariffManagementController {
         response.put("count", countryList.size());
         response.put("status", "success");
         
-        System.out.println("✅ Retrieved " + countryList.size() + " countries");
+        System.out.println("✅ Retrieved " + countryList.size() + " countries (sorted alphabetically)");
         return ResponseEntity.ok(response);
     }
     
@@ -231,7 +232,7 @@ public class TariffManagementController {
         System.out.println("🌍 Fetching countries with tariffs");
         List<Country> countries = tariffScheduleRepository.findDistinctCountries();
         
-        // Convert to simple map format
+        // Convert to simple map format and sort alphabetically by country name
         List<Map<String, String>> countryList = countries.stream()
                 .map(country -> {
                     Map<String, String> countryMap = new HashMap<>();
@@ -239,6 +240,7 @@ public class TariffManagementController {
                     countryMap.put("name", country.getCountryName());
                     return countryMap;
                 })
+                .sorted((c1, c2) -> c1.get("name").compareToIgnoreCase(c2.get("name")))
                 .collect(Collectors.toList());
         
         Map<String, Object> response = new HashMap<>();
@@ -246,7 +248,7 @@ public class TariffManagementController {
         response.put("count", countryList.size());
         response.put("status", "success");
         
-        System.out.println("✅ Retrieved " + countryList.size() + " countries with tariffs");
+        System.out.println("✅ Retrieved " + countryList.size() + " countries with tariffs (sorted alphabetically)");
         return ResponseEntity.ok(response);
     }
     

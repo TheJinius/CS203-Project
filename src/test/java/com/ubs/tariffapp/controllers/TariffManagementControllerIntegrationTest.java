@@ -71,6 +71,9 @@ class TariffManagementControllerIntegrationTest {
     @MockBean
     private com.ubs.tariffapp.repositories.TariffScheduleRepository tariffScheduleRepository;
 
+    @MockBean
+    private com.ubs.tariffapp.repositories.CountryRepository countryRepository;
+
     private TariffRequest createValidTariffRequest() {
         TariffRequest request = new TariffRequest();
         request.setTariffYear(2024);
@@ -652,8 +655,175 @@ class TariffManagementControllerIntegrationTest {
     }
 
     @Nested
+    @DisplayName("GET /api/admin/tariffs/countries - Get All Countries")
+    class GetAllCountriesTests {
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should return all countries sorted alphabetically by name")
+        void testGetAllCountries_SortedAlphabetically() throws Exception {
+            // Arrange - Create countries in non-alphabetical order
+            com.ubs.tariffapp.models.Country zimbabwe = new com.ubs.tariffapp.models.Country();
+            zimbabwe.setCountryId("ZWE");
+            zimbabwe.setCountryName("Zimbabwe");
+            
+            com.ubs.tariffapp.models.Country australia = new com.ubs.tariffapp.models.Country();
+            australia.setCountryId("AUS");
+            australia.setCountryName("Australia");
+            
+            com.ubs.tariffapp.models.Country china = new com.ubs.tariffapp.models.Country();
+            china.setCountryId("CHN");
+            china.setCountryName("China");
+            
+            com.ubs.tariffapp.models.Country brazil = new com.ubs.tariffapp.models.Country();
+            brazil.setCountryId("BRA");
+            brazil.setCountryName("Brazil");
+            
+            // Return in random order
+            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(zimbabwe, australia, china, brazil);
+            when(countryRepository.findAll()).thenReturn(mockCountries);
+
+            // Act & Assert - Verify alphabetical order: Australia, Brazil, China, Zimbabwe
+            mockMvc.perform(get("/api/admin/tariffs/countries"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.countries").isArray())
+                    .andExpect(jsonPath("$.countries.length()").value(4))
+                    .andExpect(jsonPath("$.countries[0].code").value("AUS"))
+                    .andExpect(jsonPath("$.countries[0].name").value("Australia"))
+                    .andExpect(jsonPath("$.countries[1].code").value("BRA"))
+                    .andExpect(jsonPath("$.countries[1].name").value("Brazil"))
+                    .andExpect(jsonPath("$.countries[2].code").value("CHN"))
+                    .andExpect(jsonPath("$.countries[2].name").value("China"))
+                    .andExpect(jsonPath("$.countries[3].code").value("ZWE"))
+                    .andExpect(jsonPath("$.countries[3].name").value("Zimbabwe"))
+                    .andExpect(jsonPath("$.count").value(4));
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle case-insensitive sorting correctly")
+        void testGetAllCountries_CaseInsensitiveSorting() throws Exception {
+            // Arrange - Test case sensitivity
+            com.ubs.tariffapp.models.Country country1 = new com.ubs.tariffapp.models.Country();
+            country1.setCountryId("001");
+            country1.setCountryName("australia");  // lowercase
+            
+            com.ubs.tariffapp.models.Country country2 = new com.ubs.tariffapp.models.Country();
+            country2.setCountryId("002");
+            country2.setCountryName("Brazil");  // capitalized
+            
+            com.ubs.tariffapp.models.Country country3 = new com.ubs.tariffapp.models.Country();
+            country3.setCountryId("003");
+            country3.setCountryName("ARGENTINA");  // uppercase
+            
+            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(country1, country2, country3);
+            when(countryRepository.findAll()).thenReturn(mockCountries);
+
+            // Act & Assert - Should sort case-insensitively: ARGENTINA, australia, Brazil
+            mockMvc.perform(get("/api/admin/tariffs/countries"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.countries[0].name").value("ARGENTINA"))
+                    .andExpect(jsonPath("$.countries[1].name").value("australia"))
+                    .andExpect(jsonPath("$.countries[2].name").value("Brazil"));
+        }
+
+        @Test
+        @WithMockUser(authorities = "Users")
+        @DisplayName("Should allow Users to get all countries")
+        void testGetAllCountries_AllowedForUsers() throws Exception {
+            // Arrange
+            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            usa.setCountryId("USA");
+            usa.setCountryName("United States");
+            
+            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa);
+            when(countryRepository.findAll()).thenReturn(mockCountries);
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"));
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should return empty array when no countries exist")
+        void testGetAllCountries_EmptyDatabase() throws Exception {
+            // Arrange
+            when(countryRepository.findAll()).thenReturn(Collections.emptyList());
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.countries").isArray())
+                    .andExpect(jsonPath("$.countries.length()").value(0))
+                    .andExpect(jsonPath("$.count").value(0));
+        }
+
+        @Test
+        @DisplayName("Should return 401 Unauthorized for unauthenticated requests")
+        void testGetAllCountries_Unauthorized() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle service exceptions gracefully")
+        void testGetAllCountries_ServiceException() throws Exception {
+            // Arrange
+            when(countryRepository.findAll())
+                    .thenThrow(new RuntimeException("Database connection error"));
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/countries"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value("error"));
+        }
+    }
+
+    @Nested
     @DisplayName("GET /api/admin/tariffs/countries/with-tariffs - Get Countries With Tariffs")
     class GetCountriesWithTariffsTests {
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should return countries that have tariffs sorted alphabetically by name")
+        void testGetCountriesWithTariffs_SortedAlphabetically() throws Exception {
+            // Arrange - Create countries in non-alphabetical order
+            com.ubs.tariffapp.models.Country usa = new com.ubs.tariffapp.models.Country();
+            usa.setCountryId("USA");
+            usa.setCountryName("United States");
+            
+            com.ubs.tariffapp.models.Country chn = new com.ubs.tariffapp.models.Country();
+            chn.setCountryId("CHN");
+            chn.setCountryName("China");
+            
+            com.ubs.tariffapp.models.Country jpn = new com.ubs.tariffapp.models.Country();
+            jpn.setCountryId("JPN");
+            jpn.setCountryName("Japan");
+            
+            // Return in non-alphabetical order
+            List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa, chn, jpn);
+            when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
+
+            // Act & Assert - Verify alphabetical order: China, Japan, United States
+            mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.countries").isArray())
+                    .andExpect(jsonPath("$.countries.length()").value(3))
+                    .andExpect(jsonPath("$.countries[0].code").value("CHN"))
+                    .andExpect(jsonPath("$.countries[0].name").value("China"))
+                    .andExpect(jsonPath("$.countries[1].code").value("JPN"))
+                    .andExpect(jsonPath("$.countries[1].name").value("Japan"))
+                    .andExpect(jsonPath("$.countries[2].code").value("USA"))
+                    .andExpect(jsonPath("$.countries[2].name").value("United States"))
+                    .andExpect(jsonPath("$.count").value(3));
+        }
 
         @Test
         @WithMockUser(authorities = "Admins")
@@ -668,19 +838,20 @@ class TariffManagementControllerIntegrationTest {
             chn.setCountryId("CHN");
             chn.setCountryName("China");
             
+            // Return in non-alphabetical order
             List<com.ubs.tariffapp.models.Country> mockCountries = Arrays.asList(usa, chn);
             when(tariffScheduleRepository.findDistinctCountries()).thenReturn(mockCountries);
 
-            // Act & Assert
+            // Act & Assert - Verify alphabetical order: China comes before United States
             mockMvc.perform(get("/api/admin/tariffs/countries/with-tariffs"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("success"))
                     .andExpect(jsonPath("$.countries").isArray())
                     .andExpect(jsonPath("$.countries.length()").value(2))
-                    .andExpect(jsonPath("$.countries[0].code").value("USA"))
-                    .andExpect(jsonPath("$.countries[0].name").value("United States"))
-                    .andExpect(jsonPath("$.countries[1].code").value("CHN"))
-                    .andExpect(jsonPath("$.countries[1].name").value("China"))
+                    .andExpect(jsonPath("$.countries[0].code").value("CHN"))
+                    .andExpect(jsonPath("$.countries[0].name").value("China"))
+                    .andExpect(jsonPath("$.countries[1].code").value("USA"))
+                    .andExpect(jsonPath("$.countries[1].name").value("United States"))
                     .andExpect(jsonPath("$.count").value(2));
         }
 
