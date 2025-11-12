@@ -1,11 +1,11 @@
 package com.ubs.tariffapp.audit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PostRemove;
@@ -20,6 +20,7 @@ import jakarta.persistence.PostUpdate;
 @Component // Make Spring manage this bean
 public class AuditListener implements ApplicationContextAware {
 
+    private static final Logger log = LoggerFactory.getLogger(AuditListener.class);
     private static ApplicationContext applicationContext;
 
     @Override
@@ -51,46 +52,39 @@ public class AuditListener implements ApplicationContextAware {
     @PostPersist
     public void postPersist(Object entity) {
         AuditLogService auditService = getAuditLogService();
-        
-        if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void beforeCommit(boolean readOnly) {
-                    if (!readOnly) {
-                        auditService.logChange(entity, "INSERT");
-                    }
-                }
-            });
+        if (auditService != null) {
+            try {
+                auditService.logChange(entity, "INSERT");
+            } catch (Exception e) {
+                log.error("Failed to create audit log for INSERT on {}: {}", 
+                    entity.getClass().getSimpleName(), e.getMessage(), e);
+            }
         }
     }
 
     @PostUpdate
     public void postUpdate(Object entity) {
         AuditLogService auditService = getAuditLogService();
-        if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void beforeCommit(boolean readOnly) {
-                    if (!readOnly) {
-                        auditService.logChange(entity, "UPDATE");
-                    }
-                }
-            });
+        if (auditService != null) {
+            try {
+                auditService.logChange(entity, "UPDATE");
+            } catch (Exception e) {
+                log.error("Failed to create audit log for UPDATE on {}: {}", 
+                    entity.getClass().getSimpleName(), e.getMessage(), e);
+            }
         }
     }
 
     @PostRemove
     public void postRemove(Object entity) {
         AuditLogService auditService = getAuditLogService();
-        if (auditService != null && TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void beforeCommit(boolean readOnly) {
-                    if (!readOnly) {
-                        auditService.logChange(entity, "DELETE");
-                    }
-                }
-            });
+        if (auditService != null) {
+            try {
+                auditService.logChange(entity, "DELETE");
+            } catch (Exception e) {
+                log.error("Failed to create audit log for DELETE on {}: {}", 
+                    entity.getClass().getSimpleName(), e.getMessage(), e);
+            }
         }
     }
 }
