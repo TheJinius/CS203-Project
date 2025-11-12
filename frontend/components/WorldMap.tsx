@@ -252,25 +252,39 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
       map.current.on("load", () => {
         console.log("Map loaded successfully")
         
-        // Apply theme-specific colors
-        if (theme === "dark") {
-          // Dark mode: dark blue water and lighter land
-          map.current.setPaintProperty('water', 'fill-color', '#0a193f')
-          map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
-          map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
-        } else {
-          // Light mode: light blue water and white land
-          map.current.setPaintProperty('water', 'fill-color', '#3055ff')
-          map.current.setPaintProperty('land', 'fill-color', '#f8f9fa')
-          if (map.current.getLayer('country-label')) {
-            map.current.setPaintProperty('country-label', 'text-color', '#1a1a1a')
+        // Apply theme-specific colors with proper checks
+        try {
+          if (theme === "dark") {
+            // Dark mode: dark blue water and lighter land
+            if (map.current?.getLayer('water')) {
+              map.current.setPaintProperty('water', 'fill-color', '#0a193f')
+            }
+            if (map.current?.getLayer('land')) {
+              map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
+            }
+            if (map.current?.getLayer('country-label')) {
+              map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
+            }
+          } else {
+            // Light mode: light blue water and white land
+            if (map.current?.getLayer('water')) {
+              map.current.setPaintProperty('water', 'fill-color', '#3055ff')
+            }
+            if (map.current?.getLayer('land')) {
+              map.current.setPaintProperty('land', 'fill-color', '#f8f9fa')
+            }
+            if (map.current?.getLayer('country-label')) {
+              map.current.setPaintProperty('country-label', 'text-color', '#1a1a1a')
+            }
           }
-        }
-        
-        // If there's a landcover layer, adjust it too
-        if (map.current.getLayer('landcover')) {
-          const landcoverColor = theme === "dark" ? '#e4e4e7' : '#ffffff'
-          map.current.setPaintProperty('landcover', 'fill-color', landcoverColor)
+          
+          // If there's a landcover layer, adjust it too
+          if (map.current?.getLayer('landcover')) {
+            const landcoverColor = theme === "dark" ? '#e4e4e7' : '#ffffff'
+            map.current.setPaintProperty('landcover', 'fill-color', landcoverColor)
+          }
+        } catch (error) {
+          console.warn('Error applying theme colors to map:', error)
         }
       })
     }
@@ -298,26 +312,38 @@ export default function WorldMap({ geojsonData, optimalRoutesData, routeDetails 
 
     // Wait for the new style to load before applying colors
     map.current.once('style.load', () => {
-      if (theme === "dark") {
-        // Dark mode colors
-        map.current.setPaintProperty('water', 'fill-color', '#0a193f')
-        map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
-        if (map.current.getLayer('country-label')) {
-          map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
+      try {
+        if (theme === "dark") {
+          // Dark mode colors
+          if (map.current?.getLayer('water')) {
+            map.current.setPaintProperty('water', 'fill-color', '#0a193f')
+          }
+          if (map.current?.getLayer('land')) {
+            map.current.setPaintProperty('land', 'fill-color', '#a7a7bdff')
+          }
+          if (map.current?.getLayer('country-label')) {
+            map.current.setPaintProperty('country-label', 'text-color', '#ffffff')
+          }
+          if (map.current?.getLayer('landcover')) {
+            map.current.setPaintProperty('landcover', 'fill-color', '#e4e4e7')
+          }
+        } else {
+          // Light mode colors
+          if (map.current?.getLayer('water')) {
+            map.current.setPaintProperty('water', 'fill-color', '#c6def1')
+          }
+          if (map.current?.getLayer('land')) {
+            map.current.setPaintProperty('land', 'fill-color', '#f8f9fa')
+          }
+          if (map.current?.getLayer('country-label')) {
+            map.current.setPaintProperty('country-label', 'text-color', '#1a1a1a')
+          }
+          if (map.current?.getLayer('landcover')) {
+            map.current.setPaintProperty('landcover', 'fill-color', '#ffffff')
+          }
         }
-        if (map.current.getLayer('landcover')) {
-          map.current.setPaintProperty('landcover', 'fill-color', '#e4e4e7')
-        }
-      } else {
-        // Light mode colors
-        map.current.setPaintProperty('water', 'fill-color', '#c6def1')
-        map.current.setPaintProperty('land', 'fill-color', '#f8f9fa')
-        if (map.current.getLayer('country-label')) {
-          map.current.setPaintProperty('country-label', 'text-color', '#1a1a1a')
-        }
-        if (map.current.getLayer('landcover')) {
-          map.current.setPaintProperty('landcover', 'fill-color', '#ffffff')
-        }
+      } catch (error) {
+        console.warn('Error applying theme colors after style change:', error)
       }
 
       // Re-add route layers after style change
