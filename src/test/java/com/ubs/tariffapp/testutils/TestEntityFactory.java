@@ -172,6 +172,28 @@ public class TestEntityFactory {
                         DutyTypeRepository dutyTypeRepo,
                         TariffScheduleRepository scheduleRepo,
                         Duty childDuty) {
+                return createAndSaveTariffSchedule(countryRepo, productRepo, dutyTypeRepo, scheduleRepo, childDuty, TestConstants.TARIFF_YEAR);
+        }
+
+        /**
+         * Overloaded helper method to create and persist a complete TariffSchedule
+         * with all its parent entities persisted and a custom tariff year.
+         * 
+         * @param countryRepo
+         * @param productRepo
+         * @param dutyTypeRepo
+         * @param scheduleRepo
+         * @param childDuty
+         * @param tariffYear Custom year for the tariff schedule
+         * @return
+         */
+        public static TariffSchedule createAndSaveTariffSchedule(
+                        CountryRepository countryRepo,
+                        ProductRepository productRepo,
+                        DutyTypeRepository dutyTypeRepo,
+                        TariffScheduleRepository scheduleRepo,
+                        Duty childDuty,
+                        Integer tariffYear) {
                 // Note that parent Java objects do not have their lists updated
                 // in memory when children are added
                 // But the database relationships are correctly established
@@ -191,6 +213,9 @@ public class TestEntityFactory {
                                 product,
                                 dutyType,
                                 childDuty);
+                
+                // Set custom year before saving
+                schedule.setTariffYear(tariffYear);
 
                 scheduleRepo.save(schedule);
                 return schedule;

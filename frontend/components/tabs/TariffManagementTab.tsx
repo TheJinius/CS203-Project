@@ -96,7 +96,7 @@ export default function TariffManagementTab() {
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [selectedDestination, setSelectedDestination] = useState<string>("")
-  const [selectedYear, setSelectedYear] = useState<string>("2023")
+  const [selectedYear, setSelectedYear] = useState<string>("")
   const [searchStep, setSearchStep] = useState(1)
   const [searchResults, setSearchResults] = useState<TariffData[]>([])
   
@@ -223,11 +223,9 @@ export default function TariffManagementTab() {
           console.log('✅ Loaded', data.countries.length, 'countries from database')
         } else {
           console.error('❌ Failed to load countries:', data.error)
-          showNotification('error', 'Failed to Load Countries', 'Could not fetch countries from database')
         }
       } catch (error) {
         console.error('❌ Error fetching countries:', error)
-        showNotification('error', 'Error', 'An error occurred while fetching countries')
       } finally {
         setCountriesLoading(false)
       }
@@ -237,15 +235,21 @@ export default function TariffManagementTab() {
       setYearsLoading(true)
       try {
         const { ok, data } = await getAvailableYears()
-        if (ok && data.years) {
+        if (ok && data.years && data.years.length > 0) {
           setAvailableYears(data.years)
           console.log('✅ Loaded', data.years.length, 'available years from database:', data.years)
+          
+          // Set default selected year to the most recent year
+          if (data.years.length > 0) {
+            setSelectedYear(data.years[0].toString())
+          }
         } else {
           console.error('❌ Failed to load years:', data.error)
           // Fallback to default years if fetch fails
           const currentYear = new Date().getFullYear()
           const fallbackYears = Array.from({ length: 6 }, (_, i) => currentYear - i)
           setAvailableYears(fallbackYears)
+          setSelectedYear(currentYear.toString())
         }
       } catch (error) {
         console.error('❌ Error fetching years:', error)
@@ -253,6 +257,7 @@ export default function TariffManagementTab() {
         const currentYear = new Date().getFullYear()
         const fallbackYears = Array.from({ length: 6 }, (_, i) => currentYear - i)
         setAvailableYears(fallbackYears)
+        setSelectedYear(currentYear.toString())
       } finally {
         setYearsLoading(false)
       }
@@ -988,7 +993,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                     <Label htmlFor="year" className="text-sm font-medium">Year</Label>
                     <Select onValueChange={setSelectedYear} value={selectedYear}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select year" />
+                        <SelectValue placeholder={yearsLoading ? "Loading..." : "Select year"} />
                       </SelectTrigger>
                       <SelectContent className="max-h-60 overflow-y-auto">
                         {yearsLoading ? (
@@ -1000,7 +1005,7 @@ Duty Category: ${tariff.dutyCategory || 'Unknown'}`
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="2023" disabled>No years available</SelectItem>
+                          <SelectItem value="fallback" disabled>No years available</SelectItem>
                         )}
                       </SelectContent>
                     </Select>

@@ -2,6 +2,7 @@ package com.ubs.tariffapp.repositories;
 
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -92,4 +93,8 @@ public interface TariffScheduleRepository extends JpaRepository<TariffSchedule, 
         @Param("tlCode") String tlCode,
         @Param("year") Integer year
     );
+    
+    // Get distinct years from tariff_schedule table
+    @Query("SELECT DISTINCT ts.tariffYear FROM TariffSchedule ts ORDER BY ts.tariffYear DESC")
+    List<Integer> findDistinctYears();
 }

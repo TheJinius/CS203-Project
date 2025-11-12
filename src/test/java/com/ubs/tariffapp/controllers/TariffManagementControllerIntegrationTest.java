@@ -65,6 +65,9 @@ class TariffManagementControllerIntegrationTest {
     @MockBean
     private DutyService dutyService;
 
+    @MockBean
+    private com.ubs.tariffapp.repositories.TariffScheduleRepository tariffScheduleRepository;
+
     private TariffRequest createValidTariffRequest() {
         TariffRequest request = new TariffRequest();
         request.setTariffYear(2024);
@@ -562,6 +565,80 @@ class TariffManagementControllerIntegrationTest {
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value("error"))
                     .andExpect(jsonPath("$.message").value("Tariff not found with id: 999"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/admin/tariffs/years - Get Available Years")
+    class GetAvailableYearsTests {
+
+        @Test
+        @WithMockUser(authorities = "Admin")
+        @DisplayName("Should return available years with success status")
+        void testGetAvailableYears_Success() throws Exception {
+            // Arrange
+            java.util.List<Integer> mockYears = java.util.Arrays.asList(2024, 2023, 2022);
+            when(tariffScheduleRepository.findDistinctYears()).thenReturn(mockYears);
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/years"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.years").isArray())
+                    .andExpect(jsonPath("$.years.length()").value(3))
+                    .andExpect(jsonPath("$.years[0]").value(2024))
+                    .andExpect(jsonPath("$.years[1]").value(2023))
+                    .andExpect(jsonPath("$.years[2]").value(2022))
+                    .andExpect(jsonPath("$.count").value(3));
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admin")
+        @DisplayName("Should return empty array when no years available")
+        void testGetAvailableYears_EmptyDatabase() throws Exception {
+            // Arrange
+            when(tariffScheduleRepository.findDistinctYears()).thenReturn(Collections.emptyList());
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/years"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.years").isArray())
+                    .andExpect(jsonPath("$.years.length()").value(0))
+                    .andExpect(jsonPath("$.count").value(0));
+        }
+
+        @Test
+        @WithMockUser(authorities = "User")
+        @DisplayName("Should return 403 Forbidden for non-admin users")
+        void testGetAvailableYears_Forbidden() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/years"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.status").value("error"))
+                    .andExpect(jsonPath("$.message").value("Access denied"));
+        }
+
+        @Test
+        @DisplayName("Should return 401 Unauthorized for unauthenticated requests")
+        void testGetAvailableYears_Unauthorized() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/years"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admin")
+        @DisplayName("Should handle service exceptions gracefully")
+        void testGetAvailableYears_ServiceException() throws Exception {
+            // Arrange
+            when(tariffScheduleRepository.findDistinctYears())
+                    .thenThrow(new RuntimeException("Database connection error"));
+
+            // Act & Assert
+            mockMvc.perform(get("/api/admin/tariffs/years"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value("error"));
         }
     }
 }

@@ -29,6 +29,7 @@ import com.ubs.tariffapp.models.duty.OtherDuty;
 import com.ubs.tariffapp.models.duty.SpecificDuty;
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
 import com.ubs.tariffapp.repositories.CountryRepository;
+import com.ubs.tariffapp.repositories.TariffScheduleRepository;
 import com.ubs.tariffapp.services.DutyService;
 import com.ubs.tariffapp.services.TariffManagementService;
 
@@ -40,11 +41,13 @@ public class TariffManagementController {
     private final TariffManagementService tariffManagementService;
     private final DutyService dutyService;
     private final CountryRepository countryRepository;
+    private final TariffScheduleRepository tariffScheduleRepository;
 
-    public TariffManagementController(TariffManagementService tariffManagementService, DutyService dutyService, CountryRepository countryRepository) {
+    public TariffManagementController(TariffManagementService tariffManagementService, DutyService dutyService, CountryRepository countryRepository, TariffScheduleRepository tariffScheduleRepository) {
         this.tariffManagementService = tariffManagementService;
         this.dutyService = dutyService;
         this.countryRepository = countryRepository;
+        this.tariffScheduleRepository = tariffScheduleRepository;
     }
 
     // Get all tariffs (for management view)
@@ -218,6 +221,22 @@ public class TariffManagementController {
         response.put("status", "success");
         
         System.out.println("✅ Retrieved " + countryList.size() + " countries");
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get available years from tariff_schedule table
+    @GetMapping("/years")
+    @PreAuthorize("hasAuthority('Admin')")
+    public ResponseEntity<Map<String, Object>> getAvailableYears() {
+        System.out.println("📅 Fetching available tariff years");
+        List<Integer> years = tariffScheduleRepository.findDistinctYears();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("years", years);
+        response.put("count", years.size());
+        response.put("status", "success");
+        
+        System.out.println("✅ Retrieved " + years.size() + " distinct years: " + years);
         return ResponseEntity.ok(response);
     }
 }

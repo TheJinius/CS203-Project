@@ -140,32 +140,21 @@ export async function getAvailableYears() {
   try {
     const headers = await getAuthHeaders();
     
-    // Fetch all tariffs and extract unique years
-    const response = await fetch(`${API_BASE_ROUTE}/admin/tariffs`, {
+    // Fetch distinct years from dedicated endpoint
+    const response = await fetch(`${API_BASE_ROUTE}/admin/tariffs/years`, {
       method: "GET",
       headers,
     })
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch tariffs: ${response.status}`)
+      throw new Error(`Failed to fetch years: ${response.status}`)
     }
     
     const data = await response.json()
     
-    // Extract unique years from tariffs
-    const years = new Set<number>()
-    if (data.tariffs && Array.isArray(data.tariffs)) {
-      data.tariffs.forEach((tariff: any) => {
-        if (tariff.tariffYear) {
-          years.add(tariff.tariffYear)
-        }
-      })
-    }
+    console.log('✅ Fetched years from backend:', data)
     
-    // Convert to sorted array (newest first)
-    const sortedYears = Array.from(years).sort((a, b) => b - a)
-    
-    return { ok: true, data: { years: sortedYears } }
+    return { ok: true, data: { years: data.years || [] } }
   } catch (error) {
     console.error('Get available years error:', error);
     return { ok: false, data: { error: (error as Error).message, years: [] } };
