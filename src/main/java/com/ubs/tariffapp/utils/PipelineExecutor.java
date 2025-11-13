@@ -76,13 +76,13 @@ public class PipelineExecutor {
             // Initialize Spring context using the main App class
             System.out.println("[1/3] Initializing Spring Boot context...");
             context = SpringApplication.run(App.class, args);
-            System.out.println("✓ Spring context initialized successfully");
+            System.out.println("Spring context initialized successfully");
             System.out.println();
             
             // Get the Python scraper service from Spring context
             System.out.println("[2/3] Retrieving scraper service...");
             PythonScraperService scraperService = context.getBean(PythonScraperService.class);
-            System.out.println("✓ Scraper service retrieved");
+            System.out.println("Scraper service retrieved");
             System.out.println();
             
             // Execute the full pipeline for each country
@@ -104,10 +104,10 @@ public class PipelineExecutor {
                     
                     if (success) {
                         successCount++;
-                        System.out.println("✓ " + countryCode + " completed successfully");
+                        System.out.println(countryCode + " completed successfully");
                     } else {
                         failureCount++;
-                        System.err.println("✗ " + countryCode + " failed");
+                        System.err.println(countryCode + " failed");
                     }
                     
                     // Add delay between countries to avoid overwhelming the data source
@@ -118,7 +118,7 @@ public class PipelineExecutor {
                     
                 } catch (Exception e) {
                     failureCount++;
-                    System.err.println("✗ Error processing " + countryCode + ": " + e.getMessage());
+                    System.err.println("Error processing " + countryCode + ": " + e.getMessage());
                     e.printStackTrace();
                 }
                 
@@ -135,14 +135,14 @@ public class PipelineExecutor {
             System.out.println("=".repeat(70));
             
             if (failureCount == 0) {
-                System.out.println("✓✓✓ ALL PIPELINES COMPLETED SUCCESSFULLY ✓✓✓");
+                System.out.println("ALL PIPELINES COMPLETED SUCCESSFULLY");
                 System.out.println("=".repeat(70));
                 System.out.println("Data for " + year + " has been scraped, cleaned, and loaded for:");
                 countryCodes.forEach(code -> System.out.println("  - " + code));
                 System.out.println("=".repeat(70));
                 System.exit(0);
             } else {
-                System.err.println("✗✗✗ SOME PIPELINES FAILED ✗✗✗");
+                System.err.println("SOME PIPELINES FAILED");
                 System.err.println("=".repeat(70));
                 System.err.println("Check the error messages above for details.");
                 System.err.println("Common issues:");
@@ -157,7 +157,7 @@ public class PipelineExecutor {
         } catch (Exception e) {
             System.err.println();
             System.err.println("=".repeat(70));
-            System.err.println("✗✗✗ FATAL ERROR ✗✗✗");
+            System.err.println("FATAL ERROR");
             System.err.println("=".repeat(70));
             System.err.println("Error: " + e.getMessage());
             System.err.println();
@@ -171,7 +171,7 @@ public class PipelineExecutor {
             if (context != null) {
                 System.out.println("\nCleaning up resources...");
                 context.close();
-                System.out.println("✓ Cleanup completed");
+                System.out.println("Cleanup completed");
             }
         }
     }
