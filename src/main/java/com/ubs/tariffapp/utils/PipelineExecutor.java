@@ -37,11 +37,20 @@ public class PipelineExecutor {
     private static final List<String> DEFAULT_COUNTRIES = Arrays.asList("USA", "CHN", "SGP", "JPN");
     
     public static void main(String[] args) {
+        System.exit(execute(args));
+    }
+    
+    /**
+     * Execute the pipeline and return exit status code.
+     * @param args Command line arguments
+     * @return 0 for success, 1 for failure
+     */
+    public static int execute(String[] args) {
         if (args.length < 1) {
             System.err.println("ERROR: Insufficient arguments");
             System.err.println("\nUsage: PipelineExecutor <country_code(s)> [year]");
             System.err.println("\nNote: If year is omitted, the latest available data will be scraped.");
-            System.exit(1);
+            return 1;
         }
         
         String countryInput = args[0].toUpperCase();
@@ -140,7 +149,7 @@ public class PipelineExecutor {
                 System.out.println("Data for " + year + " has been scraped, cleaned, and loaded for:");
                 countryCodes.forEach(code -> System.out.println("  - " + code));
                 System.out.println("=".repeat(70));
-                System.exit(0);
+                return 0;
             } else {
                 System.err.println("SOME PIPELINES FAILED");
                 System.err.println("=".repeat(70));
@@ -151,7 +160,7 @@ public class PipelineExecutor {
                 System.err.println("  - Network connectivity issues");
                 System.err.println("  - Database connection problems");
                 System.err.println("=".repeat(70));
-                System.exit(1);
+                return 1;
             }
             
         } catch (Exception e) {
@@ -164,7 +173,7 @@ public class PipelineExecutor {
             System.err.println("Stack trace:");
             e.printStackTrace();
             System.err.println("=".repeat(70));
-            System.exit(1);
+            return 1;
             
         } finally {
             // Clean up Spring context
