@@ -12,4 +12,16 @@ public class UserProfile {
         this.name = name;
         this.groups = groups;
     }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<String> getGroups() {
+        return groups;
+    }
 }

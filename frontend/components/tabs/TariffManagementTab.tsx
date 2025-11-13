@@ -838,7 +838,19 @@ export default function TariffManagementTab() {
       )
 
       setIsAddDialogOpen(false)
-      setTimeout(() => {
+      
+      // Set search parameters to match the newly created tariff
+      setSelectedProduct(productCode)
+      setSelectedSource(partnerCode)
+      setSelectedDestination(reporterCode)
+      setSelectedYear(tariffYear)
+      
+      // Switch to search tab and trigger search to show the new tariff
+      setActiveTab("search")
+      
+      // Perform search after a short delay to show the new entry
+      setTimeout(async () => {
+        await handleSearchTariffs()
         resetAddForm()
       }, 500)
 

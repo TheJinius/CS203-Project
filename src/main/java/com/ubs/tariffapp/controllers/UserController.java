@@ -26,21 +26,21 @@ public class UserController {
         return ResponseEntity.ok(profile);
     }
 
-    @GetMapping("/api/admin/")
+    @GetMapping("/admin/")
     @PreAuthorize("hasRole('Admins')")
     public ResponseEntity<String> adminHealthCheck() {
         // Admin-only endpoint
         return ResponseEntity.ok("Admin endpoint healthcheck: OK");
     }
 
-    @GetMapping("/api/user/")
+    @GetMapping("/user/")
     @PreAuthorize("hasRole('Users')")
     public ResponseEntity<String> userHealthCheck() {
         // Admin-only endpoint
         return ResponseEntity.ok("User endpoint healthcheck: OK");
     }
 
-    @GetMapping ("/api/health")
+    @GetMapping ("/health")
     public ResponseEntity<String> publicHealthCheck() {
         return ResponseEntity.ok("public endpoint healthcheck: OK");
     }
