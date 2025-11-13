@@ -307,6 +307,26 @@ class TariffManagementServiceUnitTest {
                 .isInstanceOf(InvalidRequestException.class)
                 .hasMessageContaining("Both compound rates must be specified together");
         }
+
+        @Test
+        @DisplayName("Should throw exception when no duty rates provided")
+        void shouldThrowExceptionWhenNoDutyRatesProvided() {
+            // Arrange
+            validRequest.setAdValoremRate(null);
+            validRequest.setSpecificRate(null);
+            validRequest.setCompoundRate1(null);
+            validRequest.setCompoundRate2(null);
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.of(dutyType));
+
+            // Act & Assert
+            assertThatThrownBy(() -> tariffManagementService.createTariff(validRequest))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("At least one duty rate must be specified");
+        }
     }
 
     @Nested
@@ -374,6 +394,244 @@ class TariffManagementServiceUnitTest {
     }
 
     @Nested
+    @DisplayName("Update Tariff Tests")
+    class UpdateTariffTests {
+
+        @Test
+        @DisplayName("Should update tariff suffix and note successfully")
+        void shouldUpdateTariffSuffixAndNote() {
+            // Arrange
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            existingTariff.setTlsSuffix("00");
+            existingTariff.setNote("Original note");
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(existingTariff);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("tlsSuffix", "01");
+            updates.put("note", "Updated note");
+
+            // Act
+            TariffResponse response = tariffManagementService.updateTariff(1, updates);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(existingTariff.getTlsSuffix()).isEqualTo("01");
+            assertThat(existingTariff.getNote()).isEqualTo("Updated note");
+            verify(tariffRepository, times(1)).save(existingTariff);
+        }
+
+        @Test
+        @DisplayName("Should update Ad Valorem duty rate successfully")
+        void shouldUpdateAdValoremDutyRate() {
+            // Arrange
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(existingTariff);
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("adValoremRate", 15.5);
+
+            // Act
+            TariffResponse response = tariffManagementService.updateTariff(1, updates);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(duty.getRatePercent()).isEqualByComparingTo(BigDecimal.valueOf(15.5));
+            verify(adValoremDutyRepository, times(1)).save(duty);
+        }
+
+        @Test
+        @DisplayName("Should update Specific duty rate successfully")
+        void shouldUpdateSpecificDutyRate() {
+            // Arrange
+            SpecificDuty duty = TestEntityFactory.createSpecificDuty();
+            duty.setAmount(BigDecimal.valueOf(5.0));
+            duty.setUnit("kg");
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(existingTariff);
+            when(specificDutyRepository.save(any(SpecificDuty.class))).thenReturn(duty);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("specificRate", 7.5);
+            updates.put("specificRateUnit", "lb");
+
+            // Act
+            TariffResponse response = tariffManagementService.updateTariff(1, updates);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(duty.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(7.5));
+            assertThat(duty.getUnit()).isEqualTo("lb");
+            verify(specificDutyRepository, times(1)).save(duty);
+        }
+
+        @Test
+        @DisplayName("Should update Combined duty rates successfully")
+        void shouldUpdateCombinedDutyRates() {
+            // Arrange
+            CombinedDuty duty = TestEntityFactory.createCombinedDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            duty.setAmount(BigDecimal.valueOf(5.0));
+            duty.setUnit("kg");
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(existingTariff);
+            when(combinedDutyRepository.save(any(CombinedDuty.class))).thenReturn(duty);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("compoundRate1", 12.0);
+            updates.put("compoundRate2", 6.5);
+
+            // Act
+            TariffResponse response = tariffManagementService.updateTariff(1, updates);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(duty.getRatePercent()).isEqualByComparingTo(BigDecimal.valueOf(12.0));
+            assertThat(duty.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(6.5));
+            verify(combinedDutyRepository, times(1)).save(duty);
+        }
+
+        @Test
+        @DisplayName("Should update only compound rate 1")
+        void shouldUpdateOnlyCompoundRate1() {
+            // Arrange
+            CombinedDuty duty = TestEntityFactory.createCombinedDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            duty.setAmount(BigDecimal.valueOf(5.0));
+            duty.setUnit("kg");
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(existingTariff);
+            when(combinedDutyRepository.save(any(CombinedDuty.class))).thenReturn(duty);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("compoundRate1", 12.0);
+
+            // Act
+            TariffResponse response = tariffManagementService.updateTariff(1, updates);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(duty.getRatePercent()).isEqualByComparingTo(BigDecimal.valueOf(12.0));
+            assertThat(duty.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(5.0)); // unchanged
+            verify(combinedDutyRepository, times(1)).save(duty);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when updating non-existent tariff")
+        void shouldThrowExceptionWhenUpdatingNonExistentTariff() {
+            // Arrange
+            when(tariffRepository.findById(999)).thenReturn(Optional.empty());
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("note", "Test");
+
+            // Act & Assert
+            assertThatThrownBy(() -> tariffManagementService.updateTariff(999, updates))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Tariff not found");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when duty not found during rate update")
+        void shouldThrowExceptionWhenDutyNotFoundDuringUpdate() {
+            // Arrange: build TariffSchedule manually with null duty
+            TariffSchedule existingTariff = new TariffSchedule();
+            existingTariff.setTariffId(1);
+            existingTariff.setTariffYear(2023);
+            existingTariff.setReporter(usa);
+            existingTariff.setPartner(china);
+            existingTariff.setProduct(product);
+            existingTariff.setDutyType(dutyType);
+            existingTariff.setDuty(null);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("adValoremRate", 15.0);
+
+            // Act & Assert
+            assertThatThrownBy(() -> tariffManagementService.updateTariff(1, updates))
+                .isInstanceOf(com.ubs.tariffapp.exceptions.DutyNotFoundException.class)
+                .hasMessageContaining("Duty information not found for tariff id: 1");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when updating with mismatched duty type")
+        void shouldThrowExceptionWhenUpdatingWithMismatchedDutyType() {
+            // Arrange
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("specificRate", 5.0); // Trying to update specific rate for Ad Valorem duty
+
+            // Act & Assert
+            assertThatThrownBy(() -> tariffManagementService.updateTariff(1, updates))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("Cannot update duty rates")
+                .hasMessageContaining("provided rates don't match existing duty type");
+        }
+
+        @Test
+        @DisplayName("Should update specific duty without changing unit when unit not provided")
+        void shouldUpdateSpecificDutyWithoutChangingUnit() {
+            // Arrange
+            SpecificDuty duty = TestEntityFactory.createSpecificDuty();
+            duty.setAmount(BigDecimal.valueOf(5.0));
+            duty.setUnit("kg");
+            
+            TariffSchedule existingTariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            existingTariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(existingTariff));
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(existingTariff);
+            when(specificDutyRepository.save(any(SpecificDuty.class))).thenReturn(duty);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("specificRate", 8.0);
+            // Not providing specificRateUnit
+
+            // Act
+            TariffResponse response = tariffManagementService.updateTariff(1, updates);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(duty.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(8.0));
+            assertThat(duty.getUnit()).isEqualTo("kg"); // Should remain unchanged
+            verify(specificDutyRepository, times(1)).save(duty);
+        }
+    }
+
+    @Nested
     @DisplayName("Delete Tariff Tests")
     class DeleteTariffTests {
 
@@ -402,6 +660,354 @@ class TariffManagementServiceUnitTest {
                 .hasMessageContaining("Tariff not found with id: 999");
             
             verify(tariffRepository, never()).deleteById(anyInt());
+        }
+    }
+
+    @Nested
+    @DisplayName("ConvertToResponse Tests")
+    class ConvertToResponseTests {
+
+        @Test
+        @DisplayName("Should convert tariff with Ad Valorem duty to response")
+        void shouldConvertTariffWithAdValoremDutyToResponse() {
+            // Arrange
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            
+            TariffSchedule tariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            tariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(tariff));
+
+            // Act
+            TariffResponse response = tariffManagementService.getTariffById(1);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getAdValoremRate()).isEqualTo(10.0);
+            assertThat(response.getDutyCategory()).isEqualTo("A");
+        }
+
+        @Test
+        @DisplayName("Should convert tariff with Specific duty to response")
+        void shouldConvertTariffWithSpecificDutyToResponse() {
+            // Arrange
+            SpecificDuty duty = TestEntityFactory.createSpecificDuty();
+            duty.setAmount(BigDecimal.valueOf(5.0));
+            duty.setUnit("kg");
+            
+            TariffSchedule tariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            tariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(tariff));
+
+            // Act
+            TariffResponse response = tariffManagementService.getTariffById(1);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getSpecificRate()).isEqualTo(5.0);
+            assertThat(response.getSpecificRateUnit()).isEqualTo("kg");
+            assertThat(response.getDutyCategory()).isEqualTo("S");
+        }
+
+        @Test
+        @DisplayName("Should convert tariff with Combined duty to response")
+        void shouldConvertTariffWithCombinedDutyToResponse() {
+            // Arrange
+            CombinedDuty duty = TestEntityFactory.createCombinedDuty();
+            duty.setRatePercent(BigDecimal.valueOf(10.0));
+            duty.setAmount(BigDecimal.valueOf(5.0));
+            duty.setUnit("kg");
+            
+            TariffSchedule tariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            tariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(tariff));
+
+            // Act
+            TariffResponse response = tariffManagementService.getTariffById(1);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getCompoundRate1()).isEqualTo(10.0);
+            assertThat(response.getCompoundRate2()).isEqualTo(5.0);
+            assertThat(response.getSpecificRateUnit()).isEqualTo("kg");
+            assertThat(response.getDutyCategory()).isEqualTo("C");
+        }
+
+        @Test
+        @DisplayName("Should convert tariff with OtherDuty to response")
+        void shouldConvertTariffWithOtherDutyToResponse() {
+            // Arrange
+            com.ubs.tariffapp.models.duty.OtherDuty duty = new com.ubs.tariffapp.models.duty.OtherDuty();
+            duty.setDutyNature("O");
+            duty.setRawText("Special duty");
+            duty.setIsComputable(false);
+            
+            TariffSchedule tariff = TestEntityFactory.createTariffSchedule(usa, china, product, dutyType, duty);
+            tariff.setTariffId(1);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(tariff));
+
+            // Act
+            TariffResponse response = tariffManagementService.getTariffById(1);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getRawText()).isEqualTo("Special duty");
+            assertThat(response.getIsComputable()).isFalse();
+            assertThat(response.getDutyCategory()).isEqualTo("O");
+        }
+
+        @Test
+        @DisplayName("Should throw exception when duty is null during conversion")
+        void shouldThrowExceptionWhenDutyIsNullDuringConversion() {
+            // Arrange: create TariffSchedule manually with null duty
+            TariffSchedule tariff = new TariffSchedule();
+            tariff.setTariffId(1);
+            tariff.setTariffYear(2023);
+            tariff.setReporter(usa);
+            tariff.setPartner(china);
+            tariff.setProduct(product);
+            tariff.setDutyType(dutyType);
+            tariff.setDuty(null);
+            
+            when(tariffRepository.findById(1)).thenReturn(Optional.of(tariff));
+
+            // Act & Assert
+            assertThatThrownBy(() -> tariffManagementService.getTariffById(1))
+                .isInstanceOf(com.ubs.tariffapp.exceptions.DutyNotFoundException.class)
+                .hasMessageContaining("Duty information not found for tariff id: 1");
+        }
+    }
+
+    @Nested
+    @DisplayName("GenerateDutyTypeDescription Tests")
+    class GenerateDutyTypeDescriptionTests {
+
+        @Test
+        @DisplayName("Should generate description for Standard MFN duty type (0-0)")
+        void shouldGenerateDescriptionForStandardMFN() {
+            // Arrange
+            validRequest.setDutyType("0");
+            validRequest.setDutyCode("0");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("0", "0"));
+            newDutyType.setDutyTypeDescription("Standard (MFN)");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
+        }
+
+        @Test
+        @DisplayName("Should generate description for Duty-Free type (0-2)")
+        void shouldGenerateDescriptionForDutyFree() {
+            // Arrange
+            validRequest.setDutyType("0");
+            validRequest.setDutyCode("2");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("0", "2"));
+            newDutyType.setDutyTypeDescription("Duty-Free");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
+        }
+
+        @Test
+        @DisplayName("Should generate description for Preferential Trade Agreement type (1-0)")
+        void shouldGenerateDescriptionForPreferentialTradeAgreement() {
+            // Arrange
+            validRequest.setDutyType("1");
+            validRequest.setDutyCode("0");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("1", "0"));
+            newDutyType.setDutyTypeDescription("Preferential (Trade Agreement)");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
+        }
+
+        @Test
+        @DisplayName("Should generate description for Preferential Specific type (1-1)")
+        void shouldGenerateDescriptionForPreferentialSpecific() {
+            // Arrange
+            validRequest.setDutyType("1");
+            validRequest.setDutyCode("1");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("1", "1"));
+            newDutyType.setDutyTypeDescription("Preferential (Specific)");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
+        }
+
+        @Test
+        @DisplayName("Should generate description for GSP type (2-0)")
+        void shouldGenerateDescriptionForGSP() {
+            // Arrange
+            validRequest.setDutyType("2");
+            validRequest.setDutyCode("0");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("2", "0"));
+            newDutyType.setDutyTypeDescription("GSP (Developing Countries)");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
+        }
+
+        @Test
+        @DisplayName("Should generate description for Temporary type (3-0)")
+        void shouldGenerateDescriptionForTemporary() {
+            // Arrange
+            validRequest.setDutyType("3");
+            validRequest.setDutyCode("0");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("3", "0"));
+            newDutyType.setDutyTypeDescription("Temporary");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
+        }
+
+        @Test
+        @DisplayName("Should generate fallback description for unknown duty type")
+        void shouldGenerateFallbackDescriptionForUnknownDutyType() {
+            // Arrange
+            validRequest.setDutyType("9");
+            validRequest.setDutyCode("9");
+            
+            when(countryRepository.findById(usa.getCountryId())).thenReturn(Optional.of(usa));
+            when(countryRepository.findById(china.getCountryId())).thenReturn(Optional.of(china));
+            when(productRepository.findById(product.getTlCode())).thenReturn(Optional.of(product));
+            when(dutyTypeRepository.findById(any(DutyTypeId.class))).thenReturn(Optional.empty());
+            
+            DutyType newDutyType = new DutyType();
+            newDutyType.setId(new DutyTypeId("9", "9"));
+            newDutyType.setDutyTypeDescription("Custom duty type 9-9 - Added via admin");
+            when(dutyTypeRepository.save(any(DutyType.class))).thenReturn(newDutyType);
+            
+            AdValoremDuty duty = TestEntityFactory.createAdValoremDuty();
+            when(adValoremDutyRepository.save(any(AdValoremDuty.class))).thenReturn(duty);
+            
+            TariffSchedule savedTariff = TestEntityFactory.createTariffSchedule(usa, china, product, newDutyType, duty);
+            savedTariff.setTariffId(1);
+            when(tariffRepository.save(any(TariffSchedule.class))).thenReturn(savedTariff);
+
+            // Act
+            TariffResponse response = tariffManagementService.createTariff(validRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            verify(dutyTypeRepository, times(1)).save(any(DutyType.class));
         }
     }
 }

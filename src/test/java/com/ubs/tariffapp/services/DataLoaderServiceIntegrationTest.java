@@ -42,7 +42,7 @@ import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
 @TestPropertySource(locations = "classpath:application-test.properties")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(DockerRequiredExtension.class)
-public class DataLoaderServiceTest {
+public class DataLoaderServiceIntegrationTest {
 
     @Autowired
     private DataLoaderService dataLoaderService;
