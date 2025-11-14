@@ -21,6 +21,7 @@
     "@tabler/icons-react": "^3.35.0",
     "@turf/turf": "^7.2.0",
     "amazon-cognito-identity-js": "^6.3.15",
+    "autoprefixer": "^10.4.22",
     "aws-amplify": "^6.15.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
