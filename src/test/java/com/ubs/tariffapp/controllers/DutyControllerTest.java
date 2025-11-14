@@ -687,6 +687,98 @@ class DutyControllerTest {
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound());
         }
+
+        @Test
+        @WithMockUser(authorities = "Users")
+        @DisplayName("Should handle CombinedDuty with null unit (Compound)")
+        void testCalculateTariff_CombinedDutyCompound_NullUnit() throws Exception {
+            // Arrange
+            TariffCalculationRequest request = new TariffCalculationRequest();
+            request.setTariffId(10);
+            request.setAmountOfProduct(500.0);
+            request.setProductValueDollars(10000.0);
+            request.setCurrency("USD");
+            
+            TariffSchedule tariff = createMockTariffSchedule(10, "Combined", "010121");
+            CombinedDuty duty = createCombinedDuty(5.0, 2.5, 100.0, null, "C");
+            tariff.setDuty(duty);
+            
+            when(dutyService.calculateTariffById(10, 500.0, 10000.0)).thenReturn(512.5);
+            when(tariffScheduleService.getTariffScheduleById(10)).thenReturn(tariff);
+            when(exchangeRateService.fetchRates()).thenReturn(mockExchangeRates);
+
+            // Act & Assert - Should handle null unit gracefully
+            mockMvc.perform(post("/api/tariffs/calculate")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.dutyTypeCode").value("COMBINED"))
+                    .andExpect(jsonPath("$.tariffAmount").value(512.5))
+                    .andExpect(jsonPath("$.formula").exists())
+                    .andExpect(jsonPath("$.steps").isArray());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Users")
+        @DisplayName("Should handle CombinedDuty with null unit (Mixed)")
+        void testCalculateTariff_CombinedDutyMixed_NullUnit() throws Exception {
+            // Arrange
+            TariffCalculationRequest request = new TariffCalculationRequest();
+            request.setTariffId(11);
+            request.setAmountOfProduct(500.0);
+            request.setProductValueDollars(10000.0);
+            request.setCurrency("USD");
+            
+            TariffSchedule tariff = createMockTariffSchedule(11, "Combined", "010121");
+            CombinedDuty duty = createCombinedDuty(5.0, 2.5, 100.0, null, "M");
+            tariff.setDuty(duty);
+            
+            when(dutyService.calculateTariffById(11, 500.0, 10000.0)).thenReturn(500.0);
+            when(tariffScheduleService.getTariffScheduleById(11)).thenReturn(tariff);
+            when(exchangeRateService.fetchRates()).thenReturn(mockExchangeRates);
+
+            // Act & Assert - Should handle null unit gracefully
+            mockMvc.perform(post("/api/tariffs/calculate")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.dutyTypeCode").value("COMBINED"))
+                    .andExpect(jsonPath("$.tariffAmount").value(500.0))
+                    .andExpect(jsonPath("$.formula").exists())
+                    .andExpect(jsonPath("$.steps").isArray());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Users")
+        @DisplayName("Should handle CombinedDuty with null unit (Legacy mode)")
+        void testCalculateTariff_CombinedDutyLegacy_NullUnit() throws Exception {
+            // Arrange
+            TariffCalculationRequest request = new TariffCalculationRequest();
+            request.setTariffId(12);
+            request.setAmountOfProduct(1000.0);
+            request.setCurrency("USD");
+            // No productValueDollars - legacy mode
+            
+            TariffSchedule tariff = createMockTariffSchedule(12, "Combined", "010121");
+            CombinedDuty duty = createCombinedDuty(5.0, 2.5, 100.0, null, "M");
+            tariff.setDuty(duty);
+            
+            when(dutyService.calculateTariffById(12, 1000.0)).thenReturn(50.0);
+            when(tariffScheduleService.getTariffScheduleById(12)).thenReturn(tariff);
+            when(exchangeRateService.fetchRates()).thenReturn(mockExchangeRates);
+
+            // Act & Assert - Should handle null unit in legacy mode
+            mockMvc.perform(post("/api/tariffs/calculate")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.tariffAmount").value(50.0))
+                    .andExpect(jsonPath("$.formula").value("Tariff = MAX(Ad Valorem, Specific Duty) (NOTE: Input has mixed semantics)"))
+                    .andExpect(jsonPath("$.steps").isArray());
+        }
     }
 
     @Nested
