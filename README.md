@@ -173,16 +173,16 @@ cd frontend
 npm install
 npm run dev
 Chatbot Setup
-bash
-Copy code
+```
+```bash
 cd "Python RAG chatbot"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 Compliance Checklist Setup
-bash
-Copy code
+```
+```bash
 cd Compliance_checklist
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -193,7 +193,6 @@ uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 Windows
 
 ```bash
-Copy code
 run-tests.bat
 run-tests.bat --coverage
 run-tests.bat --controller
@@ -201,7 +200,6 @@ Mac/Linux
 ```
 
 ```bash
-Copy code
 ./run-tests.sh
 ./run-tests.sh --coverage
 ./run-tests.sh --controller
@@ -209,13 +207,12 @@ Manual
 ```
 
 ```bash
-Copy code
 mvn clean test
 mvn test -Dtest=TariffManagementControllerIntegrationTest
 mvn jacoco:report
 ```
 
-##🌐 Deployed Servers
+## 🌐 Deployed Servers
 Service	URL
 Frontend	https://trade-optimisation-pathfinder.vercel.app
 Backend	https://cs203tariffproject.duckdns.org
@@ -224,14 +221,14 @@ Compliance Checklist	https://cs203compliance.duckdns.org
 
 Note: If you encounter a NetworkError while on SMU Wi-Fi, switch to another network (DNS blocking issue).
 
-##🧱 Backend Testing Requirements
+## 🧱 Backend Testing Requirements
 Ensure Docker Desktop is running before executing tests:
 
-bash
-Copy code
+```bash
 docker ps
 mvn test
+```
 If Docker is not running, integration tests will fail.
 
-###⭐ Trade Optimization Pathfinder (TOP) —
+### ⭐ Trade Optimization Pathfinder (TOP) —
 Empowering global trade through transparent, explainable, and optimized tariff intelligence.
