@@ -211,11 +211,11 @@ mvn jacoco:report
 ```
 
 ## 🌐 Deployed Servers
-Service	URL
-Frontend	https://trade-optimisation-pathfinder.vercel.app
-Backend	https://cs203tariffproject.duckdns.org
-Chatbot	https://cs203chatbot.duckdns.org
-Compliance Checklist	https://cs203compliance.duckdns.org
+Service	URL <br>
+Frontend	https://trade-optimisation-pathfinder.vercel.app <br>
+Backend	https://cs203tariffproject.duckdns.org <br>
+Chatbot	https://cs203chatbot.duckdns.org <br>
+Compliance Checklist	https://cs203compliance.duckdns.org <br>
 
 Note: If you encounter a NetworkError while on SMU Wi-Fi, switch to another network (DNS blocking issue).
 
