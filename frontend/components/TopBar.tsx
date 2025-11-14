@@ -148,26 +148,26 @@ export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabC
             {/* Dropdown Menu */}
             {showUserMenu && (
               <div className="absolute right-0 top-full mt-2 z-50">
-                <Card className="w-80 shadow-lg">
+                <Card className="w-80 shadow-lg bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                   <CardHeader>
-                    <CardTitle className="text-sm">User Profile</CardTitle>
+                    <CardTitle className="text-sm text-slate-900 dark:text-slate-100">User Profile</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {/* User Info */}
-                    <div className="text-xs space-y-2">
+                    <div className="text-xs space-y-2 text-slate-700 dark:text-slate-300">
                       <div>
-                        <strong>Username:</strong> {user?.username || 'N/A'}
+                        <strong className="text-slate-900 dark:text-slate-100">Username:</strong> {user?.username || 'N/A'}
                       </div>
                       <div>
-                        <strong>Email:</strong> {user?.email || 'N/A'}
+                        <strong className="text-slate-900 dark:text-slate-100">Email:</strong> {user?.email || 'N/A'}
                       </div>
                       <div>
-                        <strong>Groups:</strong> {user?.groups?.join(', ') || 'None'}
+                        <strong className="text-slate-900 dark:text-slate-100">Groups:</strong> {user?.groups?.join(', ') || 'None'}
                       </div>
                       
                       {/* Session Status */}
                       <div>
-                        <strong>Session Status:</strong> 
+                        <strong className="text-slate-900 dark:text-slate-100">Session Status:</strong> 
                         {sessionError ? ` Error: ${sessionError}` : ' Active'}
                       </div>
                     </div>
@@ -177,7 +177,7 @@ export default function TopBar({ sidebarOpen, onToggleSidebar, activeTab, onTabC
                       onClick={handleSignOut}
                       variant="destructive"
                       size="sm"
-                      className="w-full"
+                      className="w-full bg-red-600 hover:bg-red-700 text-white"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out
