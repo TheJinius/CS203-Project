@@ -1,12 +1,21 @@
 package com.ubs.tariffapp.audit;
 
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -316,6 +325,188 @@ public class AuditLogServiceTest {
                 schedule.setNote("Test schedule");
 
                 return schedule;
+        }
+
+        private Country createCountry(String code, String name) {
+                Country country = new Country();
+                country.setCountryId(code);
+                country.setCountryName(name);
+                return countryRepository.saveAndFlush(country);
+        }
+
+        @org.junit.jupiter.api.BeforeEach
+        void clearAuditLogs() {
+                // Clean up audit logs before each test since they use REQUIRES_NEW propagation
+                auditLogRepository.deleteAll();
+        }
+
+        @AfterEach
+        void clearSecurityContext() {
+                SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("logChange() should use username claim from JWT token for username")
+        void logChange_WithUsernameClaimInJwt_UsesUsername() {
+                // Given
+                Map<String, Object> headers = new HashMap<>();
+                headers.put("alg", "RS256");
+
+                Map<String, Object> claims = new HashMap<>();
+                claims.put("username", "jwtuser");
+                claims.put("sub", "user-id-123");
+
+                Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(3600), headers, claims);
+                JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Country country = createCountry("US", "United States");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("jwtuser");
+        }
+
+        @Test
+        @DisplayName("logChange() should fallback to cognito:username claim when username is missing")
+        void logChange_WithCognitoUsernameClaimInJwt_UsesCognitoUsername() {
+                // Given
+                Map<String, Object> headers = new HashMap<>();
+                headers.put("alg", "RS256");
+
+                Map<String, Object> claims = new HashMap<>();
+                claims.put("cognito:username", "cognitouser");
+                claims.put("sub", "user-id-456");
+
+                Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(3600), headers, claims);
+                JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Country country = createCountry("CA", "Canada");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("cognitouser");
+        }
+
+        @Test
+        @DisplayName("logChange() should fallback to email claim when username and cognito:username are missing")
+        void logChange_WithEmailClaimInJwt_UsesEmail() {
+                // Given
+                Map<String, Object> headers = new HashMap<>();
+                headers.put("alg", "RS256");
+
+                Map<String, Object> claims = new HashMap<>();
+                claims.put("email", "user@example.com");
+                claims.put("sub", "user-id-789");
+
+                Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(3600), headers, claims);
+                JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Country country = createCountry("UK", "United Kingdom");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("user@example.com");
+        }
+
+        @Test
+        @DisplayName("logChange() should fallback to preferred_username claim when other claims are missing")
+        void logChange_WithPreferredUsernameClaimInJwt_UsesPreferredUsername() {
+                // Given
+                Map<String, Object> headers = new HashMap<>();
+                headers.put("alg", "RS256");
+
+                Map<String, Object> claims = new HashMap<>();
+                claims.put("preferred_username", "preferreduser");
+                claims.put("sub", "user-id-abc");
+
+                Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(3600), headers, claims);
+                JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Country country = createCountry("FR", "France");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("preferreduser");
+        }
+
+        @Test
+        @DisplayName("logChange() should fallback to sub claim when all other claims are missing")
+        void logChange_WithOnlySubClaimInJwt_UsesSub() {
+                // Given
+                Map<String, Object> headers = new HashMap<>();
+                headers.put("alg", "RS256");
+
+                Map<String, Object> claims = new HashMap<>();
+                claims.put("sub", "unique-user-id-xyz");
+
+                Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(3600), headers, claims);
+                JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Country country = createCountry("DE", "Germany");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("unique-user-id-xyz");
+        }
+
+        @Test
+        @DisplayName("logChange() should use getName() for non-JWT authentication")
+        void logChange_WithNonJwtAuthentication_UsesName() {
+                // Given
+                TestingAuthenticationToken auth = new TestingAuthenticationToken("basicuser", "password");
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                Country country = createCountry("JP", "Japan");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("basicuser");
+        }
+
+        @Test
+        @DisplayName("logChange() should use 'system' when no authentication is present")
+        void logChange_WithNoAuthentication_UsesSystem() {
+                // Given
+                SecurityContextHolder.clearContext();
+
+                Country country = createCountry("AU", "Australia");
+
+                // When
+                auditLogService.logChange(country, "INSERT");
+
+                // Then
+                List<AuditLog> logs = auditLogRepository.findAll();
+                assertThat(logs).hasSize(1);
+                assertThat(logs.get(0).getChangedBy()).isEqualTo("system");
         }
 }
 
