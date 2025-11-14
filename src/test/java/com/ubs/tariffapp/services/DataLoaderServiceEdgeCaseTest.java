@@ -1457,15 +1457,23 @@ class DataLoaderServiceEdgeCaseTest {
     @Test
     @DisplayName("Test IOException when opening file")
     void testIOException_FileOpen() throws Exception {
-        // Test with a directory instead of a file (will cause IOException)
-        Path testDir = tempDir.resolve("test_directory");
-        Files.createDirectory(testDir);
+        // Create a file and then delete it to simulate IOException during file access
+        // This is more reliable across different OS than using a directory
+        Path testFile = tempDir.resolve("test_io_exception.csv");
+        Files.createFile(testFile);
         
-        String dirName = copyToCleanDataDir(testDir);
+        String fileName = copyToCleanDataDir(testFile);
         
-        assertThatThrownBy(() -> dataLoaderService.loadCleanedData(dirName))
+        // Delete the actual file from clean_data directory to cause IOException
+        Path cleanDataPath = Paths.get("src/main/resources/data/clean_data/", fileName);
+        Files.delete(cleanDataPath);
+        
+        // Try to create it as a directory instead (cross-platform way to cause IOException on open)
+        Files.createDirectory(cleanDataPath);
+        
+        assertThatThrownBy(() -> dataLoaderService.loadCleanedData(fileName))
             .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("Failed to open cleaned data file");
+            .hasMessage("Failed to open cleaned data file: " + fileName);
     }
 
     @Test
