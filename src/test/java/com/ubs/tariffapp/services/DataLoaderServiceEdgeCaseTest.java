@@ -1468,12 +1468,14 @@ class DataLoaderServiceEdgeCaseTest {
         Path cleanDataPath = Paths.get("src/main/resources/data/clean_data/", fileName);
         Files.delete(cleanDataPath);
         
-        // Try to create it as a directory instead (cross-platform way to cause IOException on open)
+        // Try to create it as a directory instead
+        // On Windows: IOException at Files.newInputStream() - "Failed to open cleaned data file"
+        // On Linux: IOException at reader.readLine() - "Failed to load data from file"
         Files.createDirectory(cleanDataPath);
         
         assertThatThrownBy(() -> dataLoaderService.loadCleanedData(fileName))
             .isInstanceOf(RuntimeException.class)
-            .hasMessage("Failed to open cleaned data file: " + fileName);
+            .hasMessageMatching("Failed to (open cleaned data|load data from) file: " + fileName);
     }
 
     @Test
