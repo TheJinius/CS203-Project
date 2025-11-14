@@ -166,22 +166,22 @@ Powered by **AWS Lambda**, **Redis**, and **DynamoDB**.
 ```bash
 mvn install
 mvn spring-boot:run
-Frontend Setup
-bash
-Copy code
+```
+### Frontend Setup
+```bash
 cd frontend
 npm install
 npm run dev
-Chatbot Setup
 ```
+### Chatbot Setup
 ```bash
 cd "Python RAG chatbot"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
-Compliance Checklist Setup
 ```
+### Compliance Checklist Setup
 ```bash
 cd Compliance_checklist
 python -m venv .venv
@@ -190,22 +190,20 @@ pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 ```
 🧪 Running Tests
-Windows
+## Windows
 
 ```bash
 run-tests.bat
 run-tests.bat --coverage
 run-tests.bat --controller
-Mac/Linux
 ```
-
+## Mac/Linux
 ```bash
 ./run-tests.sh
 ./run-tests.sh --coverage
 ./run-tests.sh --controller
-Manual
 ```
-
+## Manual
 ```bash
 mvn clean test
 mvn test -Dtest=TariffManagementControllerIntegrationTest
@@ -230,5 +228,5 @@ mvn test
 ```
 If Docker is not running, integration tests will fail.
 
-### ⭐ Trade Optimization Pathfinder (TOP) —
+### ⭐ Trade Optimization Pathfinder (TOP)
 Empowering global trade through transparent, explainable, and optimized tariff intelligence.
