@@ -21,10 +21,10 @@ Its purpose is to define import tariffs (and/or additional fees) and calculate t
 ## 🎯 Features
 
 ### Baseline Tariff Calculation Process
-<img width="600" height="710" alt="image" src="https://github.com/user-attachments/assets/3a2636c5-0ebe-4432-859d-668e9f5abbe0" />
+<img width="300" height="355" alt="image" src="https://github.com/user-attachments/assets/3a2636c5-0ebe-4432-859d-668e9f5abbe0" />
 
 **Step 1:** Enter source and destination countries to search for goods using HSCode or descriptions  
-<img width="620" height="655" alt="image" src="https://github.com/user-attachments/assets/5a4de1f6-6702-415f-a030-c35f7dbdfe7e" />
+<img width="310" height="327.5" alt="image" src="https://github.com/user-attachments/assets/5a4de1f6-6702-415f-a030-c35f7dbdfe7e" />
 
 **Step 2:** System returns available tariff(s). Select from dropdown and enter product quantity  
 **Step 3:** Choose desired currency conversion and calculate the result
@@ -32,7 +32,7 @@ Its purpose is to define import tariffs (and/or additional fees) and calculate t
 ---
 
 ## 💱 Exchange Rate Conversion
-Exchange rates are pulled hourly from **ExchangeRateAPI** and cached in **Redis** — ensuring both **speed** and **accuracy** without straining API limits.
+Exchange rates are pulled hourly from **ExchangeRateAPI** and cached in **Redis**, ensuring both **speed** and **accuracy** without straining API limits.
 
 ---
 
