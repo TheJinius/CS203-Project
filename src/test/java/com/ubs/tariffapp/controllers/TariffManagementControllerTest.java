@@ -2,8 +2,13 @@ package com.ubs.tariffapp.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ubs.tariffapp.models.Country;
+import com.ubs.tariffapp.models.DutyType;
+import com.ubs.tariffapp.models.DutyTypeId;
+import com.ubs.tariffapp.models.Product;
+import com.ubs.tariffapp.models.TariffSchedule;
 import com.ubs.tariffapp.models.dto.TariffRequest;
 import com.ubs.tariffapp.models.dto.TariffResponse;
+import com.ubs.tariffapp.models.duty.Duty;
 import com.ubs.tariffapp.models.request.TariffSearchRequest;
 import com.ubs.tariffapp.repositories.CountryRepository;
 import com.ubs.tariffapp.repositories.TariffScheduleRepository;
@@ -151,6 +156,186 @@ class TariffManagementControllerTest {
                     .andExpect(status().isUnauthorized());
 
             verify(dutyService, never()).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle tariff with null duty")
+        void testSearchTariffs_WithNullDuty() throws Exception {
+            // Arrange
+            TariffSearchRequest searchRequest = new TariffSearchRequest("USA", "CHN", "010121", 2024);
+            TariffSchedule tariffSchedule = createTariffScheduleWithDuty(null);
+            
+            when(dutyService.searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt()))
+                    .thenReturn(Collections.singletonList(tariffSchedule));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/admin/tariffs/search")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(searchRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.tariffs[0].dutyCategory").doesNotExist());
+
+            verify(dutyService, times(1)).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle AdValoremDuty and extract rate")
+        void testSearchTariffs_WithAdValoremDuty() throws Exception {
+            // Arrange
+            TariffSearchRequest searchRequest = new TariffSearchRequest("USA", "CHN", "010121", 2024);
+            com.ubs.tariffapp.models.duty.AdValoremDuty adValoremDuty = 
+                    new com.ubs.tariffapp.models.duty.AdValoremDuty();
+            adValoremDuty.setDutyNature("AD_VALOREM");
+            adValoremDuty.setRatePercent(java.math.BigDecimal.valueOf(5.0));
+            
+            TariffSchedule tariffSchedule = createTariffScheduleWithDuty(adValoremDuty);
+            
+            when(dutyService.searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt()))
+                    .thenReturn(Collections.singletonList(tariffSchedule));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/admin/tariffs/search")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(searchRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.tariffs[0].dutyCategory").value("AD_VALOREM"))
+                    .andExpect(jsonPath("$.tariffs[0].adValoremRate").value(5.0));
+
+            verify(dutyService, times(1)).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle SpecificDuty and extract amount and unit")
+        void testSearchTariffs_WithSpecificDuty() throws Exception {
+            // Arrange
+            TariffSearchRequest searchRequest = new TariffSearchRequest("USA", "CHN", "010121", 2024);
+            com.ubs.tariffapp.models.duty.SpecificDuty specificDuty = 
+                    new com.ubs.tariffapp.models.duty.SpecificDuty();
+            specificDuty.setDutyNature("SPECIFIC");
+            specificDuty.setAmount(java.math.BigDecimal.valueOf(10.0));
+            specificDuty.setUnit("kg");
+            
+            TariffSchedule tariffSchedule = createTariffScheduleWithDuty(specificDuty);
+            
+            when(dutyService.searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt()))
+                    .thenReturn(Collections.singletonList(tariffSchedule));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/admin/tariffs/search")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(searchRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.tariffs[0].dutyCategory").value("SPECIFIC"))
+                    .andExpect(jsonPath("$.tariffs[0].specificRate").value(10.0))
+                    .andExpect(jsonPath("$.tariffs[0].specificRateUnit").value("kg"));
+
+            verify(dutyService, times(1)).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle CombinedDuty with null ratePercent")
+        void testSearchTariffs_WithCombinedDuty_NullRatePercent() throws Exception {
+            // Arrange
+            TariffSearchRequest searchRequest = new TariffSearchRequest("USA", "CHN", "010121", 2024);
+            com.ubs.tariffapp.models.duty.CombinedDuty combinedDuty = 
+                    new com.ubs.tariffapp.models.duty.CombinedDuty();
+            combinedDuty.setDutyNature("COMBINED");
+            combinedDuty.setRatePercent(null); // Null rate
+            combinedDuty.setAmount(java.math.BigDecimal.valueOf(15.0));
+            combinedDuty.setUnit("kg");
+            
+            TariffSchedule tariffSchedule = createTariffScheduleWithDuty(combinedDuty);
+            
+            when(dutyService.searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt()))
+                    .thenReturn(Collections.singletonList(tariffSchedule));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/admin/tariffs/search")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(searchRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.tariffs[0].dutyCategory").value("COMBINED"))
+                    .andExpect(jsonPath("$.tariffs[0].adValoremRate").doesNotExist())
+                    .andExpect(jsonPath("$.tariffs[0].specificRate").value(15.0))
+                    .andExpect(jsonPath("$.tariffs[0].specificRateUnit").value("kg"));
+
+            verify(dutyService, times(1)).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle CombinedDuty with null amount")
+        void testSearchTariffs_WithCombinedDuty_NullAmount() throws Exception {
+            // Arrange
+            TariffSearchRequest searchRequest = new TariffSearchRequest("USA", "CHN", "010121", 2024);
+            com.ubs.tariffapp.models.duty.CombinedDuty combinedDuty = 
+                    new com.ubs.tariffapp.models.duty.CombinedDuty();
+            combinedDuty.setDutyNature("COMBINED");
+            combinedDuty.setRatePercent(java.math.BigDecimal.valueOf(8.5));
+            combinedDuty.setAmount(null); // Null amount
+            combinedDuty.setUnit("kg");
+            
+            TariffSchedule tariffSchedule = createTariffScheduleWithDuty(combinedDuty);
+            
+            when(dutyService.searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt()))
+                    .thenReturn(Collections.singletonList(tariffSchedule));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/admin/tariffs/search")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(searchRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.tariffs[0].dutyCategory").value("COMBINED"))
+                    .andExpect(jsonPath("$.tariffs[0].adValoremRate").value(8.5))
+                    .andExpect(jsonPath("$.tariffs[0].specificRate").doesNotExist())
+                    .andExpect(jsonPath("$.tariffs[0].specificRateUnit").value("kg"));
+
+            verify(dutyService, times(1)).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
+        }
+
+        @Test
+        @WithMockUser(authorities = "Admins")
+        @DisplayName("Should handle OtherDuty and extract raw text")
+        void testSearchTariffs_WithOtherDuty() throws Exception {
+            // Arrange
+            TariffSearchRequest searchRequest = new TariffSearchRequest("USA", "CHN", "010121", 2024);
+            com.ubs.tariffapp.models.duty.OtherDuty otherDuty = 
+                    new com.ubs.tariffapp.models.duty.OtherDuty();
+            otherDuty.setDutyNature("OTHER");
+            otherDuty.setRawText("See note 9822.04.01");
+            otherDuty.setIsComputable(false);
+            
+            TariffSchedule tariffSchedule = createTariffScheduleWithDuty(otherDuty);
+            
+            when(dutyService.searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt()))
+                    .thenReturn(Collections.singletonList(tariffSchedule));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/admin/tariffs/search")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(searchRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("success"))
+                    .andExpect(jsonPath("$.tariffs[0].dutyCategory").value("OTHER"))
+                    .andExpect(jsonPath("$.tariffs[0].rawText").value("See note 9822.04.01"))
+                    .andExpect(jsonPath("$.tariffs[0].isComputable").value(false));
+
+            verify(dutyService, times(1)).searchAvailableTariffs(anyString(), anyString(), anyString(), anyInt());
         }
     }
 
@@ -522,5 +707,50 @@ class TariffManagementControllerTest {
         country.setCountryId(code);
         country.setCountryName(name);
         return country;
+    }
+
+    /**
+     * Helper method to create a TariffSchedule with the specified Duty
+     * Used for testing branch coverage in searchTariffs endpoint
+     */
+    private TariffSchedule createTariffScheduleWithDuty(Duty duty) {
+        TariffSchedule tariffSchedule = new TariffSchedule();
+        tariffSchedule.setTariffId(1);
+        tariffSchedule.setTariffYear(2024);
+        
+        // Create reporter country
+        Country reporter = new Country();
+        reporter.setCountryId("USA");
+        reporter.setCountryName("United States");
+        tariffSchedule.setReporter(reporter);
+        
+        // Create partner country
+        Country partner = new Country();
+        partner.setCountryId("CHN");
+        partner.setCountryName("China");
+        tariffSchedule.setPartner(partner);
+        
+        // Create product
+        Product product = new Product();
+        product.setTlCode("010121");
+        product.setDescription("Live horses");
+        tariffSchedule.setProduct(product);
+        
+        // Create duty type
+        DutyType dutyType = new DutyType();
+        DutyTypeId dutyTypeId = new DutyTypeId();
+        dutyTypeId.setDutyType("0");
+        dutyTypeId.setDutyCode("0");
+        dutyType.setId(dutyTypeId);
+        dutyType.setDutyTypeDescription("Standard (MFN)");
+        tariffSchedule.setDutyType(dutyType);
+        
+        tariffSchedule.setTlsSuffix("");
+        tariffSchedule.setNote("Test tariff");
+        
+        // Set the duty (can be null or any Duty subtype)
+        tariffSchedule.setDuty(duty);
+        
+        return tariffSchedule;
     }
 }
