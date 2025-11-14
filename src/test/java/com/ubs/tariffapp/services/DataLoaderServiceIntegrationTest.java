@@ -18,6 +18,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import com.ubs.tariffapp.extensions.DockerRequiredExtension;
@@ -39,7 +40,7 @@ import com.ubs.tariffapp.repositories.duty.OtherDutyRepository;
 import com.ubs.tariffapp.repositories.duty.SpecificDutyRepository;
 
 @SpringBootTest
-@TestPropertySource(locations = "classpath:application-test.properties")
+@ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(DockerRequiredExtension.class)
 public class DataLoaderServiceIntegrationTest {
