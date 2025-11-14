@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import TariffManagementTab from '../../components/tabs/TariffManagementTab';
 import TopBar from '../../components/TopBar';
 import { Button } from '../../components/ui/button';
-import { ArrowLeft, Home } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -43,14 +43,6 @@ export default function EditTariffPage() {
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Home
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => router.push('/admindashboard')}
-                className="flex items-center gap-2 text-slate-600 dark:text-slate-400"
-              >
-                <Home className="h-4 w-4" />
-                Admin Dashboard
               </Button>
             </div>
             
