@@ -103,7 +103,7 @@ Compare tariffs based on:
 - Carbon emissions  
 - Time  
 
-With additional analytics:
+With additional analytics: <br>
 <img width="380" height="50" alt="image" src="https://github.com/user-attachments/assets/23fe14a4-9315-4119-873e-dc0221e57612" />
 
 ---
