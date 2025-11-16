@@ -162,9 +162,9 @@ Powered by **AWS Lambda**, **Redis**, and **DynamoDB**.
 ---
 
 ## 🚀 Running the Project Locally
-Due to our automated CI/CD pipeline, the environment variables currently point to the deployed instances of the various endpoints. If you wish to test the project locally, comment out the environment variables under `# Endpoints` in `frontend/.env.local`. Then, perform the local setups shown below.
+The `.env.local` file at `frontend/.env.local` is already configured to use the local endpoints. Simply perform the local setups shown below.
 
-Note that for ease of use, there is a deployed cloud instance of the graph database hosted on Neo4j. The provided .env file at `graphdb/.env` already points to the cloud database, hence no action is needed. However, it is on a free trial, and will expire on 28th November 2025. Past this date, the deployed frontend will no longer display the various trade routes, though other features will work as intended. To see the trade route visualisation once it expires, you must run all endpoints locally.
+Note that for ease of use, there is a deployed cloud instance of the graph database hosted on Neo4j, which local endpoints reference. The provided .env file at `graphdb/.env` already points to the cloud database, hence no action is needed. However, it is on a free trial, and will expire on 28th November 2025. Past this date, the deployed frontend will no longer display the various trade routes, though other features will work as intended. To see the trade route visualisation after the trial expires, you must run all endpoints locally.
 
 ### Backend Setup
 ```bash
