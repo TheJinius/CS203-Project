@@ -15,13 +15,13 @@ For ease of use, there is a deployed cloud instance of the database hosted on Ne
 5. Start the instance. It will be running on localhost, port 7687. If running locally, delete the ```NEO4J_URI``` variable in the provided .env file. Do make sure that the ```NEO4J_USER``` and ```NEO4J_PASSWORD``` variables are updated too.
 6. Start the main function:
 ```
-cd /graphdb
+cd graphdb
 python -m venv .venv
 .venv\scripts\activate
 pip install -r requirements.txt
 py main.py
 ```
-The app will run on port 8002.
+The app will run on [http://0.0.0.0:8002](http://0.0.0.0:8002).
 ---
 
 
