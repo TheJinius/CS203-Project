@@ -186,7 +186,7 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 ```
-This runs locally at [http://0.0.0.0:8000](http://0.0.0.0:8000).
+This runs locally at [http://localhost:8000](http://localhost:8000).
 
 Replace `.\.venv\Scripts\Activate.ps1` with:
 -  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
@@ -200,7 +200,7 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 ```
-This runs locally at [http://0.0.0.0:8001](http://0.0.0.0:8001).
+This runs locally at [http://localhost:8001](http://localhost:8001).
 
 Replace `.\.venv\Scripts\Activate.ps1` with:
 -  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
@@ -219,7 +219,7 @@ Replace `.\.venv\Scripts\Activate.ps1` with:
 -  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
 - `source .venv/Scripts/activate` when running from Git Bash or WSL
 
-This runs locally at [http://0.0.0.0:8002](http://0.0.0.0:8002).
+This runs locally at [http://localhost:8002](http://localhost:8002).
 
 ## 🧪 Running Tests
 ```bash
