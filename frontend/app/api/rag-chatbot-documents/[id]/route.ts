@@ -7,6 +7,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("Delete - PYTHON_API_URL:", PYTHON_API_URL)
+    
+    // Validate URL format
+    if (!PYTHON_API_URL.startsWith('http://') && !PYTHON_API_URL.startsWith('https://')) {
+      return NextResponse.json(
+        { error: "Backend URL misconfigured" },
+        { status: 500 }
+      )
+    }
+    
     const { id } = await params
 
     if (!id) {
@@ -39,8 +49,12 @@ export async function DELETE(
     })
   } catch (error) {
     console.error("Delete error:", error)
+    console.error("Error details:", error instanceof Error ? error.message : String(error))
     return NextResponse.json(
-      { error: "Failed to delete document" },
+      { 
+        error: "Failed to delete document",
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }

@@ -4,6 +4,16 @@ const PYTHON_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API || "http://localhost:
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("Upload - PYTHON_API_URL:", PYTHON_API_URL)
+    
+    // Validate URL format
+    if (!PYTHON_API_URL.startsWith('http://') && !PYTHON_API_URL.startsWith('https://')) {
+      return NextResponse.json(
+        { error: "Backend URL misconfigured" },
+        { status: 500 }
+      )
+    }
+    
     const formData = await request.formData()
     const file = formData.get("file") as File
 
@@ -50,8 +60,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Upload error:", error)
+    console.error("Error details:", error instanceof Error ? error.message : String(error))
     return NextResponse.json(
-      { error: "Failed to upload document" },
+      { 
+        error: "Failed to upload document",
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }
