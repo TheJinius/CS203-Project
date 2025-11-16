@@ -169,6 +169,7 @@ mvn install
 mvn spring-boot:run
 ```
 This runs locally at [http://localhost:8080/](http://localhost:8080/).
+
 ### Frontend Setup
 ```bash
 cd frontend
@@ -176,6 +177,7 @@ npm install
 npm run dev
 ```
 This runs locally at [http://localhost:3000/](http://localhost:3000/).
+
 ### Chatbot Setup(in PowerShell)
 ```bash
 cd "Python RAG chatbot"
@@ -184,11 +186,12 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 ```
-This runs locally at [http://localhost:8000/](http://localhost:8000/).
+This runs locally at [http://0.0.0.0:8000](http://0.0.0.0:8000).
 
 Replace `.\.venv\Scripts\Activate.ps1` with:
 -  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
 - `source .venv/Scripts/activate` when running from Git Bash or WSL
+
 ### Compliance Checklist Setup (in PowerShell)
 ```bash
 cd Compliance_checklist
@@ -197,11 +200,27 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 ```
-This runs locally at [http://localhost:8001/](http://localhost:8001/).
+This runs locally at [http://0.0.0.0:8001](http://0.0.0.0:8001).
 
 Replace `.\.venv\Scripts\Activate.ps1` with:
 -  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
 - `source .venv/Scripts/activate` when running from Git Bash or WSL
+
+### Graph Database (in PowerShell)
+```bash
+cd graphdb
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+py main.py
+```
+
+Replace `.\.venv\Scripts\Activate.ps1` with:
+-  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
+- `source .venv/Scripts/activate` when running from Git Bash or WSL
+
+This runs locally at [http://0.0.0.0:8002](http://0.0.0.0:8002).
+
 ## 🧪 Running Tests
 ```bash
 mvn clean test
