@@ -57,7 +57,7 @@ All items are sourced from official government reports with **direct source link
 <img width="650" height="220" alt="image" src="https://github.com/user-attachments/assets/edd0eb3e-d2e7-4df7-a15d-7bd8c49e0870" />
 
 Displays four optimized route types:
-- ⚠️ **Risk** – lowest likelihood of incidents  
+- ⚠️ **Risk** – lowest likelihood of incidents and piracy for shipping  
 - 💸 **Cost** – cheapest route  
 - 🌿 **Carbon** – eco-friendly route  
 - ⏱️ **Time** – fastest shipping option  
