@@ -98,7 +98,7 @@ Compare direct vs. multi-leg routes seamlessly.
 ## ⚖️ Tariff Comparator
 <img width="600" height="225" alt="image" src="https://github.com/user-attachments/assets/2b5c1a3a-c13e-4b7c-aa15-c61be1e0bb38" />
 
-Compare tariffs based on:
+Compare tariffs based on the following factors:
 - Risk  
 - Cost  
 - Carbon emissions  
