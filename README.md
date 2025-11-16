@@ -168,13 +168,15 @@ Powered by **AWS Lambda**, **Redis**, and **DynamoDB**.
 mvn install
 mvn spring-boot:run
 ```
+This runs locally at [http://localhost:8080/](http://localhost:8080/).
 ### Frontend Setup
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-### Chatbot Setup
+This runs locally at [http://localhost:3000/](http://localhost:3000/).
+### Chatbot Setup(in PowerShell)
 ```bash
 cd "Python RAG chatbot"
 python -m venv .venv
@@ -182,7 +184,12 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 ```
-### Compliance Checklist Setup
+This runs locally at [http://localhost:8000/](http://localhost:8000/).
+
+Replace `.\.venv\Scripts\Activate.ps1` with:
+-  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
+- `source .venv/Scripts/activate` when running from Git Bash or WSL
+### Compliance Checklist Setup (in PowerShell)
 ```bash
 cd Compliance_checklist
 python -m venv .venv
@@ -190,21 +197,12 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 ```
-🧪 Running Tests
-## Windows
+This runs locally at [http://localhost:8001/](http://localhost:8001/).
 
-```bash
-run-tests.bat
-run-tests.bat --coverage
-run-tests.bat --controller
-```
-## Mac/Linux
-```bash
-./run-tests.sh
-./run-tests.sh --coverage
-./run-tests.sh --controller
-```
-## Manual
+Replace `.\.venv\Scripts\Activate.ps1` with:
+-  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
+- `source .venv/Scripts/activate` when running from Git Bash or WSL
+## 🧪 Running Tests
 ```bash
 mvn clean test
 mvn test -Dtest=TariffManagementControllerIntegrationTest
