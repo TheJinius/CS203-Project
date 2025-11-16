@@ -187,7 +187,7 @@ export async function getShippingRoute(params: {
 }) {
   console.log('🚢 Getting shipping route:', params);
   
-  const GRAPHDB_API = process.env.NEXT_PUBLIC_GRAPHDB_API || "http://localhost:8000";
+  const GRAPHDB_API = process.env.NEXT_PUBLIC_GRAPHDB_API || "http://localhost:8002";
   
   try {
     const response = await fetch(`${GRAPHDB_API}/shortest-route`, {
@@ -214,7 +214,7 @@ export async function getOptimalRoutes(params: {
 }) {
   console.log('🚢 Getting optimal routes:', params);
   
-  const GRAPHDB_API = process.env.NEXT_PUBLIC_GRAPHDB_API || "http://localhost:8000";
+  const GRAPHDB_API = process.env.NEXT_PUBLIC_GRAPHDB_API || "http://localhost:8002";
   
   try {
     const response = await fetch(`${GRAPHDB_API}/optimal-routes`, {
