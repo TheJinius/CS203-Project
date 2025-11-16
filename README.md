@@ -228,6 +228,14 @@ docker ps
 mvn test
 ```
 If Docker is not running, integration tests will fail.
+## Team
+---
+This project was built by
+- [Khoo Kar Xing](https://github.com/itsnotkx)
+- [Ethan Lim Jin](https://github.com/TheJinius)
+- [Neo Jia Wen](https://github.com/N-Jia-Wen)
+- [Seow Wee Siang](https://github.com/wonnom)
+- [Alister Chong](https://github.com/OborosYX)
+- [Muhammad Hayyun](https://github.com/muhdhayyun)
 
-### ⭐ Trade Optimization Pathfinder (TOP)
-Empowering global trade through transparent, explainable, and optimized tariff intelligence.
+---
