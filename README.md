@@ -57,7 +57,7 @@ All items are sourced from official government reports with **direct source link
 <img width="650" height="220" alt="image" src="https://github.com/user-attachments/assets/edd0eb3e-d2e7-4df7-a15d-7bd8c49e0870" />
 
 Displays four optimized route types:
-- ⚠️ **Risk** – lowest likelihood of incidents  
+- ⚠️ **Risk** – lowest likelihood of incidents and piracy for shipping  
 - 💸 **Cost** – cheapest route  
 - 🌿 **Carbon** – eco-friendly route  
 - ⏱️ **Time** – fastest shipping option  
@@ -162,6 +162,9 @@ Powered by **AWS Lambda**, **Redis**, and **DynamoDB**.
 ---
 
 ## 🚀 Running the Project Locally
+Due to our automated CI/CD pipeline, the environment variables currently point to the deployed instances of the various endpoints. If you wish to test the project locally, comment out the environment variables under `# Endpoints` in `frontend/.env.local`. Then, perform the local setups shown below.
+
+Note that for ease of use, there is a deployed cloud instance of the graph database hosted on Neo4j. The provided .env file at `graphdb/.env` already points to the cloud database, hence no action is needed. However, it is on a free trial, and will expire on 28th November 2025. Past this date, the deployed frontend will no longer display the various trade routes, though other features will work as intended. To see the trade route visualisation once it expires, you must run all endpoints locally.
 
 ### Backend Setup
 ```bash
@@ -178,48 +181,55 @@ npm run dev
 ```
 This runs locally at [http://localhost:3000/](http://localhost:3000/).
 
-### Chatbot Setup(in PowerShell)
+### Chatbot Setup (in Bash)
 ```bash
 cd "Python RAG chatbot"
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/Scripts/activate
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
 ```
-This runs locally at [http://0.0.0.0:8000](http://0.0.0.0:8000).
+This runs locally at [http://localhost:8000](http://localhost:8000).
 
-Replace `.\.venv\Scripts\Activate.ps1` with:
--  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
-- `source .venv/Scripts/activate` when running from Git Bash or WSL
+Replace `source .venv/Scripts/activate` with:
+- `.\.venv\Scripts\Activate.ps1` when running from PowerShell, or
+-  `.\.venv\Scripts\activate.bat` when running from Command Prompt
 
-### Compliance Checklist Setup (in PowerShell)
+### Compliance Checklist Setup (in Bash)
 ```bash
 cd Compliance_checklist
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/Scripts/activate
 pip install -r requirements.txt
 uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8001
 ```
-This runs locally at [http://0.0.0.0:8001](http://0.0.0.0:8001).
+This runs locally at [http://localhost:8001](http://localhost:8001).
 
-Replace `.\.venv\Scripts\Activate.ps1` with:
--  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
-- `source .venv/Scripts/activate` when running from Git Bash or WSL
+Replace `source .venv/Scripts/activate` with:
+- `.\.venv\Scripts\Activate.ps1` when running from PowerShell, or
+-  `.\.venv\Scripts\activate.bat` when running from Command Prompt
 
-### Graph Database (in PowerShell)
+### Graph Database API (in Bash)
 ```bash
 cd graphdb
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/Scripts/activate
 pip install -r requirements.txt
 py main.py
 ```
 
-Replace `.\.venv\Scripts\Activate.ps1` with:
--  `.\.venv\Scripts\activate.bat` when running from Command Prompt, or 
-- `source .venv/Scripts/activate` when running from Git Bash or WSL
+Replace `source .venv/Scripts/activate` with:
+- `.\.venv\Scripts\Activate.ps1` when running from PowerShell, or
+-  `.\.venv\Scripts\activate.bat` when running from Command Prompt
 
-This runs locally at [http://0.0.0.0:8002](http://0.0.0.0:8002).
+This runs locally at [http://localhost:8002](http://localhost:8002).
+
+### Graph Database Cloud Instance
+1. Install [Neo4j desktop](https://neo4j.com/download/neo4j-desktop/?edition=desktop&flavour=winstall64&release=2.0.5&offline=false). Follow the installation instructions.
+2. Create a new database instance. Note down the database user and the password. Ensure the values of the `NEO4J_USER` and `NEO4J_PASSWORD` environment variables in `graphdb/.env` are respectively updated to these values.
+3. Enable the Graph Data Science (GDS) and APOC plugins by clicking on menu (3 dots) -> Plugins -> Install Graph Data Science and APOC plugins
+4. Delete the pre-existing generated`neo4j` database, if any. Then, stop the database instance, and load the .dump file by clicking "Load database from file" and selecting the neo4j.dump file provided at `graphdb/neo4j.dump`.
+5. Start the instance again, if it did not automatically start running in step 4. It will be running on localhost, port 7687. You should also see the connection URI (e.g. [neo4j://127.0.0.1:7687](neo4j://127.0.0.1:7687) - check the exact URI you are provided). Delete the `NEO4J_URI` variable in the provided .env file at `graphdb/.env` and replace it with this value.
 
 ## 🧪 Running Tests
 ```bash
