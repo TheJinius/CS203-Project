@@ -1,7 +1,8 @@
 # Trade Optimization Pathfinder (TOP)
 
 *An all-in-one Tariff Management Platform to streamline the process of calculating tariffs and optimizing trade routes between countries.*
-
+---
+[![Watch the video](https://img.youtube.com/vi/S8zH2_qEYFs/0.jpg)](https://www.youtube.com/watch?v=S8zH2_qEYFs)
 ---
 
 ## 🌍 Problem Statement
