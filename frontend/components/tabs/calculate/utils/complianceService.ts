@@ -11,10 +11,11 @@ export async function fetchComplianceData(
   setComplianceError("")
   
   try {
+    const endpoint = process.env.NEXT_PUBLIC_COMPLIANCE_API || "http://localhost:8001/query"
     const countryName = COUNTRY_NAMES[destination] || destination
     const query = `${countryName} ${productDescription}`
     
-    const response = await fetch("https://cs203compliance.duckdns.org/query", {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: query }),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000"
+const PYTHON_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API || "http://localhost:8000"
 
 export async function DELETE(
   request: NextRequest,

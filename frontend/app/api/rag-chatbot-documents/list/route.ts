@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000"
+const PYTHON_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API || "http://localhost:8000"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {

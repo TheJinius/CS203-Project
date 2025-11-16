@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Send, Bot, User, Loader2, X, MessageCircle, Maximize2, Minimize2, ArrowUpLeft } from "lucide-react"
 
+const API_ENDPOINT = process.env.NEXT_PUBLIC_CHATBOT_API || "http://localhost:8000"
+
 interface Message {
   role: "user" | "assistant"
   content: string
@@ -92,7 +94,8 @@ export default function FloatingChatbot() {
     setLoading(true)
 
     try {
-      const response = await fetch("https://cs203chatbot.duckdns.org/query", {
+      
+      const response = await fetch(`${API_ENDPOINT}/query`, {
       // const response = await fetch("http://localhost:8000/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
