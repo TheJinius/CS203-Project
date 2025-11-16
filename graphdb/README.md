@@ -19,8 +19,9 @@ cd /graphdb
 python -m venv .venv
 .venv\scripts\activate
 pip install -r requirements.txt
-uvicorn main:app
+py main.py
 ```
+The app will run on port 8002.
 ---
 
 
