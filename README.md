@@ -1,3 +1,5 @@
+![Static Badge](https://img.shields.io/badge/SMU_X_UBS_Best_Project_Award-25%2F26-gold)
+
 # Trade Optimization Pathfinder (TOP)
 
 *An all-in-one Tariff Management Platform to streamline the process of calculating tariffs and optimizing trade routes between countries.*
